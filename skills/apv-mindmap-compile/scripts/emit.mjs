@@ -15,13 +15,13 @@ export const MARKER = 'APV_EXCEL_CONTRACT | apv.excel.runtime | v1';
 const NOTES = [
   '说明：初始化行（语句类型 1）在所有用例之前执行一次；用例从自动化ID所在行开始，到下一个自动化ID为止。',
   '优先级：每个自动化ID一个；语句类型：0 文件头，1 共享初始化，2 起为用例内的步骤，逐行递增。',
-  '测试对象和方法：APV_0/APV_1 的 cmd_config、cmds_config；check_point 的 found、not_found、abs_found；time 的 sleep。',
+  '测试对象和方法：APV_0/APV_1 的 cmd_config、cmds_config；test_env 行的方法列是客户端名（如 routera），其后 check_point 对该客户端命令输出判定；check_point 的 found、not_found、abs_found；time 的 sleep。',
   '数据：命令、期望匹配串或等待秒数；临时保存期望结果和输入变量本版本不使用。',
   '每个用例之后空一行；文件最后一个用例是不执行的收尾占位，不要删除。',
 ];
 
 // The rows of one case: one row per step, the autoid and priority on the first one.
-export function caseRows(item, entry) {
+export function caseRows(item, entry, priority = 1) {
   const steps = [];
   if (item.init_commands.length)
     steps.push({ desc: '初始化配置', E: 'APV_0', F: 'cmds_config', G: item.init_commands.join('\n') });
@@ -37,12 +37,15 @@ export function caseRows(item, entry) {
     } else if (block.kind === 'OBSERVE_ASSERT') {
       steps.push({ desc: block.desc ?? '', E: host, F: 'cmd_config', G: block.cmd });
       for (const check of block.asserts) steps.push({ desc: check.desc ?? '', E: 'check_point', F: check.op, G: check.pattern });
+    } else if (block.kind === 'CLIENT') {
+      steps.push({ desc: block.desc ?? '', E: 'test_env', F: block.client, G: block.cmd });
+      for (const check of block.asserts ?? []) steps.push({ desc: check.desc ?? '', E: 'check_point', F: check.op, G: check.pattern });
     } else if (block.kind === 'SLEEP') steps.push({ desc: block.desc ?? '', E: 'time', F: 'sleep', G: String(block.seconds) });
     else if (block.kind === 'STEP') steps.push({ desc: block.desc, E: block.E, F: block.F, G: block.G ?? '' });
   }
   return steps.map((step, i) => [
     i === 0 ? item.autoid : null,
-    i === 0 ? 'P1' : null,
+    i === 0 ? `P${priority}` : null,
     2 + i,
     step.desc || null,
     step.E,
@@ -92,7 +95,7 @@ export function emitBatch(batch, author = 'circle') {
     }
     const item = readJson(join(batch, 'cases', `${manifestCase.autoid}.json`));
     const entry = machine.cases.find((c) => c.autoid === manifestCase.autoid);
-    const rows = caseRows(item, entry);
+    const rows = caseRows(item, entry, manifestCase.priority ?? 1);
     const bytes = workbook({ author, feature: manifestCase.autoid, cases: [rows] });
     const path = join(batch, 'cases', `${manifestCase.autoid}.xlsx`);
     writeBytes(path, bytes);

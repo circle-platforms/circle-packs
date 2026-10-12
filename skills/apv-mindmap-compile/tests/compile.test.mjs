@@ -86,6 +86,21 @@ function machineFor(manifest) {
   };
 }
 const hit = (command) => ({ command, build: BUILD, status: 'hit', head: command.split(' ').slice(0, 3).join(' '), violations: [], evidenceId: 'evd_1' });
+// What the server returned for a case's command check, in the shape Circle saves verbatim:
+// {tool, args, at, response: {result, evidence}}. The receipts in a case must project from it.
+const rawFor = (receipts) => ({
+  result: { build: BUILD, commands: receipts.map(({ command, status, head, violations }) => ({ command, status, head, violations })) },
+  evidence: [{ evidenceId: 'evd_1' }],
+});
+const saveChecks = (batch, cases) => {
+  mkdirSync(join(batch, 'server-returns'), { recursive: true });
+  mkdirSync(join(batch, 'checks'), { recursive: true });
+  for (const [id, item] of Object.entries(cases)) {
+    const savedAs = join(batch, 'server-returns', `${id}-buildsite.command_check.json`);
+    writeJson(savedAs, { tool: 'buildsite.command_check', args: {}, at: '2026-10-13T00:00:00.000Z', response: rawFor(item.command_receipts) });
+    writeJson(join(batch, 'checks', `${id}.json`), { savedAs });
+  }
+};
 function casesFor(manifest) {
   const group = (id) => manifest.cases.find((c) => c.autoid === id).group_path;
   return {
@@ -176,7 +191,8 @@ test('the gate passes a sound case and names what is wrong in the others', () =>
   const cases = casesFor(manifest);
   const entry = (id) => machine.cases.find((c) => c.autoid === id);
   const mcase = (id) => manifest.cases.find((c) => c.autoid === id);
-  const run = (item, id = item.autoid) => gateCase(item, entry(id), mcase(id), BUILD, destructivePatterns());
+  const run = (item, id = item.autoid, raw = rawFor(item.command_receipts ?? [])) =>
+    gateCase(item, entry(id), mcase(id), BUILD, destructivePatterns(), raw);
   assert.deepEqual(run(cases['100000000000000002']).violations, []);
   const missing = run(cases['100000000000000005']);
   assert.equal(missing.terminal, 'unsupported_feature');
@@ -202,6 +218,13 @@ test('the gate passes a sound case and names what is wrong in the others', () =>
   const otherBuild = structuredClone(cases['100000000000000001']);
   otherBuild.command_receipts[0].build = 'Rel_SYN_9_8_0_1';
   assert.ok(codes(otherBuild).includes('command_receipt_other_build'));
+  // Receipts typed by hand instead of projected from what the server returned are refused,
+  // and a case without a saved check is not verified at all.
+  const forged = structuredClone(cases['100000000000000005']);
+  const truth = rawFor(forged.command_receipts);
+  forged.command_receipts = forged.command_receipts.map((receipt) => ({ ...receipt, status: 'hit' }));
+  assert.ok(run(forged, forged.autoid, truth).violations.some((v) => v.code === 'receipt_not_from_server'));
+  assert.ok(run(cases['100000000000000001'], '100000000000000001', null).violations.some((v) => v.code === 'command_check_not_saved'));
 });
 
 test('emit writes the A–I workbook per case and merged, with the sentinel last, and the same bytes every time', (t) => {
@@ -210,7 +233,9 @@ test('emit writes the A–I workbook per case and merged, with the sentinel last
   writeJson(join(batch, 'manifest.json'), manifest);
   writeJson(join(batch, 'machine_mindmap.json'), machineFor(manifest));
   mkdirSync(join(batch, 'cases'), { recursive: true });
-  for (const [id, item] of Object.entries(casesFor(manifest))) writeJson(join(batch, 'cases', `${id}.json`), item);
+  const written = casesFor(manifest);
+  for (const [id, item] of Object.entries(written)) writeJson(join(batch, 'cases', `${id}.json`), item);
+  saveChecks(batch, written);
   writeJson(join(batch, 'gate_report.json'), gateBatch(batch));
   const report = emitBatch(batch, 'tester');
   assert.deepEqual(report.totals, { cases: 4, emitted_unverified: 2, needs_decision: 1, unsupported_feature: 1 });

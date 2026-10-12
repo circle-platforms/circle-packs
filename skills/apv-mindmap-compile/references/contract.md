@@ -53,6 +53,8 @@ Exactly these keys:
     { "kind": "CONFIG", "host": "APV_0", "cmds": ["<command>"], "desc": "配置……" },
     { "kind": "OBSERVE_ASSERT", "host": "APV_0", "cmd": "<show command>", "desc": "查看……",
       "asserts": [ { "op": "found", "pattern": "<regex>", "expectation_id": "u1:<autoid>:1:0", "desc": "应显示……" } ] },
+    { "kind": "CLIENT", "client": "routera", "cmd": "dig @<ip> <host>", "desc": "客户端发起……",
+      "asserts": [ { "op": "found", "pattern": "<regex>", "expectation_id": "u1:<autoid>:2:0", "desc": "应答……" } ] },
     { "kind": "SLEEP", "seconds": 5 },
     { "kind": "STEP", "desc": "……", "E": "APV_0", "F": "cmd_config", "G": "<data>" }
   ],
@@ -67,6 +69,9 @@ Exactly these keys:
 ```
 
 - `host` is `APV_0` or `APV_1`. `op` is `found` (regex), `not_found` (regex) or `abs_found` (literal).
+- `CLIENT` runs `cmd` on the test-env client named in `client` (the workbook row is `测试对象=test_env`, `方法=<client名>`); its `asserts` are check_point rows against the client command's own output. A client command is not a device command: no receipt, no command-tree check.
+- `command_receipts` is never typed by hand. Every `srv_*` call's raw return is saved verbatim by the server under `.circle/server-returns/` (the result carries `savedAs`); `checks/<autoid>.json` is only a pointer `{"savedAs": "<that path>"}`. The gate loads the pointed-to file, requires it to be a check of the bound build covering exactly the case's device commands (`command_check_does_not_cover` otherwise), re-derives the receipts — per `result.commands[]` entry `{command, build: result.build, status, head, violations, evidenceId: result.evidence[0].evidenceId}` — and rejects any mismatch (`receipt_not_from_server`). Without a pointer to a server-saved check the batch is 未核对 and stops before the gate; enforcement of the command tree is server-side at run submission.
+- The workbook writes the manifest's case priority as `P<n>` on the case's first row (the InfoTest finals keep the mindmap priority).
 - Expectation ids: `u1:<autoid>:<n>:<index>`, `index` counting the case's expectations of step `n` from 0, in the order of `machine_mindmap.json`.
 - `SLEEP` is 1 to 300 seconds; `CONFIG.timeout_s`, when given, 1 to 600.
 

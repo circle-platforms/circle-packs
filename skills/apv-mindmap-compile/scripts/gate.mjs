@@ -4,7 +4,7 @@
 // tree does not have ends the case as an unsupported feature, never as something to retry.
 //   node gate.mjs <batch folder>
 import { existsSync, readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readJson, writeJson } from './lib.mjs';
 import { expectationIds } from './check-recompose.mjs';
@@ -14,6 +14,56 @@ const HOSTS = new Set(['APV_0', 'APV_1']);
 const OPS = new Set(['found', 'not_found', 'abs_found']);
 const CLAIMS = new Set(['Author', 'Manual', 'CapabilityXml', 'Spec', 'DefectSpec']);
 const STEP_OBJECTS = new Set(['APV_0', 'APV_1', 'check_point', 'time', 'test_env']);
+
+// The receipts the server returned for this case, projected from the raw command_check
+// result that the SERVER saved verbatim under .circle/server-returns/. checks/<autoid>.json
+// is only a pointer {"savedAs": "<path>"}: the model never transcribes a response, and this
+// gate loads the verbatim file, checks it is a check of this build that covers exactly the
+// case's device commands, and re-derives the receipts from it.
+export function projectReceipts(raw) {
+  const result = raw?.result;
+  if (!result || !Array.isArray(result.commands)) return null;
+  const evidenceId = raw?.evidence?.[0]?.evidenceId;
+  return result.commands.map((entry) => ({
+    command: entry.command,
+    build: result.build,
+    status: entry.status,
+    head: entry.head ?? null,
+    violations: entry.violations ?? [],
+    ...(evidenceId ? { evidenceId } : {}),
+  }));
+}
+
+// Load the raw check a case points at. The pointer file holds {"savedAs": "<path>"}.
+export function loadRawCheck(pointerPath, caseCommands) {
+  const problems = [];
+  if (!existsSync(pointerPath)) return { raw: null, problems: [{ code: 'command_check_not_saved', detail: 'no checks/<autoid>.json pointer' }] };
+  let pointer;
+  try {
+    pointer = JSON.parse(readFileSync(pointerPath, 'utf8'));
+  } catch {
+    return { raw: null, problems: [{ code: 'command_check_not_saved', detail: 'unreadable pointer file' }] };
+  }
+  if (typeof pointer.savedAs !== 'string' || !pointer.savedAs.trim())
+    return { raw: null, problems: [{ code: 'command_check_not_saved', detail: 'pointer must be {"savedAs": "<server-returns path>"}' }] };
+  const candidates = [pointer.savedAs, resolve(dirname(pointerPath), '..', '..', pointer.savedAs)];
+  const path = candidates.find((p) => existsSync(p));
+  if (!path) return { raw: null, problems: [{ code: 'command_check_not_saved', detail: `${pointer.savedAs}: server-saved raw not found` }] };
+  let raw;
+  try {
+    const saved = JSON.parse(readFileSync(path, 'utf8'));
+    // the server saves {tool, args, at, response: {result, evidence}}; older shapes had {result}
+    raw = saved.response ?? saved;
+  } catch {
+    return { raw: null, problems: [{ code: 'command_check_not_saved', detail: `${pointer.savedAs}: unreadable` }] };
+  }
+  const checked = (raw?.result?.commands ?? []).map((entry) => entry.command);
+  const wanted = [...new Set(caseCommands)];
+  const sameSet = checked.length === wanted.length && [...checked].sort().join('\u0000') === [...wanted].sort().join('\u0000');
+  if (!sameSet)
+    problems.push({ code: 'command_check_does_not_cover', detail: `${pointer.savedAs} checked ${checked.length} commands, the case runs ${wanted.length}` });
+  return { raw, problems };
+}
 
 const here = dirname(fileURLToPath(import.meta.url));
 export function destructivePatterns() {
@@ -31,7 +81,7 @@ export function deviceCommands(item) {
   return commands.filter((command) => typeof command === 'string');
 }
 
-export function gateCase(item, entry, manifestCase, build, destructive = destructivePatterns()) {
+export function gateCase(item, entry, manifestCase, build, destructive = destructivePatterns(), rawCheck = null) {
   const violations = [];
   const flag = (code, detail) => violations.push({ code, detail });
   if (!item || typeof item !== 'object') return { ok: false, terminal: null, violations: [{ code: 'not_an_object', detail: '' }] };
@@ -73,6 +123,24 @@ export function gateCase(item, entry, manifestCase, build, destructive = destruc
           }
         asserts.push({ id: check?.expectation_id, block: index, index: assertIndex });
       });
+    } else if (block?.kind === 'CLIENT') {
+      // A command on a test-env client (routera and friends): E=test_env, F=<client>.
+      // Not a device command, so it never reaches the command tree or a receipt.
+      if (typeof block.client !== 'string' || !block.client.trim()) flag('client_invalid', at);
+      if (typeof block.cmd !== 'string' || !block.cmd.trim() || /\n/.test(block.cmd)) flag('client_command_invalid', at);
+      // a CLIENT block may be traffic-only: its evidence is asserted device-side
+      if (block.asserts !== undefined && !Array.isArray(block.asserts)) flag('no_assertion_in_block', at);
+      (block.asserts ?? []).forEach((check, assertIndex) => {
+        if (!OPS.has(check?.op)) flag('assert_operator_invalid', `${at}.${assertIndex}`);
+        if (typeof check?.pattern !== 'string' || !check.pattern) flag('empty_assertion_pattern', `${at}.${assertIndex}`);
+        else if (check.op !== 'abs_found')
+          try {
+            new RegExp(check.pattern);
+          } catch {
+            flag('assertion_regex_invalid', `${at}.${assertIndex}`);
+          }
+        asserts.push({ id: check?.expectation_id, block: index, index: assertIndex });
+      });
     } else if (block?.kind === 'SLEEP') {
       if (!(Number.isInteger(block.seconds) && block.seconds >= 1 && block.seconds <= 300)) flag('sleep_invalid', `${at}: 1 to 300 seconds`);
     } else if (block?.kind === 'STEP') {
@@ -97,6 +165,10 @@ export function gateCase(item, entry, manifestCase, build, destructive = destruc
   if (bindings.map((b) => b?.expectation_id).sort().join() !== [...wanted].sort().join())
     flag('expectation_binding_incomplete', 'bind every expectation id once');
   // Commands: each needs the server's verdict for this build; a miss is final.
+  const projected = rawCheck === null ? null : projectReceipts(rawCheck);
+  if (projected === null) flag('command_check_not_saved', `save the buildsite.command_check result for this case to checks/${item.autoid}.json`);
+  else if (JSON.stringify(item.command_receipts ?? []) !== JSON.stringify(projected))
+    flag('receipt_not_from_server', 'command_receipts must be the exact projection of checks/<autoid>.json; never written by hand');
   let terminal = null;
   const receipts = new Map((item.command_receipts ?? []).map((receipt) => [receipt?.command, receipt]));
   for (const command of deviceCommands(item)) {
@@ -126,7 +198,15 @@ export function gateBatch(batch) {
       results[manifestCase.autoid] = { ok: false, status: 'needs_decision', violations: [{ code: 'source_incomplete', detail: (entry.proposal ?? []).join(' / ') }] };
     else if (!existsSync(path)) results[manifestCase.autoid] = { ok: false, status: 'not_written', violations: [] };
     else {
-      const result = gateCase(readJson(path), entry, manifestCase, machine.build, destructive);
+      const checkPath = join(batch, 'checks', `${manifestCase.autoid}.json`);
+      const item = readJson(path);
+      const deviceCommandsList = deviceCommands(item);
+      const { raw: rawCheck, problems: checkProblems } = existsSync(checkPath)
+        ? loadRawCheck(checkPath, deviceCommandsList)
+        : { raw: null, problems: [{ code: 'command_check_not_saved', detail: `save the buildsite.command_check result for this case to checks/${manifestCase.autoid}.json` }] };
+      const result = gateCase(item, entry, manifestCase, machine.build, destructive, rawCheck);
+      result.violations.push(...checkProblems);
+      if (checkProblems.length) result.ok = false;
       results[manifestCase.autoid] = { ...result, status: result.ok ? 'gated' : result.terminal ?? 'rejected' };
     }
   }
