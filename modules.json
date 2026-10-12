@@ -6,7 +6,7 @@
       "kind": "skill-pack",
       "root": "skills/apv-mindmap-compile",
       "manifestPath": "skills/apv-mindmap-compile/skillpack.json",
-      "version": "0.2.6",
+      "version": "0.2.7",
       "files": [
         {
           "path": "SKILL.md",
@@ -46,7 +46,7 @@
         },
         {
           "path": "skillpack.json",
-          "sha256": "0f4258e3a11d497baea3e5c8f280dd693a323bbe0752df886e2448d8de746214"
+          "sha256": "08772c52adc72d51f3323c8428cd5ce01e21f0457a4075d9969d5fb418da4dd4"
         },
         {
           "path": "tests/compile.test.mjs",
@@ -61,7 +61,7 @@
           "sha256": "6c1d0a530e901ff9686594b37b947cae760f53223711efe7f8d1868e0f1521d7"
         }
       ],
-      "digest": "d696b22892ddcc9ddb34b56ea095081ed5297955f0c93f899355772768a58d7f"
+      "digest": "f46ff8084ac75e24c2c2479ffa1b181576972fbc08f8025c0812716692c4c3fb"
     }
   ]
 }
