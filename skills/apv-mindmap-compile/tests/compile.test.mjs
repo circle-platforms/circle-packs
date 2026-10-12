@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { prep } from '../scripts/prep.mjs';
 import { checkRecompose } from '../scripts/check-recompose.mjs';
-import { gateBatch, gateCase, destructivePatterns } from '../scripts/gate.mjs';
+import { gateBatch, gateCase, destructivePatterns, contractClients } from '../scripts/gate.mjs';
 import { emitBatch, readBack, HEADERS } from '../scripts/emit.mjs';
 import { readXlsx } from '../scripts/xlsx.mjs';
 import { sha256, writeJson } from '../scripts/lib.mjs';
@@ -274,4 +274,23 @@ test('emit writes the A–I workbook per case and merged, with the sentinel last
     single.rows.filter((row) => row[0] && /^\d+$/.test(String(row[0]))).map((row) => row[0]),
     ['100000000000000001', '999999999999999'],
   );
+});
+
+test('a client row is checked against the execution contract: an enabled test_env method passes, anything else ends the case', () => {
+  const manifest = prep(fixture, 'mindmap.json');
+  const machine = machineFor(manifest);
+  const item = structuredClone(casesFor(manifest)['100000000000000001']);
+  item.blocks.push({ kind: 'CLIENT', client: 'routera', cmd: 'dig @192.0.2.10 www.example.test', desc: '客户端解析' });
+  const clients = contractClients(new URL('./fixtures/excel-contract.json', import.meta.url));
+  const run = (candidate, known) =>
+    gateCase(candidate, machine.cases.find((c) => c.autoid === candidate.autoid), manifest.cases.find((c) => c.autoid === candidate.autoid),
+      BUILD, destructivePatterns(), rawFor(candidate.command_receipts), known);
+  assert.deepEqual(run(item, clients).violations, []);
+  assert.deepEqual([...clients].sort(), ['routera', 'server231'], 'internal and device entries are not clients');
+  const reboot = structuredClone(item);
+  reboot.blocks[1] = { kind: 'CLIENT', client: 'reboot', cmd: 'reboot', desc: '重启设备' };
+  const refused = run(reboot, clients);
+  assert.equal(refused.terminal, 'unsupported_feature');
+  assert.ok(refused.violations.some((v) => v.code === 'client_not_in_contract'));
+  assert.ok(run(item, null).violations.some((v) => v.code === 'client_not_checked'), 'no contract, no check');
 });

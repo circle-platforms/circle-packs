@@ -3,6 +3,7 @@
 // workbook is made. A case passes only with no violation; a command the build's command
 // tree does not have ends the case as an unsupported feature, never as something to retry.
 //   node gate.mjs <batch folder>
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -65,6 +66,16 @@ export function loadRawCheck(pointerPath, caseCommands) {
   return { raw, problems };
 }
 
+// The client names a workbook may dispatch to: the enabled test_env methods of the execution
+// side's Excel function contract (schema ist.excel.function-contract). The contract is data
+// the user registers with the server; the skill reads it, it never keeps its own list.
+export function contractClients(contractPath) {
+  const contract = JSON.parse(readFileSync(contractPath, 'utf8'));
+  if (contract?.schema !== 'ist.excel.function-contract' || !Array.isArray(contract.entries))
+    throw new Error(`${contractPath}: not an Excel function contract`);
+  return new Set(contract.entries.filter((entry) => entry.e === 'test_env' && entry.status === 'enabled').map((entry) => entry.f));
+}
+
 const here = dirname(fileURLToPath(import.meta.url));
 export function destructivePatterns() {
   const path = join(here, '..', 'references', 'destructive.json');
@@ -81,7 +92,7 @@ export function deviceCommands(item) {
   return commands.filter((command) => typeof command === 'string');
 }
 
-export function gateCase(item, entry, manifestCase, build, destructive = destructivePatterns(), rawCheck = null) {
+export function gateCase(item, entry, manifestCase, build, destructive = destructivePatterns(), rawCheck = null, clients = null) {
   const violations = [];
   const flag = (code, detail) => violations.push({ code, detail });
   if (!item || typeof item !== 'object') return { ok: false, terminal: null, violations: [{ code: 'not_an_object', detail: '' }] };
@@ -97,6 +108,7 @@ export function gateCase(item, entry, manifestCase, build, destructive = destruc
   if (!blocks.length || blocks.length > 1024) flag('blocks_invalid', '1 to 1024 blocks');
   const asserts = [];
   const steps = [];
+  let unsupportedClient = false;
   blocks.forEach((block, index) => {
     const at = `block ${index}`;
     if (block?.kind === 'CONFIG') {
@@ -127,6 +139,11 @@ export function gateCase(item, entry, manifestCase, build, destructive = destruc
       // A command on a test-env client (routera and friends): E=test_env, F=<client>.
       // Not a device command, so it never reaches the command tree or a receipt.
       if (typeof block.client !== 'string' || !block.client.trim()) flag('client_invalid', at);
+      else if (clients === null) flag('client_not_checked', `${at}: ${block.client}: give the Excel function contract (--contract) to check client names`);
+      else if (!clients.has(block.client)) {
+        flag('client_not_in_contract', `${at}: ${block.client} is not an enabled test_env method of the contract`);
+        unsupportedClient = true;
+      }
       if (typeof block.cmd !== 'string' || !block.cmd.trim() || /\n/.test(block.cmd)) flag('client_command_invalid', at);
       // a CLIENT block may be traffic-only: its evidence is asserted device-side
       if (block.asserts !== undefined && !Array.isArray(block.asserts)) flag('no_assertion_in_block', at);
@@ -169,7 +186,7 @@ export function gateCase(item, entry, manifestCase, build, destructive = destruc
   if (projected === null) flag('command_check_not_saved', `save the buildsite.command_check result for this case to checks/${item.autoid}.json`);
   else if (JSON.stringify(item.command_receipts ?? []) !== JSON.stringify(projected))
     flag('receipt_not_from_server', 'command_receipts must be the exact projection of checks/<autoid>.json; never written by hand');
-  let terminal = null;
+  let terminal = unsupportedClient ? 'unsupported_feature' : null;
   const receipts = new Map((item.command_receipts ?? []).map((receipt) => [receipt?.command, receipt]));
   for (const command of deviceCommands(item)) {
     if (destructive.some((pattern) => pattern.test(command))) flag('destructive_command', command);
@@ -180,15 +197,17 @@ export function gateCase(item, entry, manifestCase, build, destructive = destruc
       flag('command_not_in_tree', `${command}: ${build} has no such command`);
       terminal = 'unsupported_feature';
     } else if (receipt.status !== 'hit') flag('command_unverified', command);
-    else if ((receipt.violations ?? []).length) flag('command_parameter_contract', `${command}: ${receipt.violations.join(', ')}`);
+    else if ((receipt.violations ?? []).length)
+      flag('command_parameter_contract', `${command}: ${receipt.violations.map((v) => (typeof v === 'string' ? v : v?.code ?? JSON.stringify(v))).join(', ')}`);
   }
   return { ok: violations.length === 0, terminal, violations };
 }
 
-export function gateBatch(batch) {
+export function gateBatch(batch, { contract = null } = {}) {
   const manifest = readJson(join(batch, 'manifest.json'));
   const machine = readJson(join(batch, 'machine_mindmap.json'));
   const destructive = destructivePatterns();
+  const clients = contract ? contractClients(contract) : null;
   const results = {};
   for (const manifestCase of manifest.cases) {
     const entry = machine.cases.find((c) => c.autoid === manifestCase.autoid);
@@ -204,22 +223,31 @@ export function gateBatch(batch) {
       const { raw: rawCheck, problems: checkProblems } = existsSync(checkPath)
         ? loadRawCheck(checkPath, deviceCommandsList)
         : { raw: null, problems: [{ code: 'command_check_not_saved', detail: `save the buildsite.command_check result for this case to checks/${manifestCase.autoid}.json` }] };
-      const result = gateCase(item, entry, manifestCase, machine.build, destructive, rawCheck);
+      const result = gateCase(item, entry, manifestCase, machine.build, destructive, rawCheck, clients);
       result.violations.push(...checkProblems);
       if (checkProblems.length) result.ok = false;
       results[manifestCase.autoid] = { ...result, status: result.ok ? 'gated' : result.terminal ?? 'rejected' };
     }
   }
-  return { schema: 'apv.mindmap-compile.gate-report', source_sha256: manifest.source_sha256, build: machine.build, cases: results };
+  return {
+    schema: 'apv.mindmap-compile.gate-report',
+    source_sha256: manifest.source_sha256,
+    build: machine.build,
+    contract_sha256: contract ? createHash('sha256').update(readFileSync(contract)).digest('hex') : null,
+    cases: results,
+  };
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const [batch] = process.argv.slice(2);
-  if (!batch) {
-    console.error('usage: node gate.mjs <batch folder>');
+  const args = process.argv.slice(2);
+  const at = args.indexOf('--contract');
+  const contract = at >= 0 ? args[at + 1] : null;
+  const [batch] = args.filter((_, i) => i !== at && i !== at + 1);
+  if (!batch || (at >= 0 && !contract)) {
+    console.error('usage: node gate.mjs <batch folder> [--contract <excel function contract>]');
     process.exit(2);
   }
-  const report = gateBatch(batch);
+  const report = gateBatch(batch, { contract });
   writeJson(join(batch, 'gate_report.json'), report);
   const counts = {};
   for (const result of Object.values(report.cases)) counts[result.status] = (counts[result.status] ?? 0) + 1;

@@ -1,0 +1,10 @@
+{
+  "schema": "ist.excel.function-contract",
+  "entries": [
+    { "e": "test_env", "f": "routera", "status": "enabled" },
+    { "e": "test_env", "f": "server231", "status": "enabled" },
+    { "e": "test_env", "f": "xlsx_begin", "status": "internal" },
+    { "e": "APV_0", "f": "cmd_config", "status": "enabled" },
+    { "e": "APV_0", "f": "reboot", "status": "disabled" }
+  ]
+}
