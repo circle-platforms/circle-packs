@@ -31,6 +31,8 @@ Call `srv_buildsite_versions` for the version line. Use the build the user named
 
 Every later query passes this build's `buildId` as `build`, because the same build name exists on several platforms. The case files keep the build name, as the tools return it in `build`.
 
+When the tree is an approved external source instead (no entry in the site), the same rule with the source artifact id: pass the `sar_` id as `build` and `sourceArtifactId`, and keep the human-readable build name in `display_build` in `out/machine_mindmap.json`. The server answers `command_check` for a `sar_` with top-level `build`/`buildId` equal to the sar id, so the receipts still match the bound build. The workbook and `compile_report.json` carry both: `build` is the sar id and `display_build` is the name a reader recognizes.
+
 ## 3. Recompose (you), then check (script)
 
 Write `out/machine_mindmap.json`: for each case its bucket, its contract triple (intent, verification method, expectation) and its expectations by step, each with an origin.
@@ -51,6 +53,7 @@ Fix every violation it lists and run it again until `ok:true`.
 For each case that is not `true_gap`, write `out/cases/<autoid>.json`, the mechanical case.
 
 - `description.intent_verbatim` and `description.group_path` are copied byte for byte from the contract and the manifest.
+- The case's `build` is what the receipts name as `build` (the site's build name, or the `sar_` id for an external source); the human-readable name lives once, in `machine_mindmap.json`'s `display_build`, and the gate checks every case's `build` against `machine_mindmap.build`.
 - **Every device command comes from the bound build.** Find heads with `srv_buildsite_command_heads`, arguments with `srv_buildsite_command_param`, and the manual with `srv_docs_search` for the version line (`version`, which searches that version's CLI manual) and `srv_docs_section` (the section that starts `**<head>**`). Never write a command from memory, and never "repair" a command the author wrote.
 - `srv_buildsite_command_param` lists every signature of a head. When `overloaded` is true there is more than one and `parameters` is empty: pick the signature whose parameters say what the case does, and write the arguments in that signature's order.
 - When `srv_docs_search` for the version line fails (for example `SOURCE_FORBIDDEN` or `SOURCE_ABSENT`), the manual was not available to this run. Go on without it and write in the report that the manual was not obtained; do not conclude that the version has no manual, because the server gives an ordinary identity the same answer for absent and not allowed. The manual only explains how a value shows on screen; it never decides a command or an expectation.
@@ -62,6 +65,7 @@ For each case that is not `true_gap`, write `out/cases/<autoid>.json`, the mecha
 - Clean up what the case configures: add the inverse commands after the checks.
 - Then verify **all** the case's device commands (init, CONFIG and observation commands; `CLIENT` commands are not device commands) with `buildsite.command_check`. Each call's raw return is saved verbatim by the server under `.circle/server-returns/` and the result carries `savedAs`; write `out/checks/<autoid>.json` as the pointer `{"savedAs": "<that path>"}` and nothing else — never transcribe a response. `command_receipts` is the mechanical projection of the pointed-to file — per returned command `{command, build, status, head, violations, evidenceId}` — and the gate loads the file itself, requires the check to cover exactly the case's device commands, and re-derives the projection. When no server-saved check covers a case, say so plainly, mark it **未核对** and stop before the gate: an unverified command is never dressed up as a verified one. The real barrier is server-side: on a run submission the server re-runs `command_check` for every device command in the workbook against the bound build and refuses the submission when a command is not in the tree, independent of anything the skill wrote.
 - The test data must be the bed's own: listener IPs, client names and answer records come from the testbed's topology (the gateway's `bed_topology` when the run capability is connected), not from a synthetic demo environment and never invented. A case may only name an IP that exists on the bed. Before a compile whose workbook will run, confirm the build on the bed equals the bound build — the gateway checks it and refuses a mismatch.
+- On a run submission pass the asset id of the approved source artifact as `commandSourceAssetId` and either the `sar_` id or the build name as `build`; the server accepts both, hands the build name to the gateway's `env_prepare` for the bed check, and re-runs the checks against the artifact's tree, refusing a mismatch.
 
 ## 5. Gate (script)
 

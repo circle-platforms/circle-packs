@@ -57,9 +57,10 @@ export function caseRows(item, entry, priority = 1) {
 }
 const SENTINEL = [[SENTINEL_AUTOID, 'P9', 2, 'sentinel', 'time', 'sleep', '1', null, null]];
 
-export function workbook({ author, feature, cases }) {
+export function workbook({ author, feature, cases, buildLine = null }) {
   const rows = [[MARKER], ...NOTES.map((note) => [note]), HEADERS];
-  rows.push([null, null, 0, `Author         : ${author}\n${feature}`]);
+  const headerText = buildLine ? `Author         : ${author}\n${feature}\n构建           : ${buildLine}` : `Author         : ${author}\n${feature}`;
+  rows.push([null, null, 0, headerText]);
   for (const rowsOfCase of [...cases, SENTINEL]) rows.push(...rowsOfCase, []);
   return writeXlsx({ sheet: SHEET, rows, hidden: [1], widths: { A: 22, D: 40, G: 48 } });
 }
@@ -83,6 +84,7 @@ export function emitBatch(batch, author = 'circle') {
   const machine = readJson(join(batch, 'machine_mindmap.json'));
   const gate = readJson(join(batch, 'gate_report.json'));
   if (gate.source_sha256 !== manifest.source_sha256) throw new Error('gate_report.json is for another mindmap; run gate.mjs again');
+  const buildLine = machine.display_build ?? machine.build;
   const delivered = [];
   const cases = {};
   const unsuccessful = [];
@@ -96,7 +98,7 @@ export function emitBatch(batch, author = 'circle') {
     const item = readJson(join(batch, 'cases', `${manifestCase.autoid}.json`));
     const entry = machine.cases.find((c) => c.autoid === manifestCase.autoid);
     const rows = caseRows(item, entry, manifestCase.priority ?? 1);
-    const bytes = workbook({ author, feature: manifestCase.autoid, cases: [rows] });
+    const bytes = workbook({ author, feature: manifestCase.autoid, cases: [rows], buildLine });
     const path = join(batch, 'cases', `${manifestCase.autoid}.xlsx`);
     writeBytes(path, bytes);
     const back = readBack(bytes);
@@ -107,7 +109,7 @@ export function emitBatch(batch, author = 'circle') {
   }
   let merged = null;
   if (delivered.length) {
-    const bytes = workbook({ author, feature: manifest.source, cases: delivered });
+    const bytes = workbook({ author, feature: manifest.source, cases: delivered, buildLine });
     writeBytes(join(batch, 'case.xlsx'), bytes);
     const back = readBack(bytes);
     merged = { path: 'case.xlsx', sha256: sha256(bytes), case_count: back.autoids.length - 1, check_point_count: back.check_point_count, header_row: back.header_row };
@@ -119,6 +121,7 @@ export function emitBatch(batch, author = 'circle') {
     source: manifest.source,
     source_sha256: manifest.source_sha256,
     build: machine.build,
+    display_build: machine.display_build ?? machine.build,
     totals,
     merged,
     cases,

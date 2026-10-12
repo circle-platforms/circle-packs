@@ -56,6 +56,7 @@ function machineFor(manifest) {
     schema: 'apv.mindmap-compile.machine',
     source_sha256: manifest.source_sha256,
     build: BUILD,
+    display_build: BUILD,
     cases: [
       {
         autoid: '100000000000000001',
@@ -248,7 +249,7 @@ test('emit writes the A–I workbook per case and merged, with the sentinel last
   assert.deepEqual(sheet.hidden, [1], 'the contract marker row is hidden');
   const header = sheet.rows.findIndex((row) => HEADERS.every((h, i) => row[i] === h));
   const data = sheet.rows.slice(header + 1);
-  assert.deepEqual(data[0].slice(2, 4), [0, 'Author         : tester\nmindmap.json']);
+  assert.deepEqual(data[0].slice(2, 4), [0, `Author         : tester\nmindmap.json\n构建           : ${BUILD}`]);
   // The first case: one observation row and one check_point, then a blank row.
   assert.deepEqual(data[1], ['100000000000000001', 'P1', 2, '查看会话超时配置', 'APV_0', 'cmd_config', 'show slb session timeout']);
   assert.deepEqual(data[2], [, , 3, '显示 timeout 90', 'check_point', 'found', 'timeout\\s+90']);

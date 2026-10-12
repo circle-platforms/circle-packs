@@ -233,6 +233,7 @@ export function gateBatch(batch, { contract = null } = {}) {
     schema: 'apv.mindmap-compile.gate-report',
     source_sha256: manifest.source_sha256,
     build: machine.build,
+    display_build: machine.display_build ?? machine.build,
     contract_sha256: contract ? createHash('sha256').update(readFileSync(contract)).digest('hex') : null,
     cases: results,
   };
