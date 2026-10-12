@@ -1,0 +1,67 @@
+{
+  "schema": "circle-packs/modules/1",
+  "modules": [
+    {
+      "id": "apv-mindmap-compile",
+      "kind": "skill-pack",
+      "root": "skills/apv-mindmap-compile",
+      "manifestPath": "skills/apv-mindmap-compile/skillpack.json",
+      "version": "0.2.5",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "ae5e5dcd31ede9246c68cfa18680c10f8d6a7d171e99e03233577ffcdaa28dc7"
+        },
+        {
+          "path": "references/contract.md",
+          "sha256": "b60451c5720dd0d497d64dce1114aeaa3d39ed1a8d9aa3c9c3208495061de9a3"
+        },
+        {
+          "path": "references/destructive.json",
+          "sha256": "7acad30a33ce0892ca66f01ce4e8578ab3ed6598ca39435209777d15b3dbeaa2"
+        },
+        {
+          "path": "scripts/check-recompose.mjs",
+          "sha256": "f2ecc931a4710d1f16486898c1f5c40d5c76c0950f92e37ed09263e82cd504f3"
+        },
+        {
+          "path": "scripts/emit.mjs",
+          "sha256": "d79b40774a718601fff96b090bbd3825faa75ff8644bf3d6766de64e756ce47c"
+        },
+        {
+          "path": "scripts/gate.mjs",
+          "sha256": "f63268999d61254678eeeb796920c216b6ca35065d8af7577727426c1a2d933d"
+        },
+        {
+          "path": "scripts/lib.mjs",
+          "sha256": "2b5a25bfafa18d62a25b4f49c5d5f8f1b8cdaccf93eec8b179f287c08ae073f0"
+        },
+        {
+          "path": "scripts/prep.mjs",
+          "sha256": "ce9b02ffd249bb671cfdcc7db9449061806e2646da45b5c24c2a3c3a2079b557"
+        },
+        {
+          "path": "scripts/xlsx.mjs",
+          "sha256": "1bef6cc0c919acffd3e006db5501122366121d2e4df6513c7e64f48fd4314692"
+        },
+        {
+          "path": "skillpack.json",
+          "sha256": "46a1c7f1a836252ef06a4b2b59e7dde24c7c7775791cb86d9b25e7bbb6ed240d"
+        },
+        {
+          "path": "tests/compile.test.mjs",
+          "sha256": "5d1e926b77349ec44234679b04b122a9b5955b75c46f411ea30c6f5fe67ba23e"
+        },
+        {
+          "path": "tests/fixtures/excel-contract.json",
+          "sha256": "a13f149046b04060292eba691fb87a3b164645387afe705e232f64b8cdbaf6f2"
+        },
+        {
+          "path": "tests/fixtures/mindmap.json",
+          "sha256": "6c1d0a530e901ff9686594b37b947cae760f53223711efe7f8d1868e0f1521d7"
+        }
+      ],
+      "digest": "5fcd1dea65477decf50a89c5746cce617a0d5ba9dd5ae3bc5c2ed6fcc56fdf42"
+    }
+  ]
+}
