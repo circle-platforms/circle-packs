@@ -1,0 +1,12 @@
+{
+  "schema": "circle-packs/resource/1",
+  "id": "case-gateway",
+  "kind": "connector-instance",
+  "role": "execution-resource",
+  "protocol": "mcp",
+  "writes": ["device-config"],
+  "credentialMode": "static-secret",
+  "runtimeProfileRef": "profiles/case-gateway.json",
+  "executionIsChange": false,
+  "notes": "测试床网关;实验床默认不声明 executionIsChange,生产资源登记时声明 true。端点、CA、超时在库外 profile,凭据在保险箱,运行时由 worker 注入。"
+}
