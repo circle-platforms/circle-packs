@@ -154,7 +154,7 @@
       "kind": "product-line",
       "root": "products/apv",
       "manifestPath": "products/apv/product-line.json",
-      "version": "1.0.1",
+      "version": "1.1.0",
       "files": [
         {
           "path": "README.md",
@@ -178,7 +178,7 @@
         },
         {
           "path": "product-line.json",
-          "sha256": "a68e61f337f1ed886d96a06d78009554eed60fe2d156b6228b27b0cf389a6bcc"
+          "sha256": "0b54b840141c0c9b48a6c049cc84a66217e37aae2bb269e5fdb38b23dd092fd1"
         },
         {
           "path": "resources/case-gateway.json",
@@ -237,7 +237,7 @@
           "sha256": "f939fcd8a00d2583780a629bca827f774332423db8072711d1b151eb8faa25d0"
         }
       ],
-      "digest": "bac5f2e0066aee958626e6d5cb3f4125923ba3e1ba92364a55b6f606aabf457b"
+      "digest": "5e34132f4e6943b90e47b583f3161c47a894d8659c74ec4ac07ef5cf6ebd57cb"
     }
   ]
 }
