@@ -19,7 +19,9 @@ Work on a branch per pack, with synthetic samples only. Pushes, releases and ins
 
 Originals (command trees, function contracts, bed configuration, mind maps, device returns) never enter Git; they are uploaded to the hub at run time and read only after approval. Tests prove script behaviour on synthetic samples, never a result on a real product or device.
 
-Never commit credentials, internal addresses (use 192.0.2.0/24 in samples), real business data or local absolute paths. Inspect status and diffs and preserve other people's work. Stage explicit paths; never use `git add -A`, `git add .` or `git commit -a`. Commit messages are one capitalized imperative English sentence without a prefix or final full stop.
+## Git and commits
+
+Inspect status and diffs and preserve other people's work; use isolated worktrees for parallel work. Stage explicit paths and never use `git add -A`, `git add .` or `git commit -a`. Commit messages are one capitalized imperative English sentence without a prefix or final full stop. Commit and push only within user authorization. Keep credentials, internal addresses and connection strings (samples use 192.0.2.0/24), raw business documents, logs, conversation dumps and local absolute paths out of Git. This section is identical in circle-hub and circle-packs; change it in both.
 
 ## Verification
 
