@@ -203,8 +203,19 @@ export function deriveFacts(file) {
 // Returns {violations, proposals}. violations carry severity 'block'|'warn' and, for the
 // author-verbatim disclosure rule, category 'environment'.
 const LISTENER_RE = /^sdns\s+listener\s+(\S+)/;
-const SLB_VIRTUAL_RE = /^slb\s+virtual\s+\S+\s+"[^"]*"\s+(\S+)/;
-const DIG_TARGET_RE = /(?:dig\s+(?:[^@]*\s)?@|\bcurl\s+(?:-\S+\s+)*)([^\s,;]+)/;
+// the name after the protocol may be quoted (slb virtual http "v1" 172…) or bare
+// (slb virtual https v1 172…); the address follows either way
+const SLB_VIRTUAL_RE = /^slb\s+virtual\s+\S+\s+(?:"[^"]*"|\S+)\s+(\S+)/;
+// dig @X names the server; a curl target is a URL (http://X/…) or host[:port]
+const DIG_AT_RE = /(?:^|\s)dig\s+[^@\n]*?@([^\s,;]+)/;
+const CURL_RE = /\bcurl\s+(?:-\S+\s+)*(?:https?:\/\/)?([^\s,;\/]+)/;
+export function queryTargetOf(command) {
+  const at = DIG_AT_RE.exec(command);
+  if (at) return at[1];
+  const curl = CURL_RE.exec(command);
+  if (curl) return curl[1].replace(/:\d+$/, '');
+  return null;
+}
 const BACKEND_RE = /\b(?:record\s+ip|real|pool)\b/;
 
 export function checkCase(item, facts, sourceText) {
@@ -282,7 +293,7 @@ export function checkCase(item, facts, sourceText) {
   // list; the dispatching host must be paired with the target's subnet.
   for (const { command, client } of commands) {
     if (client === undefined) continue;
-    const target = DIG_TARGET_RE.exec(command)?.[1];
+    const target = queryTargetOf(command);
     if (!target || !parseIp(target)) continue;
     if (!listenerTargets.has(target))
       violations.push({ code: 'query_target_not_listener', severity: 'block', category: categoryOf(target), literal: target, command, detail: '查询目标不是本例已配置的监听地址' });
@@ -323,7 +334,7 @@ export function checkCase(item, facts, sourceText) {
       proposals.push({ autoid: item.autoid, rule: 'listener_not_on_device', from, to });
       for (const { command, client } of commands) {
         if (client === undefined) continue;
-        const target = DIG_TARGET_RE.exec(command)?.[1];
+        const target = queryTargetOf(command);
         if (target && target !== to && parseIp(target))
           proposals.push({ autoid: item.autoid, rule: 'query_target_follows_listener', from: target, to });
       }
@@ -336,3 +347,45 @@ const FORWARD_RE = /\bsdns\s+(?:host\s+name\s+.*forward_only|zone\s+forward\b)/;
 const triggerInSubnet = (facts, cidr) => [...facts.devices.values()]
   .filter((d) => d.type === '路由器' || d.type === '客户端')
   .some((d) => d.addresses.some((a) => a.cidr === cidr || inCidr(a.ip, cidr)));
+
+// Confirmed bindings (batch/bindings.json): each entry replaces a literal in every
+// command of the case — a listener binding and its dig-target companion together.
+export function applyBindings(item, bindings) {
+  const applied = [];
+  const replace = (text) => {
+    let out = text;
+    for (const binding of bindings) {
+      if (!out.includes(binding.from)) continue;
+      out = out.split(binding.from).join(binding.to);
+      if (!applied.some((a) => a.autoid === binding.autoid && a.from === binding.from))
+        applied.push({ autoid: binding.autoid, rule: binding.rule ?? 'binding', from: binding.from, to: binding.to });
+    }
+    return out;
+  };
+  const rebound = structuredClone(item);
+  rebound.init_commands = (rebound.init_commands ?? []).map(replace);
+  for (const block of rebound.blocks ?? []) {
+    if (block.kind === 'CONFIG') block.cmds = (block.cmds ?? []).map(replace);
+    else if (typeof block.cmd === 'string') block.cmd = replace(block.cmd);
+  }
+  return { item: rebound, applied };
+}
+
+// Validate a confirmed bindings list against the batch: every from must appear in its
+// case's commands, and every dig-target companion must point at the same address as a
+// listener binding of the same case (the pair moves together).
+export function validateBindings(bindings, caseOf) {
+  const problems = [];
+  for (const binding of bindings) {
+    const item = caseOf(binding.autoid);
+    if (!item) { problems.push({ autoid: binding.autoid, detail: 'unknown case' }); continue; }
+    const commands = [...(item.init_commands ?? []), ...(item.blocks ?? []).flatMap((b) => (b.kind === 'CONFIG' ? b.cmds ?? [] : typeof b.cmd === 'string' ? [b.cmd] : []))];
+    if (!commands.some((c) => String(c).includes(binding.from)))
+      problems.push({ autoid: binding.autoid, detail: `from ${binding.from} 不在该用例的命令里` });
+  }
+  for (const binding of bindings) {
+    if (binding.rule === 'query_target_follows_listener' && !bindings.some((b) => b.autoid === binding.autoid && b.rule !== 'query_target_follows_listener' && b.to === binding.to))
+      problems.push({ autoid: binding.autoid, detail: `dig 目标绑定 ${binding.from}→${binding.to} 没有同址的 listener 绑定` });
+  }
+  return problems;
+}

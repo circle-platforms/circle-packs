@@ -82,7 +82,7 @@
         },
         {
           "path": "scripts/bed-facts.mjs",
-          "sha256": "f6f3757e4ec670e6117aaca503b0f6c776b30fae8a2029f780b940803e181b58"
+          "sha256": "185e9050a5f4dcbecd0335859f937548f2d9e4ab457e2af930c07b2b401b9120"
         },
         {
           "path": "scripts/check-recompose.mjs",
@@ -90,11 +90,11 @@
         },
         {
           "path": "scripts/emit.mjs",
-          "sha256": "b77c4b2288200fe68a440852ce9c4bd8e28630b07c8a1a46f7c0508303c1943b"
+          "sha256": "fe99147e5374cc9991bafbde434f6e9979bc1ee791ab6ae7b4a45de8fa02ebf4"
         },
         {
           "path": "scripts/gate.mjs",
-          "sha256": "967929f324361069d650f2405af03aeb2bbcf1c97d8258356cabd88ddfbefd44"
+          "sha256": "2acf8c07e59fbc42282939c3cecf61440a5471608d27d5cf4948d9f446328d5d"
         },
         {
           "path": "scripts/lib.mjs",
@@ -114,11 +114,11 @@
         },
         {
           "path": "tests/bed-facts.test.mjs",
-          "sha256": "9d10505c361ecd40dce38bbc92096058de1572f13936f2f462e9ed32e24f1b29"
+          "sha256": "6a1f081c6f2edd507cd391fcb48d051b7919920a9b137ddc07d76f5be483b648"
         },
         {
           "path": "tests/compile.test.mjs",
-          "sha256": "39351d7345a6ea290f661a909f1bacefb18c9f31a76033747ce861735d4389eb"
+          "sha256": "17518ef2a4766e22f2007d9aa868a2d4bb4dd95f6f07fec251e7377e86f21483"
         },
         {
           "path": "tests/fixtures/bed-facts.json",
@@ -133,7 +133,7 @@
           "sha256": "6c1d0a530e901ff9686594b37b947cae760f53223711efe7f8d1868e0f1521d7"
         }
       ],
-      "digest": "fd4f65a5340fe3a1a2377bc8e0ca2ded4d6597be994ec611b7b73829a8e9ad6f"
+      "digest": "432c23ecd03be53d6e93660be0cc58f15a88f479c534f2171f9a3f32f3e0e492"
     },
     {
       "id": "apv-product-qa",

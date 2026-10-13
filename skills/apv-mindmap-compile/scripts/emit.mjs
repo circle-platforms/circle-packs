@@ -7,7 +7,11 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { SENTINEL_AUTOID, readJson, sha256, writeBytes, writeJson } from './lib.mjs';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+const sha256File = (p) => createHash('sha256').update(readFileSync(p)).digest('hex');
 import { readXlsx, writeXlsx } from './xlsx.mjs';
+import { applyBindings } from './bed-facts.mjs';
 
 export const HEADERS = ['自动化ID', '优先级', '语句类型', '描述', '测试对象', '方法', '数据', '临时保存期望结果', '输入变量'];
 export const SHEET = '执行';
@@ -99,32 +103,6 @@ export function readBack(bytes) {
   return { sheet, header_row: header + 1, autoids, check_point_count: checkPoints };
 }
 
-// Confirmed bindings (batch/bindings.json, human-copied from bindings.proposed.json):
-// each entry replaces a listener literal and the dig target together, in every command of
-// the case, before rows are written. The gate must already be green with the bindings
-// applied — emit records what it replaced into the report and refuses a binding whose
-// literal does not appear in the case.
-function applyBindings(item, bindings) {
-  const applied = [];
-  const replace = (text) => {
-    let out = text;
-    for (const binding of bindings) {
-      if (!out.includes(binding.from)) continue;
-      out = out.split(binding.from).join(binding.to);
-      if (!applied.some((a) => a.autoid === binding.autoid && a.from === binding.from))
-        applied.push({ autoid: binding.autoid, rule: binding.rule ?? 'binding', from: binding.from, to: binding.to });
-    }
-    return out;
-  };
-  const rebound = structuredClone(item);
-  rebound.init_commands = (rebound.init_commands ?? []).map(replace);
-  for (const block of rebound.blocks ?? []) {
-    if (block.kind === 'CONFIG') block.cmds = (block.cmds ?? []).map(replace);
-    else if (typeof block.cmd === 'string') block.cmd = replace(block.cmd);
-  }
-  return { item: rebound, applied };
-}
-
 export function emitBatch(batch, author = 'circle', contractPath = null) {
   const manifest = readJson(join(batch, 'manifest.json'));
   const machine = readJson(join(batch, 'machine_mindmap.json'));
@@ -132,13 +110,23 @@ export function emitBatch(batch, author = 'circle', contractPath = null) {
   if (gate.source_sha256 !== manifest.source_sha256) throw new Error('gate_report.json is for another mindmap; run gate.mjs again');
   if (!contractPath) throw new Error('emit needs --contract <the registered Excel function contract copy>: the workbook must carry the IST_EXCEL_CONTRACT identity marker');
   const identity = contractIdentity(readJson(contractPath));
+  // Bindings apply only when the gate report itself ran with this exact bindings.json
+  // (sha match) and gated the case; anything else refuses the workbook.
   const bindingsPath = join(batch, 'bindings.json');
   const bindings = existsSync(bindingsPath) ? readJson(bindingsPath) : [];
   if (bindings.length) {
-    const gated = Object.values(gate.cases).filter((r) => r.ok);
-    if (!gated.length) throw new Error('bindings.json present but the gate report is not green; re-run gate with the bindings applied');
+    const applied = gate.applied_bindings;
+    if (!applied) throw new Error('bindings.json present but the gate report did not run with bindings; re-run gate');
+    const currentSha = sha256File(bindingsPath);
+    if (applied.sha256 !== currentSha) throw new Error(`bindings.json changed after the gate ran (gate ${applied.sha256.slice(0, 12)}…, now ${currentSha.slice(0, 12)}…); re-run gate`);
   }
-  const bindingsFor = (autoid) => bindings.filter((b) => b.autoid === autoid);
+  const bindingsFor = (autoid) => {
+    const status = gate.cases[autoid]?.status;
+    if (!status) return [];
+    if (status !== 'gated')
+      throw new Error(`case ${autoid} is ${status} in the gate report; a bound case must be gated before its workbook is written`);
+    return bindings.filter((b) => b.autoid === autoid);
+  };
   const buildLine = machine.display_build ?? machine.build;
   const delivered = [];
   const appliedBindings = [];

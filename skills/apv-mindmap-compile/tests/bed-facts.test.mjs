@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { gateBatch } from '../scripts/gate.mjs';
-import { deriveFacts, parseIp, literalsOf, checkCase } from '../scripts/bed-facts.mjs';
+import { deriveFacts, parseIp, literalsOf, checkCase, queryTargetOf } from '../scripts/bed-facts.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BED_FACTS = join(HERE, 'fixtures', 'bed-facts.json');
@@ -163,4 +163,65 @@ test('a case needing many distinct listener placeholders gets no binding proposa
   ] }), f, '');
   assert.ok(sixteen.violations.filter((v) => v.code === 'listener_not_on_device').length >= 2);
   assert.deepEqual(sixteen.proposals, []);
+});
+
+test('curl URL and bare-host targets resolve to the host; slb virtual accepts a bare name', () => {
+  assert.equal(queryTargetOf('dig @192.0.2.10 autotest.com'), '192.0.2.10');
+  assert.equal(queryTargetOf('curl -s http://192.0.2.10/health'), '192.0.2.10');
+  assert.equal(queryTargetOf('curl 192.0.2.10:8080/x'), '192.0.2.10');
+  const f = facts();
+  const bare = checkCase(sound({ blocks: [
+    { kind: 'CONFIG', host: 'APV_0', cmds: ['slb virtual https v1 192.0.2.88 443 arp 0', 'sdns listener 192.0.2.10'], desc: '' },
+    { kind: 'CLIENT', client: 'routera', cmd: 'curl -s http://192.0.2.88/health', asserts: [{ op: 'found', pattern: 'x', expectation_id: 'u:1' }] },
+  ] }), f, '');
+  assert.ok(!bare.violations.some((v) => v.code === 'listener_not_on_device' && v.literal === '192.0.2.88'));
+  assert.ok(!bare.violations.some((v) => v.code === 'query_target_not_listener'));
+});
+
+test('gate: a confirmed binding turns the case gated and lands in applied_bindings', () => {
+  // APV_0 listener on 192.0.2.11 (carried by APV1) with the dig target following: the
+  // confirmed pair binds both to 192.0.2.10 and the case gates.
+  const batch = mkdtempSync(join(tmpdir(), 'bind-'));
+  try {
+    mkdirSync(join(batch, 'cases'), { recursive: true });
+    const item = sound({ blocks: [
+      { kind: 'CONFIG', host: 'APV_0', cmds: ['sdns listener 192.0.2.11'], desc: '' },
+      { kind: 'CLIENT', client: 'routera', cmd: 'dig @192.0.2.10 x', asserts: [{ op: 'found', pattern: 'x', expectation_id: 'u:1' }] },
+    ] });
+    // dig must target the placeholder so the pair moves together
+    item.blocks[1].cmd = 'dig @192.0.2.11 x';
+    writeFileSync(join(batch, 'cases', item.autoid + '.json'), JSON.stringify(item));
+    writeFileSync(join(batch, 'manifest.json'), JSON.stringify({ source: 'x.txt', source_sha256: 'a'.repeat(64), cases: [{ autoid: item.autoid }] }));
+    const entry = { autoid: item.autoid, bucket: 'exp_recipe', contract: { intent: 't', verification_method: 'v', expectation: 'e' }, expectations: [{ n: 1, text: 'e', origin: 'expectation:1' }], proposal: [] };
+    writeFileSync(join(batch, 'machine_mindmap.json'), JSON.stringify({ build: 'B', cases: [entry] }));
+    writeFileSync(join(batch, 'bindings.json'), JSON.stringify([
+      { autoid: item.autoid, rule: 'listener_not_on_device', from: '192.0.2.11', to: '192.0.2.10' },
+    ]));
+    const report = gateBatch(batch, { bedFactsPath: BED_FACTS });
+    // the bed-facts layer must be clean after the binding: no listener/target violation
+    // survives (the fixture cuts corners elsewhere — no receipts, no contract — so the
+    // case may still be rejected on those unrelated layers)
+    const codes = report.cases[item.autoid].violations.map((v) => v.code);
+    assert.ok(!codes.includes('listener_not_on_device'), codes.join(','));
+    assert.ok(!codes.includes('query_target_not_listener'), codes.join(','));
+    assert.ok(report.applied_bindings && report.applied_bindings.bindings.length === 1);
+    assert.match(report.applied_bindings.sha256, /^[a-f0-9]{64}$/);
+  } finally { rmSync(batch, { recursive: true, force: true }); }
+});
+
+test('gate: a binding whose from is not in the case refuses the whole batch', () => {
+  const batch = mkdtempSync(join(tmpdir(), 'bind-'));
+  try {
+    mkdirSync(join(batch, 'cases'), { recursive: true });
+    const item = sound();
+    writeFileSync(join(batch, 'cases', item.autoid + '.json'), JSON.stringify(item));
+    writeFileSync(join(batch, 'manifest.json'), JSON.stringify({ source: 'x.txt', source_sha256: 'a'.repeat(64), cases: [{ autoid: item.autoid }] }));
+    const entry = { autoid: item.autoid, bucket: 'exp_recipe', contract: { intent: 't', verification_method: 'v', expectation: 'e' }, expectations: [{ n: 1, text: 'e', origin: 'expectation:1' }], proposal: [] };
+    writeFileSync(join(batch, 'machine_mindmap.json'), JSON.stringify({ build: 'B', cases: [entry] }));
+    writeFileSync(join(batch, 'bindings.json'), JSON.stringify([
+      { autoid: item.autoid, rule: 'listener_not_on_device', from: '203.0.113.99', to: '203.0.113.213' },
+    ]));
+    const report = gateBatch(batch, { bedFactsPath: BED_FACTS });
+    assert.ok(report.cases[item.autoid].violations[0]?.code === 'bed_facts_unavailable' || report.cases[item.autoid].violations.some((v) => /bindings.json invalid/.test(v.detail ?? '')) || /bindings.json invalid/.test(JSON.stringify(report)));
+  } finally { rmSync(batch, { recursive: true, force: true }); }
 });

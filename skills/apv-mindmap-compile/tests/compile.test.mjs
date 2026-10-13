@@ -307,3 +307,21 @@ test('a client row is checked against the execution contract: an enabled test_en
   assert.ok(refused.violations.some((v) => v.code === 'client_not_in_contract'));
   assert.ok(run(item, null).violations.some((v) => v.code === 'client_not_checked'), 'no contract, no check');
 });
+
+test('emit refuses a workbook when bindings.json changed after the gate ran (sha mismatch)', (t) => {
+  const batch = batchDir(t);
+  const manifest = prep(fixture, 'mindmap.json');
+  writeJson(join(batch, 'manifest.json'), manifest);
+  writeJson(join(batch, 'machine_mindmap.json'), machineFor(manifest));
+  mkdirSync(join(batch, 'cases'), { recursive: true });
+  const written = casesFor(manifest);
+  for (const [id, item] of Object.entries(written)) writeJson(join(batch, 'cases', `${id}.json`), item);
+  saveChecks(batch, written);
+  writeJson(join(batch, 'contract.json'), CONTRACT);
+  const gate = gateBatch(batch, { bedFactsPath: BED_FACTS });
+  // forge an applied_bindings entry from a different sha: emit must refuse
+  gate.applied_bindings = { sha256: 'f'.repeat(64), bindings: [{ autoid: '100000000000000001', rule: 'listener_not_on_device', from: '192.0.2.77', to: '192.0.2.10' }] };
+  writeJson(join(batch, 'gate_report.json'), gate);
+  writeJson(join(batch, 'bindings.json'), [{ autoid: '100000000000000001', rule: 'listener_not_on_device', from: '192.0.2.78', to: '192.0.2.10' }]);
+  assert.throws(() => emitBatch(batch, 'tester', join(batch, 'contract.json')), /changed after the gate ran/);
+});

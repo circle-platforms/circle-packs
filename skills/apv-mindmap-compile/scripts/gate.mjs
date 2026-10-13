@@ -9,7 +9,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readJson, writeJson } from './lib.mjs';
 import { expectationIds } from './check-recompose.mjs';
-import { loadBedFacts, deriveFacts, checkCase } from './bed-facts.mjs';
+import { loadBedFacts, deriveFacts, checkCase, applyBindings, validateBindings } from './bed-facts.mjs';
 
 const KEYS = ['autoid', 'blocks', 'build', 'command_receipts', 'description', 'escape_hatches', 'expectation_binding', 'init_commands', 'schema'];
 const HOSTS = new Set(['APV_0', 'APV_1']);
@@ -228,6 +228,19 @@ export function gateBatch(batch, { contract = null, bedFactsPath = null } = {}) 
     };
   };
   if (!facts) return refuseAll(bedFactsPath === null ? '--bed-facts is required' : `bed facts ${bedFactsPath}: ${bed.reason}`);
+  // Confirmed bindings: validated against the batch, then applied per case before the
+  // checks; a binding whose from is missing or whose pair is broken is a hard refusal.
+  const bindingsPath = join(batch, 'bindings.json');
+  const bindings = existsSync(bindingsPath) ? readJson(bindingsPath) : [];
+  const bindingsSha256 = bindings.length ? createHash('sha256').update(readFileSync(bindingsPath)).digest('hex') : null;
+  const caseOf = (autoid) => {
+    const path = join(batch, 'cases', `${autoid}.json`);
+    return existsSync(path) ? readJson(path) : null;
+  };
+  const bindingProblems = bindings.length ? validateBindings(bindings, caseOf) : [];
+  const bindingProblemsFor = (autoid) => bindingProblems.filter((p) => p.autoid === autoid);
+  if (bindingProblems.length)
+    return refuseAll(`bindings.json invalid: ${bindingProblems.map((p) => `${p.autoid}: ${p.detail}`).join('; ')}`);
   // Author-verbatim disclosure needs the source text the batch was compiled from.
   const sourcePath = join(batch, '..', manifest.source);
   const sourceText = existsSync(sourcePath) ? readFileSync(sourcePath, 'utf8') : '';
@@ -250,8 +263,14 @@ export function gateBatch(batch, { contract = null, bedFactsPath = null } = {}) 
       const result = gateCase(item, entry, manifestCase, machine.build, destructive, rawCheck, clients);
       result.violations.push(...checkProblems);
       if (checkProblems.length) result.ok = false;
-      // Bed-facts mechanical checks a–f; binding proposals are recorded, never applied.
-      const { violations: bedViolations, proposals: caseProposals } = checkCase(item, facts, sourceText);
+      // Bed-facts mechanical checks a–g; binding proposals are recorded, never applied
+      // here. Confirmed bindings (batch/bindings.json) are validated and applied before
+      // the checks, so a bound case is judged on the bound data.
+      let effectiveItem = item;
+      const caseBindings = bindings.filter((b) => b.autoid === manifestCase.autoid);
+      if (caseBindings.length && !bindingProblemsFor(manifestCase.autoid).length)
+        effectiveItem = applyBindings(item, caseBindings).item;
+      const { violations: bedViolations, proposals: caseProposals } = checkCase(effectiveItem, facts, sourceText);
       const blocks = bedViolations.filter((v) => v.severity === 'block');
       const warns = bedViolations.filter((v) => v.severity === 'warn');
       result.violations.push(...blocks.map((v) => ({ code: v.code, detail: `${v.detail}${v.suggestion ? `;建议绑定 ${v.suggestion}` : ''}${v.pairedHosts ? `;同段触发机: ${v.pairedHosts.join(',')}` : ''}`, literal: v.literal, command: v.command })));
@@ -276,6 +295,7 @@ export function gateBatch(batch, { contract = null, bedFactsPath = null } = {}) 
     display_build: machine.display_build ?? machine.build,
     contract_sha256: contract ? createHash('sha256').update(readFileSync(contract)).digest('hex') : null,
     bed_facts: bedFactsPath,
+    ...(bindings.length ? { applied_bindings: { sha256: bindingsSha256, bindings } } : {}),
     cases: results,
   };
   writeJson(join(batch, 'bindings.proposed.json'), proposals);
