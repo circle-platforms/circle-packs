@@ -12,7 +12,7 @@
 |---|---|---|
 | [skills/apv-mindmap-compile](skills/apv-mindmap-compile/SKILL.md) | 把 APV 脑图编译成可运行的执行工作簿：重组意图、按绑定构建核对每条设备命令、出九列单表。版本 0.2.7 | 已在 main |
 | [products/apv](products/apv/README.md) | APV 产品线包：`product-line.json`、`tools/`、`hooks/`、`resources/`、`sources/`、`flows/`、README 里的适配单、18 个合成测试。版本 1.0.0 | 已在 main |
-| skills/apv-case-review | 0.1.x | 评审中 |
+| [skills/apv-case-review](skills/apv-case-review/SKILL.md) | 对编译批次按绑定构建做评审：结构、命令树、函数契约核对是脚本，覆盖与风险是模型判断；报告带 evidenceId，发现以候选声明提交。版本 0.1.3 | 已在 main |
 
 ## 不放什么
 

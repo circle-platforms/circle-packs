@@ -12,7 +12,7 @@ The layout and the adaptation sheet every pack fills in are the [product-line pa
 |---|---|---|
 | [skills/apv-mindmap-compile](skills/apv-mindmap-compile/SKILL.md) | Compiles an APV mind map into a workbook that can be run: recomposes the intent, checks each device command against the bound build, and emits a nine-column sheet. Version 0.2.7 | on main |
 | [products/apv](products/apv/README.md) | APV product-line pack: `product-line.json`, `tools/`, `hooks/`, `resources/`, `sources/`, `flows/`, the adaptation sheet in its README, and 18 synthetic tests. Version 1.0.0 | on main |
-| skills/apv-case-review | 0.1.x | under review |
+| [skills/apv-case-review](skills/apv-case-review/SKILL.md) | Reviews a compiled APV batch against its bound build: structure, command-tree and function-contract checks are scripts, coverage and risk are model judgement; the report carries evidence ids and findings are submitted as candidate claims. Version 0.1.3 | on main |
 
 ## What stays out
 
