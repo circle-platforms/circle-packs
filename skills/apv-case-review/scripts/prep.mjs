@@ -1,13 +1,10 @@
 #!/usr/bin/env node
 // Step 1: read a compiled batch and check the required structure.
 //   node prep.mjs <batch folder>
-// Reads cases/*.json (or a case.xlsx projected to the same shape) and writes
-// out/review_structure.json. Pure structure checks; no verdict on content.
-import { readFileSync, readdirSync, existsSync, writeFileSync, mkdirSync } from 'node:fs';
+// Reads cases/*.json and writes review_structure.json into the batch folder.
+// Pure structure checks; no verdict on content.
+import { readFileSync, readdirSync, existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { createHash } from 'node:crypto';
-
-const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 export function readBatch(folder) {
   const casesDir = join(folder, 'cases');
@@ -25,7 +22,7 @@ export function readBatch(folder) {
 export function checkStructure(item) {
   const violations = [];
   const flag = (code, detail) => violations.push({ code, detail });
-  if (!item || typeof item !== 'object') return [{ code: 'not_an_object', detail: '' }];
+  if (!item || typeof item !== 'object') return { violations: [{ code: 'not_an_object', detail: '' }], deviceCommands: [], clients: [] };
   if (typeof item.autoid !== 'string' || !/^\d{18}$/.test(item.autoid)) flag('autoid_invalid', String(item.autoid));
   const blocks = Array.isArray(item.blocks) ? item.blocks : [];
   if (!blocks.length) flag('blocks_empty', 'a case needs at least one block');
@@ -59,12 +56,12 @@ export function checkStructure(item) {
 export function prepBatch(folder) {
   const cases = readBatch(folder);
   const results = {};
-  for (const item of cases) {
+  cases.forEach((item, index) => {
+    const key = typeof item?.autoid === 'string' && item.autoid ? item.autoid : `case#${index + 1}`;
     const { violations } = checkStructure(item);
-    results[item.autoid ?? String(results)] = { autoid: item.autoid, ok: violations.length === 0, violations };
-  }
+    results[key] = { autoid: item?.autoid ?? null, ok: violations.length === 0, violations };
+  });
   const report = { schema: 'apv.case-review.structure', folder, case_count: cases.length, fail_count: Object.values(results).filter((r) => !r.ok).length, cases: results };
-  mkdirSync(join(folder), { recursive: true });
   writeFileSync(join(folder, 'review_structure.json'), JSON.stringify(report, null, 2) + '\n');
   return report;
 }

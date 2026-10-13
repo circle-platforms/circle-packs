@@ -10,6 +10,9 @@ import { createHash } from 'node:crypto';
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const readJson = (path) => JSON.parse(readFileSync(path, 'utf8'));
 
+// Model judgement findings use exactly these codes; anything else is a mistake, not a finding.
+export const FINDING_CODES = ['coverage_gap', 'expectation_unverifiable', 'risk_dataplane', 'risk_order_dependency', 'cleanup_missing', 'related_defect'];
+
 export function mergeReport(folder) {
   const structure = existsSync(join(folder, 'review_structure.json')) ? readJson(join(folder, 'review_structure.json')) : null;
   const commands = existsSync(join(folder, 'review_commands.json')) ? readJson(join(folder, 'review_commands.json')) : null;
@@ -33,7 +36,9 @@ export function mergeReport(folder) {
     }
   }
   for (const finding of findings.findings ?? []) {
-    items.push({ origin: finding.origin === 'script' ? 'script' : 'model', autoid: finding.autoid ?? null, code: finding.code ?? 'finding', summary: finding.summary ?? '', facts: finding.facts ?? {}, evidenceIds: finding.evidenceIds ?? [] });
+    const code = finding.code ?? '';
+    if (!FINDING_CODES.includes(code)) throw new Error(`review_findings.json: code ${JSON.stringify(code)} is outside ${FINDING_CODES.join(' / ')}`);
+    items.push({ origin: finding.origin === 'script' ? 'script' : 'model', autoid: finding.autoid ?? null, code, summary: finding.summary ?? '', facts: finding.facts ?? {}, evidenceIds: finding.evidenceIds ?? [] });
   }
 
   const report = {

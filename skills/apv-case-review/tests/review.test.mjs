@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { checkStructure, prepBatch } from '../scripts/prep.mjs';
+import { collectBatch, applyCheck, contractClients } from '../scripts/check.mjs';
 import { mergeReport } from '../scripts/report.mjs';
 
 const good = {
@@ -24,10 +25,39 @@ const good = {
 
 function batch(t, items) {
   const folder = mkdtempSync(join(tmpdir(), 'review-'));
-  t.after(() => {});
+  t.after(() => rmSync(folder, { recursive: true, force: true }));
   mkdirSync(join(folder, 'cases'), { recursive: true });
   for (const item of items) writeFileSync(join(folder, 'cases', `${item.autoid}.json`), JSON.stringify(item));
   return folder;
+}
+
+const CONTRACT_PATH = (() => {
+  const path = join(mkdtempSync(join(tmpdir(), 'contract-')), 'contract.json');
+  writeFileSync(path, JSON.stringify({
+    schema: 'ist.excel.function-contract',
+    complete: true,
+    entries: [
+      { e: 'test_env', f: 'routera', status: 'enabled' },
+      { e: 'test_env', f: 'console', status: 'disabled' },
+    ],
+  }));
+  return path;
+})();
+
+function savedCheck(t, commands) {
+  const folder = mkdtempSync(join(tmpdir(), 'saved-'));
+  t.after(() => rmSync(folder, { recursive: true, force: true }));
+  const path = join(folder, 'check.json');
+  writeFileSync(path, JSON.stringify({
+    tool: 'buildsite.command_check',
+    args: {},
+    at: '2026-10-13T00:00:00.000Z',
+    response: {
+      result: { build: 'Rel_X_1', commands: commands.map((c) => ({ command: c.command, status: c.status, head: c.head ?? null, violations: c.violations ?? [] })) },
+      evidence: [{ evidenceId: 'evd_check' }],
+    },
+  }));
+  return path;
 }
 
 test('structure: a sound case passes; empty blocks, no checkpoint and long command fail', () => {
@@ -42,7 +72,7 @@ test('structure: a sound case passes; empty blocks, no checkpoint and long comma
   assert.ok(checkStructure(badId).violations.some((v) => v.code === 'autoid_invalid'));
 });
 
-test('prepBatch writes review_structure.json with per-case verdicts', (t) => {
+test('prepBatch writes review_structure.json with per-case verdicts and case# keys for missing autoids', (t) => {
   const folder = batch(t, [good, { ...good, autoid: '100000000000000002', blocks: [] }]);
   const report = prepBatch(folder);
   assert.equal(report.case_count, 2);
@@ -53,7 +83,39 @@ test('prepBatch writes review_structure.json with per-case verdicts', (t) => {
   assert.equal(written.case_count, 2);
 });
 
-test('mergeReport merges script and model findings and marks origin', (t) => {
+test('collectBatch dedupes device commands with their autoids and lists clients', (t) => {
+  const folder = batch(t, [good, { ...good, autoid: '100000000000000002' }]);
+  const collected = collectBatch(folder);
+  assert.equal(collected.commands.length, 3); // sdns on, sdns listener, show sdns listener
+  assert.deepEqual(collected.commands.find((c) => c.command === 'sdns on').autoids.sort(), ['100000000000000001', '100000000000000002']);
+  assert.deepEqual(collected.clients, [{ client: 'routera', autoids: ['100000000000000001', '100000000000000002'] }]);
+});
+
+test('applyCheck takes verdicts from the hub-saved return and checks clients against the contract', (t) => {
+  const folder = batch(t, [good]);
+  const check = savedCheck(t, [
+    { command: 'sdns on', status: 'hit' },
+    { command: 'sdns listener 192.0.2.70', status: 'hit' },
+    { command: 'show sdns listener', status: 'missing', violations: [{ code: 'HEAD_MISSING' }] },
+  ]);
+  const report = applyCheck(folder, check, CONTRACT_PATH);
+  assert.equal(report.build, 'Rel_X_1');
+  assert.equal(report.commands.find((c) => c.command === 'show sdns listener').status, 'missing');
+  assert.equal(report.commands.find((c) => c.command === 'sdns on').evidenceId, 'evd_check');
+  assert.equal(report.clients[0].status, 'enabled');
+  const noContract = applyCheck(folder, check, null);
+  assert.equal(noContract.clients[0].status, 'not_checked');
+  const written = JSON.parse(readFileSync(join(folder, 'review_commands.json'), 'utf8'));
+  assert.equal(written.commands.length, 3);
+});
+
+test('contractClients reads only enabled test_env entries', () => {
+  const clients = contractClients(CONTRACT_PATH);
+  assert.ok(clients.has('routera'));
+  assert.ok(!clients.has('console'));
+});
+
+test('mergeReport merges script and model findings, marks origin and rejects unknown finding codes', (t) => {
   const folder = batch(t, [good]);
   prepBatch(folder);
   writeFileSync(join(folder, 'review_commands.json'), JSON.stringify({
@@ -78,4 +140,7 @@ test('mergeReport merges script and model findings and marks origin', (t) => {
   assert.equal(modelItem.code, 'coverage_gap');
   assert.deepEqual(modelItem.evidenceIds, ['evd_3']);
   assert.ok(readFileSync(join(folder, 'review_report.md'), 'utf8').includes('coverage_gap'));
+
+  writeFileSync(join(folder, 'review_findings.json'), JSON.stringify({ findings: [{ origin: 'model', code: 'not_a_code', summary: 'x' }] }));
+  assert.throws(() => mergeReport(folder), /outside/);
 });
