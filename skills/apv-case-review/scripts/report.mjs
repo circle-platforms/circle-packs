@@ -3,7 +3,8 @@
 //   node report.mjs <batch folder>
 // Reads review_structure.json, review_commands.json and review_findings.json (the model's
 // judgement findings), writes review_report.json, review_report.md and review_claims.json
-// (the knowledge.claim_submit calls, ready to submit verbatim).
+// (the knowledge.claim_submit calls, ready to submit verbatim; no absolute path ever
+// enters a claim).
 import { readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -18,12 +19,13 @@ export function mergeReport(folder) {
   const structure = existsSync(join(folder, 'review_structure.json')) ? readJson(join(folder, 'review_structure.json')) : null;
   const commands = existsSync(join(folder, 'review_commands.json')) ? readJson(join(folder, 'review_commands.json')) : null;
   const findings = existsSync(join(folder, 'review_findings.json')) ? readJson(join(folder, 'review_findings.json')) : { findings: [] };
+  const boundBuild = commands?.build ?? 'unbound';
 
   const items = [];
   if (structure) {
     for (const [autoid, result] of Object.entries(structure.cases)) {
       for (const violation of result.violations)
-        items.push({ origin: 'script', autoid, code: violation.code, summary: violation.detail, facts: { autoid, code: violation.code }, evidenceIds: [] });
+        items.push({ origin: 'script', autoid: result.autoid ?? (autoid.startsWith('unreadable:') || autoid.startsWith('case#') ? null : autoid), code: violation.code, summary: violation.detail, facts: { key: autoid, code: violation.code }, evidenceIds: [] });
     }
   }
   if (commands) {
@@ -31,15 +33,15 @@ export function mergeReport(folder) {
       items.push({ origin: 'script', autoid: null, code: problem.code, summary: problem.detail, facts: problem, evidenceIds: [] });
     for (const entry of commands.commands ?? []) {
       const autoids = Array.isArray(entry.autoids) && entry.autoids.length ? entry.autoids : [entry.autoid ?? null];
-      if (entry.status === 'missing')
-        for (const autoid of autoids)
-          items.push({ origin: 'script', autoid, code: 'command_not_in_tree', summary: entry.command, facts: { command: entry.command, violations: entry.violations }, evidenceIds: entry.evidenceId ? [entry.evidenceId] : [] });
-      else if (entry.status === 'not_checked')
-        for (const autoid of autoids)
-          items.push({ origin: 'script', autoid, code: 'command_not_checked', summary: entry.command, facts: { command: entry.command }, evidenceIds: [] });
-      else if (entry.status === 'hit' && Array.isArray(entry.violations) && entry.violations.length)
-        for (const autoid of autoids)
-          items.push({ origin: 'script', autoid, code: 'command_parameter_contract', summary: entry.command, facts: { command: entry.command, violations: entry.violations }, evidenceIds: entry.evidenceId ? [entry.evidenceId] : [] });
+      const push = (code, facts, evidenceIds = []) => {
+        for (const autoid of autoids) items.push({ origin: 'script', autoid, code, summary: entry.command, facts, evidenceIds });
+      };
+      if (entry.status === 'missing') push('command_not_in_tree', { command: entry.command, violations: entry.violations }, entry.evidenceId ? [entry.evidenceId] : []);
+      else if (entry.status === 'not_checked') push('command_not_checked', { command: entry.command });
+      else if (entry.status === 'inconsistent') push('command_check_inconsistent', { command: entry.command, violations: entry.violations, evidenceIds: entry.evidenceIds ?? [] }, entry.evidenceIds ?? []);
+      else if (entry.status === 'hit') {
+        if (Array.isArray(entry.violations) && entry.violations.length) push('command_parameter_contract', { command: entry.command, violations: entry.violations }, entry.evidenceId ? [entry.evidenceId] : []);
+      } else push('command_status_unknown', { command: entry.command, status: entry.status });
     }
     for (const entry of commands.clients ?? []) {
       const autoids = Array.isArray(entry.autoids) && entry.autoids.length ? entry.autoids : [entry.autoid ?? null];
@@ -72,10 +74,9 @@ export function mergeReport(folder) {
   writeFileSync(join(folder, 'review_report.json'), json);
 
   const claims = items.map((item) => ({
-    subject: item.autoid ? `case:${item.autoid}` : `batch:${folder}`,
+    subject: item.autoid ? `case:${item.autoid}` : `build:${boundBuild}`,
     predicate: item.code,
-    value: { summary: item.summary, facts: item.facts, origin: item.origin },
-    ...(item.evidenceIds.length ? { evidenceIds: item.evidenceIds } : {}),
+    value: { summary: item.summary, facts: item.facts, origin: item.origin, evidenceIds: item.evidenceIds },
   }));
   writeFileSync(join(folder, 'review_claims.json'), JSON.stringify(claims, null, 2) + '\n');
 

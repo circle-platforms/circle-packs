@@ -92,15 +92,54 @@ test('prepBatch writes review_context.json from machine_mindmap.json', (t) => {
   const machine = {
     build: 'Rel_X_1',
     display_build: 'X 1.0',
-    cases: [{ autoid: '100000000000000001', bucket: 'exp_recipe', contract: { intent: '意图', verification_method: '看', expectation: '显示' }, expectations: [{ n: 1, text: '显示', origin: 'expectation:1' }], proposal: [] }],
+    cases: [
+      { autoid: '100000000000000001', bucket: 'exp_recipe', contract: { intent: '意图', verification_method: '看', expectation: '显示' }, expectations: [{ n: 1, text: '显示', origin: 'expectation:1' }], proposal: [] },
+      { autoid: '100000000000000002', bucket: 'true_gap', proposal: ['缺步骤'] },
+    ],
   };
   const folder = batch(t, [good], { machine });
   prepBatch(folder);
   const context = JSON.parse(readFileSync(join(folder, 'review_context.json'), 'utf8'));
   assert.equal(context.build, 'Rel_X_1');
   assert.equal(context.display_build, 'X 1.0');
-  assert.deepEqual(context.cases[0].intent, '意图');
-  assert.deepEqual(context.cases[0].expectations, [{ n: 1, text: '显示', origin: 'expectation:1' }]);
+  const first = context.cases[0];
+  assert.equal(first.bucket, 'exp_recipe');
+  assert.deepEqual(first.group_path, ['a']); // from the case file, not the machine entry
+  assert.equal(first.intent, '意图');
+  assert.equal(first.verification, '看');
+  assert.equal(first.expectation, '显示');
+  assert.deepEqual(first.expectations, [{ n: 1, text: '显示', origin: 'expectation:1' }]);
+  const gap = context.cases[1];
+  assert.equal(gap.bucket, 'true_gap');
+  assert.equal(gap.intent, null);
+  assert.deepEqual(gap.proposal, ['缺步骤']);
+});
+
+test('structure: an over-long init command is flagged and never collected', (t) => {
+  assert.ok(checkStructure({ ...good, init_commands: ['x'.repeat(2001)] }).violations.some((v) => v.code === 'command_too_long' && v.detail === 'init_commands'));
+  const folder = batch(t, [{ ...good, init_commands: ['x'.repeat(2001)] }]);
+  assert.ok(collectBatch(folder).commands.every((c) => c.command.length <= 2000));
+});
+
+test('prep: an unreadable case file is case_unreadable; the rest of the batch still reviews', (t) => {
+  const folder = mkdtempSync(join(tmpdir(), 'review-'));
+  t.after(() => rmSync(folder, { recursive: true, force: true }));
+  mkdirSync(join(folder, 'cases'), { recursive: true });
+  writeFileSync(join(folder, 'cases', '0-broken.json'), '{not json');
+  writeFileSync(join(folder, 'cases', '1-good.json'), JSON.stringify(good));
+  const report = prepBatch(folder);
+  assert.equal(report.case_count, 1);
+  assert.ok(report.cases['unreadable:0-broken.json'].violations.some((v) => v.code === 'case_unreadable'));
+  assert.equal(report.cases['100000000000000001'].ok, true);
+});
+
+test('prep: duplicate autoids both stay, keyed autoid#n, both flagged', (t) => {
+  const folder = batch(t, [good, good]);
+  const report = prepBatch(folder);
+  assert.ok(report.cases['100000000000000001']);
+  assert.ok(report.cases['100000000000000001#2']);
+  assert.ok(report.cases['100000000000000001'].violations.some((v) => v.code === 'autoid_duplicate'));
+  assert.ok(report.cases['100000000000000001#2'].violations.some((v) => v.code === 'autoid_duplicate'));
 });
 
 test('collectBatch dedupes device commands (init included) with autoids and lists clients', (t) => {
@@ -134,6 +173,73 @@ test('applyCheck merges several returns, pointers included, per-return evidenceI
   assert.equal(report.commands.find((c) => c.command === 'show sdns listener').evidenceId, 'evd_ptr');
   assert.equal(report.commands.find((c) => c.command === 'sdns on').evidenceId, 'evd_raw');
   assert.ok(report.commands.every((c) => c.status === 'hit'));
+});
+
+test('applyCheck resolves a relative savedAs pointer against the batch folder', (t) => {
+  const folder = batch(t, [good]);
+  const target = join(folder, 'server-returns', 'check.json');
+  mkdirSync(join(folder, 'server-returns'), { recursive: true });
+  writeFileSync(target, JSON.stringify({ response: { result: { build: 'Rel_X_1', commands: [{ command: 'sdns on', status: 'hit' }] }, evidence: [{ evidenceId: 'evd_rel' }] } }));
+  const pointer = join(folder, 'checks', 'ptr.json');
+  mkdirSync(join(folder, 'checks'), { recursive: true });
+  writeFileSync(pointer, JSON.stringify({ savedAs: 'server-returns/check.json' }));
+  const report = applyCheck(folder, [pointer], contractFile(t), 'Rel_X_1');
+  assert.equal(report.commands.find((c) => c.command === 'sdns on').status, 'hit');
+});
+
+test('applyCheck: the same command in several returns — agreeing keeps one verdict, disagreeing is inconsistent', (t) => {
+  const folder = batch(t, [good]);
+  const a = savedCheck(t, [{ command: 'sdns on', status: 'hit' }], { evidenceId: 'evd_a' });
+  const b = savedCheck(t, [{ command: 'sdns on', status: 'hit' }], { evidenceId: 'evd_b' });
+  const agree = applyCheck(folder, [a, b], contractFile(t), 'Rel_X_1');
+  assert.equal(agree.commands.find((c) => c.command === 'sdns on').status, 'hit');
+  const c = savedCheck(t, [{ command: 'sdns on', status: 'missing', violations: [{ code: 'HEAD_MISSING' }] }], { evidenceId: 'evd_c' });
+  const clash = applyCheck(folder, [a, c], contractFile(t), 'Rel_X_1');
+  const entry = clash.commands.find((x) => x.command === 'sdns on');
+  assert.equal(entry.status, 'inconsistent');
+  assert.deepEqual(entry.evidenceIds.sort(), ['evd_a', 'evd_c']);
+  writeFileSync(join(folder, 'review_commands.json'), JSON.stringify(clash));
+  const report = mergeReport(folder);
+  assert.ok(report.items.some((i) => i.code === 'command_check_inconsistent' && i.autoid === good.autoid));
+});
+
+test('applyCheck: a return without result.build is build_unverified, not skipped', (t) => {
+  const folder = batch(t, [good]);
+  const noBuild = savedCheck(t, [{ command: 'sdns on', status: 'hit' }]);
+  const saved = JSON.parse(readFileSync(noBuild, 'utf8'));
+  delete saved.response.result.build;
+  writeFileSync(noBuild, JSON.stringify(saved));
+  const report = applyCheck(folder, [noBuild], contractFile(t), 'Rel_X_1');
+  assert.ok(report.problems.some((p) => p.code === 'build_unverified' && p.detail.includes(noBuild.split('/').pop())));
+});
+
+test('report: an unknown command status surfaces as command_status_unknown', (t) => {
+  const folder = batch(t, [good]);
+  prepBatch(folder);
+  writeFileSync(join(folder, 'review_commands.json'), JSON.stringify({ problems: [], build: 'Rel_X_1', commands: [{ command: 'sdns on', autoids: [good.autoid], status: 'weird', violations: [] }], clients: [] }));
+  const report = mergeReport(folder);
+  const item = report.items.find((i) => i.code === 'command_status_unknown');
+  assert.ok(item);
+  assert.equal(item.facts.status, 'weird');
+});
+
+test('report: claims carry evidenceIds in value and use build:<bound build> for case-less findings', (t) => {
+  const folder = batch(t, [good]);
+  prepBatch(folder);
+  writeFileSync(join(folder, 'review_commands.json'), JSON.stringify({
+    problems: [{ code: 'build_mismatch', detail: 'x' }],
+    build: 'Rel_X_1',
+    commands: [{ command: 'sdns on', autoids: [good.autoid], status: 'missing', violations: [], evidenceId: 'evd_9' }],
+    clients: [],
+  }));
+  const report = mergeReport(folder);
+  const claims = JSON.parse(readFileSync(join(folder, 'review_claims.json'), 'utf8'));
+  const notInTree = claims.find((c) => c.predicate === 'command_not_in_tree');
+  assert.equal(notInTree.subject, `case:${good.autoid}`);
+  assert.deepEqual(notInTree.value.evidenceIds, ['evd_9']);
+  const mismatch = claims.find((c) => c.predicate === 'build_mismatch');
+  assert.equal(mismatch.subject, 'build:Rel_X_1');
+  assert.ok(JSON.stringify(claims).indexOf(folder) === -1);
 });
 
 test('applyCheck: build mismatch against the return and against a case', (t) => {

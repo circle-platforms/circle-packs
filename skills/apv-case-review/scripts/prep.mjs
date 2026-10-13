@@ -6,18 +6,25 @@
 import { readFileSync, readdirSync, existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+// A case file that is not valid JSON is reported as case_unreadable; the rest of the
+// batch still reviews.
 export function readBatch(folder) {
   const casesDir = join(folder, 'cases');
   const cases = [];
+  const unreadable = [];
   if (existsSync(casesDir)) {
     for (const file of readdirSync(casesDir).filter((f) => f.endsWith('.json')).sort()) {
-      const item = JSON.parse(readFileSync(join(casesDir, file), 'utf8'));
-      cases.push(item);
+      try {
+        cases.push(JSON.parse(readFileSync(join(casesDir, file), 'utf8')));
+      } catch {
+        unreadable.push(file);
+      }
     }
   }
-  return cases;
+  return { cases, unreadable };
 }
 
+// The block kinds gate.mjs accepts; anything else is block_unknown — no exceptions.
 const KNOWN_BLOCKS = new Set(['CONFIG', 'OBSERVE_ASSERT', 'CLIENT', 'SLEEP', 'STEP']);
 const checkCommand = (cmd, at, flag, into) => {
   if (typeof cmd !== 'string' || !cmd.trim()) flag('command_empty', at);
@@ -26,7 +33,9 @@ const checkCommand = (cmd, at, flag, into) => {
   else into.push(cmd);
 };
 
-// Deterministic structure checks per case. Each violation is {code, detail}.
+// Deterministic structure checks per case. Each violation is {code, detail}. Only commands
+// that pass the checks enter deviceCommands, so collect hands the hub nothing structurally
+// invalid.
 export function checkStructure(item) {
   const violations = [];
   const flag = (code, detail) => violations.push({ code, detail });
@@ -47,8 +56,7 @@ export function checkStructure(item) {
       if (!Array.isArray(block.cmds) || !block.cmds.length) flag('config_empty', at);
       for (const cmd of block.cmds ?? []) checkCommand(cmd, at, flag, deviceCommands);
     } else if (block.kind === 'OBSERVE_ASSERT') {
-      if (typeof block.cmd !== 'string' || !block.cmd.trim()) flag('observe_cmd_empty', at);
-      else deviceCommands.push(block.cmd);
+      checkCommand(block.cmd, at, flag, deviceCommands);
       checkpoints += (block.asserts ?? []).length;
       if (!(block.asserts ?? []).length) flag('observe_no_assert', at);
     } else if (block.kind === 'CLIENT') {
@@ -61,10 +69,11 @@ export function checkStructure(item) {
   return { violations, deviceCommands, clients };
 }
 
-// The mindmap context the judgement step reads, projected from machine_mindmap.json as the
-// compile skill's references/contract.md writes it: per case the contract triple, the
-// expectations and the gap proposal.
-export function readContext(folder) {
+// The mindmap context the judgement step reads: per case the bucket, the contract triple,
+// the per-step expectations and the gap proposal — projected from machine_mindmap.json as
+// the compile skill's references/contract.md writes it — with group_path taken from the
+// case file's description.group_path (the machine entries carry none).
+export function readContext(folder, batchCases) {
   const path = join(folder, 'machine_mindmap.json');
   if (!existsSync(path)) return null;
   const machine = JSON.parse(readFileSync(path, 'utf8'));
@@ -73,33 +82,43 @@ export function readContext(folder) {
     schema: 'apv.case-review.context',
     build: machine.build ?? null,
     display_build: machine.display_build ?? null,
-    cases: cases.map((entry) => ({
-      autoid: entry.autoid,
-      group_path: entry.group_path ?? entry.description?.group_path ?? null,
-      intent: entry.contract?.intent ?? null,
-      verification: entry.contract?.verification_method ?? null,
-      expectations: (entry.expectations ?? []).map((e) => ({ n: e.n, text: e.text, origin: e.origin })),
-      proposal: entry.proposal ?? [],
-    })),
+    cases: cases.map((entry) => {
+      const batchCase = batchCases.find((c) => c?.autoid === entry.autoid);
+      return {
+        autoid: entry.autoid,
+        bucket: entry.bucket ?? null,
+        group_path: batchCase?.description?.group_path ?? null,
+        intent: entry.contract?.intent ?? null,
+        verification: entry.contract?.verification_method ?? null,
+        expectation: entry.contract?.expectation ?? null,
+        expectations: (entry.expectations ?? []).map((e) => ({ n: e.n, text: e.text, origin: e.origin })),
+        proposal: entry.proposal ?? [],
+      };
+    }),
   };
 }
 
 export function prepBatch(folder) {
-  const cases = readBatch(folder);
-  const results = {};
-  const seen = new Map();
+  const { cases, unreadable } = readBatch(folder);
+  const entries = [];
+  const occurrences = new Map();
   cases.forEach((item, index) => {
-    const key = typeof item?.autoid === 'string' && item.autoid ? item.autoid : `case#${index + 1}`;
+    const autoid = typeof item?.autoid === 'string' && item.autoid ? item.autoid : null;
+    const key = autoid ?? `case#${index + 1}`;
+    const n = (occurrences.get(key) ?? 0) + 1;
+    occurrences.set(key, n);
     const { violations } = checkStructure(item);
-    if (typeof item?.autoid === 'string' && seen.has(item.autoid)) {
-      violations.push({ code: 'autoid_duplicate', detail: `${item.autoid} also at ${seen.get(item.autoid)}` });
-    }
-    seen.set(item?.autoid, key);
-    results[key] = { autoid: item?.autoid ?? null, ok: violations.length === 0, violations };
+    entries.push({ key: n === 1 ? key : `${key}#${n}`, autoid, violations });
   });
+  const results = {};
+  for (const entry of entries) {
+    if ((occurrences.get(entry.autoid ?? '') ?? 0) > 1) entry.violations.push({ code: 'autoid_duplicate', detail: `${entry.autoid} occurs ${occurrences.get(entry.autoid)} times` });
+    results[entry.key] = { autoid: entry.autoid, ok: entry.violations.length === 0, violations: entry.violations };
+  }
+  for (const file of unreadable) results[`unreadable:${file}`] = { autoid: null, ok: false, violations: [{ code: 'case_unreadable', detail: file }] };
   const report = { schema: 'apv.case-review.structure', folder, case_count: cases.length, fail_count: Object.values(results).filter((r) => !r.ok).length, cases: results };
   writeFileSync(join(folder, 'review_structure.json'), JSON.stringify(report, null, 2) + '\n');
-  const context = readContext(folder);
+  const context = readContext(folder, cases);
   if (context) writeFileSync(join(folder, 'review_context.json'), JSON.stringify(context, null, 2) + '\n');
   return report;
 }

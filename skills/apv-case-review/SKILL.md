@@ -27,7 +27,7 @@ node <skill>/scripts/prep.mjs <batch folder>
 
 - 读取批次的每条用例(autoid、描述、init_commands、blocks)与 `machine_mindmap.json`。
 - 必填列与步骤结构:autoid 唯一且 18 位(重复出 `autoid_duplicate`)、init_commands 逐条查空/换行/长度、未知块类型出 `block_unknown`、每条用例至少一个检查点、CONFIG/OBSERVE/CLIENT 块齐全。
-- 产出 `<batch>/review_structure.json`(每例 {autoid, ok, violations})与 `<batch>/review_context.json`(每例 {autoid, group_path, intent, verification, expectations[], proposal[]},形状按编译技能 references/contract.md 投影,供第 3 步对照脑图判覆盖)。
+- 产出 `<batch>/review_structure.json`(每例 {autoid, ok, violations};同一 autoid 出现多次时各占一条键 `autoid#序号` 并都标 `autoid_duplicate`;cases/ 里的坏 JSON 报 `case_unreadable`,不影响其余用例)与 `<batch>/review_context.json`(每例 {autoid, bucket, group_path, intent, verification, expectation, expectations[], proposal[]}:bucket、契约三元组、按步 expectations、proposal 来自 machine_mindmap.json,group_path 来自 cases/*.json 的 description.group_path,形状按编译技能 references/contract.md 投影,供第 3 步对照脑图判覆盖,true_gap 用例只有 bucket 和 proposal)。
 
 ## 2. 命令与契约核对(脚本)
 
@@ -36,8 +36,8 @@ node <skill>/scripts/check.mjs collect <batch>
 node <skill>/scripts/check.mjs apply <batch> --build <绑定构建> --check <hub 落盘返回或指针> [--check …] [--contract <契约>]
 ```
 
-- `collect`:输出去重的设备命令清单(每条带来源 autoids,含 init_commands)与客户端名清单。把设备命令**原样**传给 `srv_buildsite_command_check` 对绑定构建核对;默认路径是评审自己对整批做一次核对,编译留下的 `checks/<autoid>.json` 指针也可以直接传(解析方式照编译技能的 gate.mjs:先按原路径,再相对批次目录)。
-- `apply`:读各份落盘返回(不转抄),合并 result.commands:每条命令 status(hit/missing/not_checked——没被任何返回覆盖的是 not_checked,不等于不在树里)、violations、evidenceId(取自包含它的那份返回);`--build` 与每份返回的 `result.build`、每条用例的 `build` 字段比对,不一致出 `build_mismatch`。客户端名对照 `--contract` 的启用 test_env 方法,不在契约标 `client_not_in_contract`,没给契约标 `client_not_checked`。
+- `collect`:输出去重的设备命令清单(每条带来源 autoids,含 init_commands;结构检查已拒绝的空/换行/超长命令不送核对,它们已在结构发现里)与客户端名清单。把设备命令**原样**传给 `srv_buildsite_command_check` 对绑定构建核对;默认路径是评审自己对整批做一次核对,编译留下的 `checks/<autoid>.json` 指针也可以直接传(解析候选照编译技能的 gate.mjs:先按原路径,再相对指针所在目录的 ../..(工作区根),再相对批次目录)。
+- `apply`:读各份落盘返回(不转抄),合并 result.commands:每条命令 status——hit/missing 按返回;没被任何返回覆盖的是 not_checked(不等于不在树里);多份返回对同一命令结论不一致是 inconsistent,violations 与 evidenceIds 两份都带。evidenceId 取自包含它的那份返回。`--build` 与每份返回的 `result.build`、每条用例的 `build` 字段比对,不一致出 `build_mismatch`;返回缺 `result.build` 记 `build_unverified`(带文件名)。客户端名对照 `--contract` 的启用 test_env 方法,不在契约标 `client_not_in_contract`,没给契约标 `client_not_checked`。报告侧的错误码与之对应:command_not_in_tree / command_not_checked / command_check_inconsistent / command_parameter_contract(hit 带 violations)/ command_status_unknown(返回给了未认识的 status)。
 - 产出 `<batch>/review_commands.json`。
 
 ## 3. 覆盖与风险(判断)
@@ -62,7 +62,7 @@ node <skill>/scripts/report.mjs <batch folder>
 ```
 
 - 合并三类结果,写 `<batch>/review_report.json`、`<batch>/review_report.md` 与 `<batch>/review_claims.json`。每条发现:{origin: script|model, autoid(可空), code, summary, facts, evidenceIds[]}。脚本结论标 `script`,模型判断标 `model`;每条发现的 evidenceId 指到 hub 落盘的原件(命令核对返回、缺陷详情、文档行)。
-- `review_claims.json` 是固定映射的 `[{subject, predicate, value}]`(subject 为 `case:<autoid>` 或 `batch:<folder>`,predicate 为发现 code,value 带 summary/facts/origin 与 evidenceIds);用 `srv_knowledge_claim_submit` **逐条原样提交**,不自动提升为团队知识,模型不手抄映射。
+- `review_claims.json` 是固定映射的 `[{subject, predicate, value}]`(有用例的发现 subject 为 `case:<autoid>`,批次级发现为 `build:<绑定构建>`;predicate 为发现 code;value 带 summary/facts/origin 与 evidenceIds;绝对路径永远不进声明);用 `srv_knowledge_claim_submit` **逐条原样提交**,不自动提升为团队知识,模型不手抄映射。
 
 ## 5. 报告口径
 
