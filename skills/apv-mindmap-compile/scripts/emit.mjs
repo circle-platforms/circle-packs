@@ -57,13 +57,27 @@ export function caseRows(item, entry, priority = 1) {
 }
 const SENTINEL = [[SENTINEL_AUTOID, 'P9', 2, 'sentinel', 'time', 'sleep', '1', null, null]];
 
-export function workbook({ author, feature, cases, buildLine = null }) {
-  const rows = [[MARKER], ...NOTES.map((note) => [note]), HEADERS];
+// The InfoTest runner (lib/test_xlsx.py) requires, before the execution header row,
+// exactly one cell row whose first column is the literal IST_EXCEL_CONTRACT, carrying the
+// identity of the registered Excel function contract: runtime.minimum_version in the next
+// cell and contract_sha256 after it. Without it the gateway refuses the workbook.
+export const CONTRACT_MARKER = 'IST_EXCEL_CONTRACT';
+
+// Reads the identity the marker must carry from a registered function-contract copy.
+export function contractIdentity(contract) {
+  if (contract?.schema !== 'ist.excel.function-contract' || !contract?.runtime?.minimum_version || !contract?.contract_sha256)
+    throw new Error('contract must be the registered Excel function contract (ist.excel.function-contract with runtime.minimum_version and contract_sha256)');
+  return { version: contract.runtime.minimum_version, sha256: contract.contract_sha256 };
+}
+
+export function workbook({ author, feature, cases, buildLine = null, identity = null }) {
+  const markerRow = identity ? [CONTRACT_MARKER, identity.version, identity.sha256] : null;
+  const rows = [[MARKER], ...(markerRow ? [markerRow] : []), ...NOTES.map((note) => [note]), HEADERS];
   const headerText = buildLine ? `Author         : ${author}\n${feature}\n构建           : ${buildLine}` : `Author         : ${author}\n${feature}`;
   rows.push([null, null, 0, headerText]);
   for (const rowsOfCase of [...cases, SENTINEL]) rows.push(...rowsOfCase, []);
   // The InfoTest runner finds the execution sheet via this defined name; see xlsx.mjs.
-  const headerRow = 1 + NOTES.length + 1;
+  const headerRow = 1 + (markerRow ? 1 : 0) + NOTES.length + 1;
   return writeXlsx({
     sheet: SHEET, rows, hidden: [1], widths: { A: 22, D: 40, G: 48 },
     definedNames: [{ name: 'IST_EXECUTION_SHEET', ref: `${SHEET}!$A$${headerRow}:$I$${headerRow}` }],
@@ -84,11 +98,13 @@ export function readBack(bytes) {
   return { sheet, header_row: header + 1, autoids, check_point_count: checkPoints };
 }
 
-export function emitBatch(batch, author = 'circle') {
+export function emitBatch(batch, author = 'circle', contractPath = null) {
   const manifest = readJson(join(batch, 'manifest.json'));
   const machine = readJson(join(batch, 'machine_mindmap.json'));
   const gate = readJson(join(batch, 'gate_report.json'));
   if (gate.source_sha256 !== manifest.source_sha256) throw new Error('gate_report.json is for another mindmap; run gate.mjs again');
+  if (!contractPath) throw new Error('emit needs --contract <the registered Excel function contract copy>: the workbook must carry the IST_EXCEL_CONTRACT identity marker');
+  const identity = contractIdentity(readJson(contractPath));
   const buildLine = machine.display_build ?? machine.build;
   const delivered = [];
   const cases = {};
@@ -103,7 +119,7 @@ export function emitBatch(batch, author = 'circle') {
     const item = readJson(join(batch, 'cases', `${manifestCase.autoid}.json`));
     const entry = machine.cases.find((c) => c.autoid === manifestCase.autoid);
     const rows = caseRows(item, entry, manifestCase.priority ?? 1);
-    const bytes = workbook({ author, feature: manifestCase.autoid, cases: [rows], buildLine });
+    const bytes = workbook({ author, feature: manifestCase.autoid, cases: [rows], buildLine, identity });
     const path = join(batch, 'cases', `${manifestCase.autoid}.xlsx`);
     writeBytes(path, bytes);
     const back = readBack(bytes);
@@ -114,7 +130,7 @@ export function emitBatch(batch, author = 'circle') {
   }
   let merged = null;
   if (delivered.length) {
-    const bytes = workbook({ author, feature: manifest.source, cases: delivered, buildLine });
+    const bytes = workbook({ author, feature: manifest.source, cases: delivered, buildLine, identity });
     writeBytes(join(batch, 'case.xlsx'), bytes);
     const back = readBack(bytes);
     merged = { path: 'case.xlsx', sha256: sha256(bytes), case_count: back.autoids.length - 1, check_point_count: back.check_point_count, header_row: back.header_row };
@@ -170,13 +186,16 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2);
   const flag = args.indexOf('--author');
   const author = flag >= 0 ? args[flag + 1] : 'circle';
-  const batch = args.find((arg, i) => i !== flag && i !== flag + 1);
-  if (!batch) {
-    console.error('usage: node emit.mjs <batch folder> [--author <name>]');
+  const contractFlag = args.indexOf('--contract');
+  const contract = contractFlag >= 0 ? args[contractFlag + 1] : null;
+  const skip = new Set([flag, flag + 1, contractFlag, contractFlag + 1]);
+  const batch = args.find((arg, i) => !skip.has(i));
+  if (!batch || !contract) {
+    console.error('usage: node emit.mjs <batch folder> --contract <registered function contract> [--author <name>]');
     process.exit(2);
   }
   try {
-    const report = emitBatch(batch, author);
+    const report = emitBatch(batch, author, contract);
     console.log(JSON.stringify({ ok: true, totals: report.totals, merged: report.merged }));
   } catch (error) {
     console.log(JSON.stringify({ ok: false, message: error.message }));

@@ -80,8 +80,10 @@ For each rejected case, fix what the violations name and run it again; at most t
 ## 6. Emit (script) and report
 
 ```
-node <skill>/scripts/emit.mjs out --author <user>
+node <skill>/scripts/emit.mjs out --contract <the registered Excel function contract> --author <user>
 ```
+
+`--contract` is the same registered contract copy the gate uses: the workbook carries the InfoTest identity markers the gateway checks — exactly one `IST_EXCEL_CONTRACT` cell row before the execution header with the contract's `runtime.minimum_version` and `contract_sha256`, and the `IST_EXECUTION_SHEET` defined name on the header row. Without a contract there is nothing to write: emit refuses.
 
 Report the totals from `compile_report.json`, the path and SHA-256 of `case.xlsx`, and the cases that were not written with their reasons (`unsuccessful_cases.md`). Say plainly that nothing has run on a device.
 

@@ -162,6 +162,7 @@ export function readXlsx(bytes) {
   const files = unzip(bytes);
   const workbook = files.get('xl/workbook.xml')?.toString('utf8') ?? '';
   const sheet = unescape(/<sheet name="([^"]*)"/.exec(workbook)?.[1] ?? '');
+  const definedNames = [...workbook.matchAll(/<definedName name="([^"]*)">([\s\S]*?)<\/definedName>/g)].map((m) => ({ name: unescape(m[1]), ref: unescape(m[2]) }));
   const xml = files.get('xl/worksheets/sheet1.xml')?.toString('utf8') ?? '';
   const rows = [];
   const hidden = [];
@@ -177,5 +178,5 @@ export function readXlsx(bytes) {
     }
     rows[number - 1] = cells;
   }
-  return { sheet, hidden, rows: Array.from(rows, (row) => row ?? []) };
+  return { sheet, hidden, definedNames, rows: Array.from(rows, (row) => row ?? []) };
 }

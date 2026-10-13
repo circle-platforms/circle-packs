@@ -6,12 +6,15 @@ import { join } from 'node:path';
 import { prep } from '../scripts/prep.mjs';
 import { checkRecompose } from '../scripts/check-recompose.mjs';
 import { gateBatch, gateCase, destructivePatterns, contractClients } from '../scripts/gate.mjs';
-import { emitBatch, readBack, HEADERS } from '../scripts/emit.mjs';
+import { emitBatch, readBack, HEADERS, CONTRACT_MARKER } from '../scripts/emit.mjs';
 import { readXlsx } from '../scripts/xlsx.mjs';
 import { sha256, writeJson } from '../scripts/lib.mjs';
 
 const fixture = readFileSync(new URL('./fixtures/mindmap.json', import.meta.url));
 const BUILD = 'Rel_SYN_9_9_0_42';
+// Synthetic identity of a registered Excel function contract, as emit writes it into the
+// IST_EXCEL_CONTRACT marker row.
+const CONTRACT = { schema: 'ist.excel.function-contract', complete: true, runtime: { minimum_version: 'ist.excel.runtime' }, contract_sha256: 'ab'.repeat(32) };
 const batchDir = (t) => {
   const dir = mkdtempSync(join(tmpdir(), 'apv-compile-'));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
@@ -238,7 +241,8 @@ test('emit writes the A–I workbook per case and merged, with the sentinel last
   for (const [id, item] of Object.entries(written)) writeJson(join(batch, 'cases', `${id}.json`), item);
   saveChecks(batch, written);
   writeJson(join(batch, 'gate_report.json'), gateBatch(batch));
-  const report = emitBatch(batch, 'tester');
+  writeJson(join(batch, 'contract.json'), CONTRACT);
+  const report = emitBatch(batch, 'tester', join(batch, 'contract.json'));
   assert.deepEqual(report.totals, { cases: 4, emitted_unverified: 2, needs_decision: 1, unsupported_feature: 1 });
   assert.equal(report.merged.case_count, 2);
   assert.equal(report.merged.check_point_count, 3);
@@ -248,6 +252,13 @@ test('emit writes the A–I workbook per case and merged, with the sentinel last
   assert.equal(sheet.sheet, '执行');
   assert.deepEqual(sheet.hidden, [1], 'the contract marker row is hidden');
   const header = sheet.rows.findIndex((row) => HEADERS.every((h, i) => row[i] === h));
+  // The InfoTest identity markers the gateway checks: the IST_EXCEL_CONTRACT cell row
+  // exactly once, before the header, and the IST_EXECUTION_SHEET defined name on it.
+  const markers = sheet.rows.map((row, i) => ({ row, i })).filter(({ row }) => row[0] === CONTRACT_MARKER);
+  assert.equal(markers.length, 1);
+  assert.ok(markers[0].i < header, 'the contract marker sits before the execution header');
+  assert.deepEqual(markers[0].row.slice(0, 3), [CONTRACT_MARKER, 'ist.excel.runtime', 'ab'.repeat(32)]);
+  assert.deepEqual(sheet.definedNames, [{ name: 'IST_EXECUTION_SHEET', ref: `执行!$A$${header + 1}:$I$${header + 1}` }]);
   const data = sheet.rows.slice(header + 1);
   assert.deepEqual(data[0].slice(2, 4), [0, `Author         : tester\nmindmap.json\n构建           : ${BUILD}`]);
   // The first case: one observation row and one check_point, then a blank row.
@@ -268,7 +279,7 @@ test('emit writes the A–I workbook per case and merged, with the sentinel last
   assert.match(unsuccessful, /没有写怎样判断间隔已生效/);
   assert.match(readFileSync(join(batch, 'delivery_report.md'), 'utf8'), /还没有上机执行/);
 
-  emitBatch(batch, 'tester');
+  emitBatch(batch, 'tester', join(batch, 'contract.json'));
   assert.equal(sha256(readFileSync(join(batch, 'case.xlsx'))), sha256(bytes), 'the same input gives the same bytes');
   const single = readXlsx(readFileSync(join(batch, 'cases', '100000000000000001.xlsx')));
   assert.deepEqual(
