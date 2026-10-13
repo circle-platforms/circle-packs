@@ -70,7 +70,7 @@ circle-packs/
 - **连接器实例声明**：只写 declaration（reads / writes / credentials 引用名）和 configuration 的形状；地址、账号、CA 在管理员登记时填进库外 profile 或保险箱。同一个连接器包被两条产品线用时，各自一个实例、各自的别名。
 - **原件**：每种 role 一段说明——文件是什么、从哪来、metadata 必填哪些键（例如 buildName、platform）、怎么核对 SHA、谁有权上传与阅读。metadata 是上传者的声明，hub 不验证；要验证的事（例如床的实际构建）在运行时由资源回报。
 - **技能包**：SKILL.md 先写输入、工具、输出，再按步骤写；每一步标明「脚本」或「判断」。脚本只处理 B 给的字节（原件、工具返回）和自己的产物；工具返回由 hub 原样保存，脚本只拿 evidenceId 指针。试跑记录要覆盖技能声明的每条路径（例如站点构建和上传原件两种绑定）。
-- **方法模块**：纯函数，输入字节、输出结构；不读环境、不连网、不写文件。版本随产品线清单。
+- **Tool 实现**：纯函数，输入字节、输出结构；不读环境、不连网、不写文件。在内存里用解析库处理字节是允许的（例如用 ExcelJS 读一个 Buffer），但只能 import hub 自带依赖集里的包（exceljs、read-excel-file、fflate、zod、saxes、parse5，精确版本），并在清单的 `tools[].imports` 里声明；包的测试需要 hub 的依赖集（node_modules 软链或安装同版本）。版本随产品线清单。
 - **规则包**：输入一次运行的绑定（方法、资源、原件、输入），输出通过或一个固定错误码加事实。规则是 100% 可证真的判定；判定不了的不写规则，交给披露。
 - **流程版本**：阶段枚举固定（received · running · waiting-input · waiting-review · delivered · failed · cancelled），等待原因是枚举字段，交付项列清楚。
 - **资源声明**：writes 写实话（会改设备配置就写 device-config）；要两人规则的生产资源声明 executionIsChange。

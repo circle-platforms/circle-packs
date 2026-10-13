@@ -32,5 +32,5 @@ APV 产品线的 harness 原语集合:连接器声明、原件 role、工具实�
 包的测试需要 hub 的依赖集(exceljs@4.4.0、read-excel-file@9.3.12、fflate@0.8.3、zod@4.6.5 中的 exceljs 与 fflate)。本仓库不 vendored;跑测试时把 hub 的依赖集软链到本目录的 node_modules,例如:
 
 ```
-ln -s /Users/jiangyongze/Public/circle-server-s2/node_modules node_modules
+ln -s <circle-hub 检出目录>/node_modules node_modules
 ```

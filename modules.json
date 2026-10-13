@@ -72,7 +72,7 @@
       "files": [
         {
           "path": "README.md",
-          "sha256": "9d19be247c9e031f4bf218bab7761ad9513b0357cc2013fc96f2a2440435d67d"
+          "sha256": "a1c3e38e82db278fcbb8e55f94e27731f8064ce8375ee181a7070eb397f10ced"
         },
         {
           "path": "flows/apv-case-execute.json",
@@ -84,7 +84,7 @@
         },
         {
           "path": "hooks/host-destructive.ts",
-          "sha256": "5eaee9e7f0ac94de2ef7b92d4b11b35420bfbfc9a04668486565e86b33d854c3"
+          "sha256": "912627664a6620978523551ef1a59ea4c1f495e0a048f4c2ce4c21747351c006"
         },
         {
           "path": "hooks/workbook-contract.ts",
@@ -112,7 +112,7 @@
         },
         {
           "path": "tests/hooks.test.mjs",
-          "sha256": "454ce92c5b2b115b6f2a8cd3161c6d5c35a0f51048ad58e0816b5ab8fb6df44d"
+          "sha256": "50de71027769545091f81d2ee1d9a2d6fe91271123f8e2f40e52ebdc6b5b4841"
         },
         {
           "path": "tests/mindmap.test.mjs",
@@ -143,7 +143,7 @@
           "sha256": "7f46cf1bebf4dc74def75f970dea14b7d8597f548138445b76a669d89ceee6d0"
         }
       ],
-      "digest": "1dea5a664c4fbab50cbe0f986c587ee4bf1114e067186187cb3a5c2dc9726b3c"
+      "digest": "0444202106efd09ac6f4d0391bdadb6270c2a53c332ce56e786e08c2125047db"
     }
   ]
 }

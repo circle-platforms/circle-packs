@@ -20,12 +20,12 @@ test('device-command-tree blocks an empty command', () => {
 });
 
 test('host-destructive blocks self-destructive shell commands', () => {
-  for (const cmd of ['rm -rf /', 'dd if=/dev/zero of=/dev/sda', 'shutdown -h now', 'reboot', 'iptables -F', 'mkfs.ext4 /dev/sda1'])
+  for (const cmd of ['rm -rf /', 'rm -rf /*', 'rm -rf /etc', 'rm -rf /home', 'dd if=/dev/zero of=/dev/sda', 'shutdown -h now', 'reboot', 'mkfs.ext4 /dev/sda1', 'passwd root', 'chmod -R 777 /'])
     assert.equal(hostDestructive(input('verify.hostCommand', { command: cmd })).code, 'DESTRUCTIVE_COMMAND', cmd);
 });
 
 test('host-destructive passes the normal test commands', () => {
-  for (const cmd of ['dig @172.16.34.70 autotest.com', 'curl -s http://x', 'ping -c 1 10.0.0.1', 'tc qdisc show'])
+  for (const cmd of ['dig @192.0.2.70 autotest.example', 'curl -s http://192.0.2.231/', 'ping -c 1 192.0.2.1', 'tc qdisc show', 'iptables -F', 'systemctl restart nginx', 'rm -rf /tmp/ist_staging_sdns', 'rm -f /home/test/old.log', 'killall -HUP dnsmasq'])
     assert.deepEqual(hostDestructive(input('verify.hostCommand', { command: cmd })), { decision: 'pass' }, cmd);
 });
 
