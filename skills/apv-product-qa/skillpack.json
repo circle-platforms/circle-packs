@@ -1,0 +1,23 @@
+{
+  "id": "apv-product-qa",
+  "version": "0.1.0",
+  "title": "APV 产品问答",
+  "owner": "apv-product-line",
+  "tools": [
+    "docs.search",
+    "docs.section"
+  ],
+  "triggers": [
+    "manual"
+  ],
+  "inputs": {
+    "question": "the question about the product, in any wording",
+    "product": "the product line, such as APV",
+    "versionLine": "the product version line, such as 10.5"
+  },
+  "outputs": [
+    "answer.json",
+    "answer.md"
+  ],
+  "model": "any capable model; search terms, section picks and the answer are model judgement; citation validation and rendering are scripts"
+}
