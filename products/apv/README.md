@@ -27,6 +27,16 @@ APV 产品线的 harness 原语集合:连接器声明、原件 role、工具实�
 - 运行失败只有固定错误码;无平台批准记录。
 - 仓库内没有原件、地址、凭据、真实返回。
 
+### 试验 hub 上的登记记录(2026-10-13)
+
+按典范「开发到生效」的流程,四个技能/模块在试验 hub 上各做了一次真实试跑并提交;以下只记事实与 id。
+
+- **apv-mindmap-compile 0.2.7**:此前已登记。本轮未再试跑。
+- **apv-case-review 0.1.3**:对一次编译批次绑定其构建走完评审:定位产品与缺陷检索(zentao.products / zentao.bug_search)、读缺陷详情(zentao.bug_detail)、整批一次命令核对(buildsite.command_check,绑定构建的命令树)、契约核对(apply --contract)、结构检查与报告(脚本,无工具调用)、逐条提交候选声明(knowledge.claim_submit)。试跑共 6 次工具调用,全部在声明内。候选 `skp_84176c5a74b14861be0e0d22f2a9c92b`,已由独立审批人批准(registered)。产出候选声明 2 条(coverage_gap、related_defect,均含证据指针)。
+- **apv-defect-claims 0.1.0**:用修复清单中的真实缺陷号取详情并抽取:zentao.products 定位产品、zentao.bug_search 证实产品返回缺陷、zentao.bug_detail 取两条记录、脚本抽取 17 条候选声明(2 个缺陷;其中 1 个无修复提交动作,未编造 repair_note)、knowledge.claim_submit 提交 2 条代表候选。试跑共 5 次工具调用,全部在声明内。候选 `skp_261ba95d44634dfca9bcc8a058ad41ff`,已由独立审批人批准(registered)。
+- **apv-product-qa 0.1.3**:试跑未完成。代码已达 0.1.3(手册版本先定位再取段、docs.section 直取、no_evidence 需一次真实未命中);试跑被 hub 的大文件回报 bug 挡住——读约 2.6MB 的手册文件时 worker 回报在服务端出错,操作落 unknown 并冻结文档资源,试跑中断。待 hub 修复后重跑 answered 与 no_evidence 两条路径。
+- **host-policy(hub-hook/1,products/apv 1.2.0)**:等 hub 把 verify.hostCommand 的 subject/declaration 两处对上后试跑。
+
 ## 依赖
 
 包的测试需要 hub 的依赖集(exceljs@4.4.0、read-excel-file@9.3.12、fflate@0.8.3、zod@4.6.5 中的 exceljs 与 fflate)。本仓库不 vendored;跑测试时把 hub 的依赖集软链到本目录的 node_modules,例如:
