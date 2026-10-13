@@ -4,9 +4,15 @@
   "kind": "connector-instance",
   "role": "execution-resource",
   "protocol": "mcp",
-  "writes": ["device-config"],
+  "writes": [
+    "device-config"
+  ],
   "credentialMode": "static-secret",
   "runtimeProfileRef": "profiles/case-gateway.json",
   "executionIsChange": false,
-  "notes": "测试床网关;实验床默认不声明 executionIsChange,生产资源登记时声明 true。端点、CA、超时在库外 profile,凭据在保险箱,运行时由 worker 注入。"
+  "notes": "测试床网关;实验床默认不声明 executionIsChange,生产资源登记时声明 true。端点、CA、超时在库外 profile,凭据在保险箱,运行时由 worker 注入。",
+  "declaration": {
+    "allowedTestHosts": "string[]: 主机闭集——本床允许下发 shell 命令的全部测试主机名;登记时由床管理员从床配置(网关 env_prepare/bed_topology 回报的主机清单)填入,不进 Git。缺失或为空视为未声明,verify.hostCommand 一律 HOST_SET_UNDECLARED。",
+    "hostCommandPolicies": "Record<host, {allowPrefixes: string[]}>: 可选的单主机命令前缀策略,只能缩小 allowedTestHosts 内主机的可用命令,不能放行闭集外主机;登记时由床管理员按该主机承担的角色从床配置填写,不进 Git。"
+  }
 }

@@ -154,11 +154,11 @@
       "kind": "product-line",
       "root": "products/apv",
       "manifestPath": "products/apv/product-line.json",
-      "version": "1.1.0",
+      "version": "1.2.0",
       "files": [
         {
           "path": "README.md",
-          "sha256": "a1c3e38e82db278fcbb8e55f94e27731f8064ce8375ee181a7070eb397f10ced"
+          "sha256": "be2f4426056248b9597e0dab3b3fe83d933095132fa1ffc901a7b7216b302b2e"
         },
         {
           "path": "flows/apv-case-execute.json",
@@ -173,16 +173,20 @@
           "sha256": "912627664a6620978523551ef1a59ea4c1f495e0a048f4c2ce4c21747351c006"
         },
         {
+          "path": "hooks/host-policy.ts",
+          "sha256": "aec2b323e657942e88b1c03f06804504ced808a98fac3514db3c5aee3c2e5228"
+        },
+        {
           "path": "hooks/workbook-contract.ts",
           "sha256": "9bfa0ee9dc06b41c7db68a3c31c3e1db1b33238abc9e21db62c7b8e936573b52"
         },
         {
           "path": "product-line.json",
-          "sha256": "0b54b840141c0c9b48a6c049cc84a66217e37aae2bb269e5fdb38b23dd092fd1"
+          "sha256": "05f0f66a5b2470faa754dedd2f13f2ba8719dc100c3027b1a88dde136bf482ad"
         },
         {
           "path": "resources/case-gateway.json",
-          "sha256": "4806beb4f723aaf631ab5be88f3743db65ba6cc02f404ec65016ca015e5ae99d"
+          "sha256": "9fcba1409c748b2721800f5d8cba65adfa7479f4e1145581b6b88a71e40eb315"
         },
         {
           "path": "sources/command-tree.md",
@@ -203,6 +207,10 @@
         {
           "path": "tests/hooks.test.mjs",
           "sha256": "50de71027769545091f81d2ee1d9a2d6fe91271123f8e2f40e52ebdc6b5b4841"
+        },
+        {
+          "path": "tests/host-policy.test.mjs",
+          "sha256": "26b78ed80f87d7aae40a0dc30b95f6239263327880451e6ae2633b2befa979b7"
         },
         {
           "path": "tests/mindmap.test.mjs",
@@ -237,7 +245,7 @@
           "sha256": "f939fcd8a00d2583780a629bca827f774332423db8072711d1b151eb8faa25d0"
         }
       ],
-      "digest": "5e34132f4e6943b90e47b583f3161c47a894d8659c74ec4ac07ef5cf6ebd57cb"
+      "digest": "9f9034011a7f62dc39f219396438514241bfd2874df1fee99b0cd977f521e999"
     }
   ]
 }

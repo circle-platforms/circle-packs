@@ -1,7 +1,7 @@
 {
   "schemaVersion": "product-line/1",
   "id": "apv",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "connectorPackages": [
     "documents",
     "build-site",
@@ -83,6 +83,11 @@
       "manifest": "hooks/host-destructive.ts",
       "event": "verify.hostCommand",
       "order": 10
+    },
+    {
+      "manifest": "hooks/host-policy.ts",
+      "event": "verify.hostCommand",
+      "order": 20
     },
     {
       "manifest": "hooks/workbook-contract.ts",
