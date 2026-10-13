@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { checkStructure, prepBatch } from '../scripts/prep.mjs';
+import { checkStructure, prepBatch, readContext } from '../scripts/prep.mjs';
 import { collectBatch, applyCheck, contractClients } from '../scripts/check.mjs';
 import { mergeReport } from '../scripts/report.mjs';
 
@@ -23,124 +23,211 @@ const good = {
   command_receipts: [],
 };
 
-function batch(t, items) {
+function batch(t, items, { machine = null } = {}) {
   const folder = mkdtempSync(join(tmpdir(), 'review-'));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
   mkdirSync(join(folder, 'cases'), { recursive: true });
-  for (const item of items) writeFileSync(join(folder, 'cases', `${item.autoid}.json`), JSON.stringify(item));
+  items.forEach((item, i) => writeFileSync(join(folder, 'cases', `${item.autoid ?? `case${i}`}-${i}.json`), JSON.stringify(item)));
+  if (machine) writeFileSync(join(folder, 'machine_mindmap.json'), JSON.stringify(machine));
   return folder;
 }
 
-const CONTRACT_PATH = (() => {
-  const path = join(mkdtempSync(join(tmpdir(), 'contract-')), 'contract.json');
-  writeFileSync(path, JSON.stringify({
-    schema: 'ist.excel.function-contract',
-    complete: true,
-    entries: [
-      { e: 'test_env', f: 'routera', status: 'enabled' },
-      { e: 'test_env', f: 'console', status: 'disabled' },
-    ],
-  }));
-  return path;
-})();
+const contractBytes = () => JSON.stringify({
+  schema: 'ist.excel.function-contract',
+  complete: true,
+  entries: [
+    { e: 'test_env', f: 'routera', status: 'enabled' },
+    { e: 'test_env', f: 'console', status: 'disabled' },
+  ],
+});
 
-function savedCheck(t, commands) {
+function contractFile(t, bytes = contractBytes()) {
+  const folder = mkdtempSync(join(tmpdir(), 'contract-'));
+  t.after(() => rmSync(folder, { recursive: true, force: true }));
+  const path = join(folder, 'contract.json');
+  writeFileSync(path, bytes);
+  return path;
+}
+
+function savedCheck(t, commands, { pointerFor = null, evidenceId = 'evd_check', build = 'Rel_X_1' } = {}) {
   const folder = mkdtempSync(join(tmpdir(), 'saved-'));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
-  const path = join(folder, 'check.json');
+  const path = join(folder, `check-${evidenceId}.json`);
   writeFileSync(path, JSON.stringify({
     tool: 'buildsite.command_check',
     args: {},
     at: '2026-10-13T00:00:00.000Z',
     response: {
-      result: { build: 'Rel_X_1', commands: commands.map((c) => ({ command: c.command, status: c.status, head: c.head ?? null, violations: c.violations ?? [] })) },
-      evidence: [{ evidenceId: 'evd_check' }],
+      result: { build, commands: commands.map((c) => ({ command: c.command, status: c.status, head: c.head ?? null, violations: c.violations ?? [] })) },
+      evidence: [{ evidenceId }],
     },
   }));
+  if (pointerFor) {
+    const pointer = join(pointerFor, 'checks', 'ptr.json');
+    mkdirSync(join(pointerFor, 'checks'), { recursive: true });
+    writeFileSync(pointer, JSON.stringify({ savedAs: path }));
+    return pointer;
+  }
   return path;
 }
 
-test('structure: a sound case passes; empty blocks, no checkpoint and long command fail', () => {
+test('structure: sound case passes; empty blocks, no checkpoint, long command, bad autoid fail', () => {
   assert.deepEqual(checkStructure(good).violations, []);
-  const noBlocks = { ...good, blocks: [] };
-  assert.ok(checkStructure(noBlocks).violations.some((v) => v.code === 'blocks_empty'));
-  const noCheck = { ...good, blocks: [good.blocks[0]] };
-  assert.ok(checkStructure(noCheck).violations.some((v) => v.code === 'no_checkpoint'));
-  const long = { ...good, blocks: [{ kind: 'CONFIG', host: 'APV_0', cmds: ['x'.repeat(2001)], desc: '' }] };
-  assert.ok(checkStructure(long).violations.some((v) => v.code === 'command_too_long'));
-  const badId = { ...good, autoid: '123' };
-  assert.ok(checkStructure(badId).violations.some((v) => v.code === 'autoid_invalid'));
+  assert.ok(checkStructure({ ...good, blocks: [] }).violations.some((v) => v.code === 'blocks_empty'));
+  assert.ok(checkStructure({ ...good, blocks: [good.blocks[0]] }).violations.some((v) => v.code === 'no_checkpoint'));
+  assert.ok(checkStructure({ ...good, blocks: [{ kind: 'CONFIG', host: 'APV_0', cmds: ['x'.repeat(2001)], desc: '' }] }).violations.some((v) => v.code === 'command_too_long'));
+  assert.ok(checkStructure({ ...good, autoid: '123' }).violations.some((v) => v.code === 'autoid_invalid'));
 });
 
-test('prepBatch writes review_structure.json with per-case verdicts and case# keys for missing autoids', (t) => {
-  const folder = batch(t, [good, { ...good, autoid: '100000000000000002', blocks: [] }]);
+test('structure: init_commands checked, unknown blocks flagged, duplicate autoids flagged', (t) => {
+  assert.ok(checkStructure({ ...good, init_commands: ['a\nb'] }).violations.some((v) => v.code === 'cmd_config_multiline'));
+  assert.ok(checkStructure({ ...good, init_commands: [''] }).violations.some((v) => v.code === 'command_empty'));
+  assert.ok(checkStructure({ ...good, blocks: [{ kind: 'WAT' }] }).violations.some((v) => v.code === 'block_unknown'));
+  const folder = batch(t, [good, good]);
   const report = prepBatch(folder);
-  assert.equal(report.case_count, 2);
-  assert.equal(report.fail_count, 1);
-  assert.equal(report.cases['100000000000000001'].ok, true);
-  assert.equal(report.cases['100000000000000002'].ok, false);
-  const written = JSON.parse(readFileSync(join(folder, 'review_structure.json'), 'utf8'));
-  assert.equal(written.case_count, 2);
+  assert.ok(Object.values(report.cases).some((entry) => entry.violations.some((v) => v.code === 'autoid_duplicate')));
 });
 
-test('collectBatch dedupes device commands with their autoids and lists clients', (t) => {
+test('prepBatch writes review_context.json from machine_mindmap.json', (t) => {
+  const machine = {
+    build: 'Rel_X_1',
+    display_build: 'X 1.0',
+    cases: [{ autoid: '100000000000000001', bucket: 'exp_recipe', contract: { intent: '意图', verification_method: '看', expectation: '显示' }, expectations: [{ n: 1, text: '显示', origin: 'expectation:1' }], proposal: [] }],
+  };
+  const folder = batch(t, [good], { machine });
+  prepBatch(folder);
+  const context = JSON.parse(readFileSync(join(folder, 'review_context.json'), 'utf8'));
+  assert.equal(context.build, 'Rel_X_1');
+  assert.equal(context.display_build, 'X 1.0');
+  assert.deepEqual(context.cases[0].intent, '意图');
+  assert.deepEqual(context.cases[0].expectations, [{ n: 1, text: '显示', origin: 'expectation:1' }]);
+});
+
+test('collectBatch dedupes device commands (init included) with autoids and lists clients', (t) => {
   const folder = batch(t, [good, { ...good, autoid: '100000000000000002' }]);
   const collected = collectBatch(folder);
-  assert.equal(collected.commands.length, 3); // sdns on, sdns listener, show sdns listener
+  assert.equal(collected.commands.length, 3);
   assert.deepEqual(collected.commands.find((c) => c.command === 'sdns on').autoids.sort(), ['100000000000000001', '100000000000000002']);
   assert.deepEqual(collected.clients, [{ client: 'routera', autoids: ['100000000000000001', '100000000000000002'] }]);
 });
 
-test('applyCheck takes verdicts from the hub-saved return and checks clients against the contract', (t) => {
+test('applyCheck: uncovered commands are not_checked without evidenceId; covered ones keep their own evidenceId', (t) => {
   const folder = batch(t, [good]);
   const check = savedCheck(t, [
     { command: 'sdns on', status: 'hit' },
     { command: 'sdns listener 192.0.2.70', status: 'hit' },
-    { command: 'show sdns listener', status: 'missing', violations: [{ code: 'HEAD_MISSING' }] },
   ]);
-  const report = applyCheck(folder, check, CONTRACT_PATH);
-  assert.equal(report.build, 'Rel_X_1');
-  assert.equal(report.commands.find((c) => c.command === 'show sdns listener').status, 'missing');
-  assert.equal(report.commands.find((c) => c.command === 'sdns on').evidenceId, 'evd_check');
-  assert.equal(report.clients[0].status, 'enabled');
-  const noContract = applyCheck(folder, check, null);
-  assert.equal(noContract.clients[0].status, 'not_checked');
-  const written = JSON.parse(readFileSync(join(folder, 'review_commands.json'), 'utf8'));
-  assert.equal(written.commands.length, 3);
+  const report = applyCheck(folder, [check], contractFile(t), 'Rel_X_1');
+  const uncovered = report.commands.find((c) => c.command === 'show sdns listener');
+  assert.equal(uncovered.status, 'not_checked');
+  assert.equal(uncovered.evidenceId, undefined);
+  const covered = report.commands.find((c) => c.command === 'sdns on');
+  assert.equal(covered.status, 'hit');
+  assert.equal(covered.evidenceId, 'evd_check');
 });
 
-test('contractClients reads only enabled test_env entries', () => {
-  const clients = contractClients(CONTRACT_PATH);
-  assert.ok(clients.has('routera'));
-  assert.ok(!clients.has('console'));
+test('applyCheck merges several returns, pointers included, per-return evidenceId', (t) => {
+  const folder = batch(t, [good]);
+  const raw = savedCheck(t, [{ command: 'sdns on', status: 'hit' }, { command: 'sdns listener 192.0.2.70', status: 'hit' }], { evidenceId: 'evd_raw' });
+  const pointer = savedCheck(t, [{ command: 'show sdns listener', status: 'hit' }], { evidenceId: 'evd_ptr', pointerFor: folder });
+  const report = applyCheck(folder, [raw, pointer], contractFile(t), 'Rel_X_1');
+  assert.equal(report.commands.find((c) => c.command === 'show sdns listener').evidenceId, 'evd_ptr');
+  assert.equal(report.commands.find((c) => c.command === 'sdns on').evidenceId, 'evd_raw');
+  assert.ok(report.commands.every((c) => c.status === 'hit'));
 });
 
-test('mergeReport merges script and model findings, marks origin and rejects unknown finding codes', (t) => {
+test('applyCheck: build mismatch against the return and against a case', (t) => {
+  const folder = batch(t, [good]);
+  const otherBuild = savedCheck(t, [{ command: 'sdns on', status: 'hit' }], { build: 'Rel_Y_9' });
+  const report = applyCheck(folder, [otherBuild], contractFile(t), 'Rel_X_1');
+  assert.ok(report.problems.some((p) => p.code === 'build_mismatch'));
+  const caseMismatch = batch(t, [{ ...good, build: 'Rel_Y_9' }]);
+  const ok = savedCheck(t, [{ command: 'sdns on', status: 'hit' }]);
+  assert.ok(applyCheck(caseMismatch, [ok], contractFile(t), 'Rel_X_1').problems.some((p) => p.code === 'build_mismatch'));
+});
+
+test('applyCheck: clients without a contract are client_not_checked; a disabled one is client_not_in_contract', (t) => {
+  const folder = batch(t, [good, { ...good, autoid: '100000000000000002', blocks: [{ kind: 'CLIENT', client: 'console', cmd: 'x', asserts: [{ op: 'found', pattern: 'x' }] }] }]);
+  const check = savedCheck(t, [{ command: 'sdns on', status: 'hit' }]);
+  const noContract = applyCheck(folder, [check], null, 'Rel_X_1');
+  assert.ok(noContract.clients.every((c) => c.status === 'client_not_checked'));
+  const withContract = applyCheck(folder, [check], contractFile(t), 'Rel_X_1');
+  assert.equal(withContract.clients.find((c) => c.client === 'routera').status, 'enabled');
+  assert.equal(withContract.clients.find((c) => c.client === 'console').status, 'client_not_in_contract');
+});
+
+test('contractClients rejects a non-contract schema', (t) => {
+  assert.throws(() => contractClients(contractFile(t, '{"schema":"nope"}')));
+});
+
+test('mergeReport expands per-case findings, codes them, and writes claims ready to submit', (t) => {
   const folder = batch(t, [good]);
   prepBatch(folder);
   writeFileSync(join(folder, 'review_commands.json'), JSON.stringify({
+    problems: [],
     commands: [
-      { autoid: good.autoid, command: 'sdns listener 192.0.2.70', status: 'hit', violations: [], evidenceId: 'evd_1' },
-      { autoid: good.autoid, command: 'sdns fulldns on', status: 'missing', violations: [{ code: 'HEAD_MISSING' }], evidenceId: 'evd_2' },
+      { command: 'sdns listener 192.0.2.70', autoids: ['100000000000000001'], status: 'hit', violations: [], evidenceId: 'evd_1' },
+      { command: 'sdns fulldns on', autoids: ['100000000000000001'], status: 'missing', violations: [{ code: 'HEAD_MISSING' }], evidenceId: 'evd_2' },
+      { command: 'sdns stray', autoids: ['100000000000000001'], status: 'not_checked', violations: [] },
+      { command: 'sdns host name x', autoids: ['100000000000000001'], status: 'hit', violations: [{ code: 'ARGUMENT_COUNT' }], evidenceId: 'evd_4' },
     ],
-    clients: [{ autoid: good.autoid, client: 'routera', status: 'enabled' }],
+    clients: [{ client: 'routera', autoids: ['100000000000000001'], status: 'enabled' }],
   }));
   writeFileSync(join(folder, 'review_findings.json'), JSON.stringify({
     findings: [{ origin: 'model', autoid: good.autoid, code: 'coverage_gap', summary: '缺负向用例', facts: { defect: '79758' }, evidenceIds: ['evd_3'] }],
   }));
   const report = mergeReport(folder);
-  assert.equal(report.totals.cases, 1);
-  assert.equal(report.totals.findings, 2);
-  assert.equal(report.totals.script_findings, 1);
-  assert.equal(report.totals.model_findings, 1);
-  const scriptItem = report.items.find((i) => i.origin === 'script');
-  assert.equal(scriptItem.code, 'command_not_in_tree');
-  assert.deepEqual(scriptItem.evidenceIds, ['evd_2']);
-  const modelItem = report.items.find((i) => i.origin === 'model');
-  assert.equal(modelItem.code, 'coverage_gap');
-  assert.deepEqual(modelItem.evidenceIds, ['evd_3']);
-  assert.ok(readFileSync(join(folder, 'review_report.md'), 'utf8').includes('coverage_gap'));
+  const codes = report.items.map((i) => i.code);
+  assert.ok(codes.includes('command_not_in_tree'));
+  assert.ok(codes.includes('command_not_checked'));
+  assert.ok(codes.includes('command_parameter_contract'));
+  assert.ok(codes.includes('coverage_gap'));
+  const notChecked = report.items.find((i) => i.code === 'command_not_checked');
+  assert.equal(notChecked.autoid, '100000000000000001');
+  assert.equal(notChecked.facts.command, 'sdns stray');
+  assert.deepEqual(notChecked.evidenceIds, []);
+  const claims = JSON.parse(readFileSync(join(folder, 'review_claims.json'), 'utf8'));
+  assert.ok(claims.every((c) => c.subject && c.predicate && c.value));
+  assert.equal(claims.find((c) => c.predicate === 'coverage_gap').subject, 'case:100000000000000001');
+  const md = readFileSync(join(folder, 'review_report.md'), 'utf8');
+  assert.ok(md.includes('review_report.json'));
+  assert.ok(md.includes(report.sha256));
+});
 
+test('mergeReport refuses a finding code outside the enum', (t) => {
+  const folder = batch(t, [good]);
+  prepBatch(folder);
   writeFileSync(join(folder, 'review_findings.json'), JSON.stringify({ findings: [{ origin: 'model', code: 'not_a_code', summary: 'x' }] }));
   assert.throws(() => mergeReport(folder), /outside/);
+});
+
+test('end to end: prep → collect → apply (raw + pointer) → report on a mixed batch', (t) => {
+  const machine = {
+    build: 'Rel_X_1',
+    cases: [
+      { autoid: '100000000000000001', bucket: 'exp_recipe', contract: { intent: 'i1', verification_method: 'v', expectation: 'e' }, expectations: [{ n: 1, text: 'e', origin: 'expectation:1' }], proposal: [] },
+    ],
+  };
+  const folder = batch(t, [good, { ...good, autoid: '100000000000000002', blocks: [{ kind: 'CLIENT', client: 'console', cmd: 'x', asserts: [{ op: 'found', pattern: 'x' }] }] }], { machine });
+  const structure = prepBatch(folder);
+  assert.equal(structure.fail_count, 0);
+  assert.ok(readFileSync(join(folder, 'review_context.json'), 'utf8').includes('i1'));
+  const collected = collectBatch(folder);
+  const raw = savedCheck(t, collected.commands.filter((c) => c.command !== 'show sdns listener').map((c) => ({ command: c.command, status: 'hit' })), { evidenceId: 'evd_a' });
+  const pointer = savedCheck(t, [{ command: 'show sdns listener', status: 'hit', violations: [{ code: 'ARGUMENT_COUNT' }] }], { evidenceId: 'evd_b', pointerFor: folder });
+  const applied = applyCheck(folder, [raw, pointer], contractFile(t), 'Rel_X_1');
+  assert.equal(applied.problems.length, 0);
+  const report = mergeReport(folder);
+  assert.equal(report.totals.cases, 2);
+  assert.ok(report.items.some((i) => i.code === 'command_parameter_contract' && i.evidenceIds.includes('evd_b')));
+  assert.ok(report.items.some((i) => i.code === 'client_not_in_contract' && i.autoid === '100000000000000002'));
+});
+
+test('an empty cases folder yields zero cases, not an error', (t) => {
+  const folder = mkdtempSync(join(tmpdir(), 'review-empty-'));
+  t.after(() => rmSync(folder, { recursive: true, force: true }));
+  mkdirSync(join(folder, 'cases'), { recursive: true });
+  const report = prepBatch(folder);
+  assert.equal(report.case_count, 0);
+  assert.equal(report.fail_count, 0);
 });

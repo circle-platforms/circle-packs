@@ -6,34 +6,34 @@
       "kind": "skill-pack",
       "root": "skills/apv-case-review",
       "manifestPath": "skills/apv-case-review/skillpack.json",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "133159faf182aeb0a37427f10f0b9a66077bac02b9cd93486f1965d0c055419f"
+          "sha256": "c780b8118405cf21ccd5bf3cd491d4590463b0ec00776ef8b23e8cea16a12117"
         },
         {
           "path": "scripts/check.mjs",
-          "sha256": "36e36da7f2f2ec4ca2dce2bf1ed025720e5b126989e0cc8255b3a92f9eacfcb4"
+          "sha256": "c418056fb690f20ee614d7cdf20a223dbf066b8456809ed33957d70b5c58d8ce"
         },
         {
           "path": "scripts/prep.mjs",
-          "sha256": "cbc6bed22900cd47b811142caa9ba5486091b5edd85145d642bb9783ca9e8277"
+          "sha256": "949e841bd94aabdb1a643f0a92b0f245c5e40b941b74acd4d61ea50ed3d8fb12"
         },
         {
           "path": "scripts/report.mjs",
-          "sha256": "5e90ba1fd18b938f7236702243aa1e05a4996fa084e8ab6008b27063f0b16831"
+          "sha256": "7b95127190b6cdf5fe8061f0c26edff3f4dc99181157e4ee80d6346d10236a78"
         },
         {
           "path": "skillpack.json",
-          "sha256": "88bbd4401a2db702229e68cc1a45ee7a5e075ddcea429f70fdffddea55da1d95"
+          "sha256": "58b9fb3b305306cc974f5378307c5521418859668bd3067161b06b1f6ab3c4b8"
         },
         {
           "path": "tests/review.test.mjs",
-          "sha256": "cebaaaf08d8eb04405dae177d92caf643bfc65538a0b99679a7196198e66faa6"
+          "sha256": "1bc5905d35679b66a9f16f8678b4feee7832575ca9dc0d1c36d6aca9a371b6ca"
         }
       ],
-      "digest": "3148702b8b8e73c77862feafa2535bbfac088bf60b4a2473b40acd0e9d40e2a5"
+      "digest": "78e4f97c80486912a51582e66a5730eb53b3e58689407d8ff2734947ef7a20b1"
     },
     {
       "id": "apv-mindmap-compile",

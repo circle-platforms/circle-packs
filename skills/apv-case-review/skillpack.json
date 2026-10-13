@@ -1,10 +1,9 @@
 {
   "id": "apv-case-review",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "title": "APV 用例评审",
   "owner": "apv-product-line",
   "tools": [
-    "buildsite.versions",
     "buildsite.command_check",
     "docs.search",
     "zentao.products",
@@ -18,11 +17,14 @@
   "inputs": {
     "batch": "path of a compiled batch folder (out/) with cases/*.json and machine_mindmap.json",
     "versionLine": "the product version line, such as 10.5",
-    "build": "the build the batch was written for; required — review is always against the bound build"
+    "build": "the build the batch was written for; required — review is always against the bound build",
+    "contract": "path of the Excel function contract copy the user registered with the hub (schema ist.excel.function-contract)",
+    "checks": "hub-saved buildsite.command_check returns or compile-skill checks/<autoid>.json pointers; one per --check, several allowed"
   },
   "outputs": [
     "review_report.md",
-    "review_report.json"
+    "review_report.json",
+    "review_claims.json"
   ],
   "model": "any capable model; structure, command and contract checks are scripts; coverage, verifiability and risk are model judgement"
 }
