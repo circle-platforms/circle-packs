@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { validateAnswer, loadSection, cite } from '../scripts/cite.mjs';
+import { validateAnswer, loadSection, loadReturn, cite } from '../scripts/cite.mjs';
 
-function workspace(t, { answer = null, sections = [] } = {}) {
+function workspace(t, { answer = null, sections = [], searches = [] } = {}) {
   const folder = mkdtempSync(join(tmpdir(), 'qa-'));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
-  const args = sections.map((section, i) => {
+  const sectionArgs = sections.map((section, i) => {
     const path = join(folder, `section-${i}.json`);
     writeFileSync(path, JSON.stringify({
       tool: 'docs.section',
@@ -18,103 +18,124 @@ function workspace(t, { answer = null, sections = [] } = {}) {
     }));
     return path;
   });
+  const searchArgs = searches.map((search, i) => {
+    const path = join(folder, `search-${i}.json`);
+    writeFileSync(path, JSON.stringify({
+      tool: 'docs.search',
+      args: { query: search.query, version: search.version },
+      at: '2026-10-13T00:00:00.000Z',
+      response: { result: { hits: search.hits.map((hit) => ({ path: hit })), coverage: { complete: true } }, evidence: [{ evidenceId: 'evd_search', sha256: 'ab'.repeat(32) }] },
+    }));
+    return path;
+  });
   if (answer) writeFileSync(join(folder, 'answer.json'), JSON.stringify(answer));
-  return { folder, args };
+  return { folder, sectionArgs, searchArgs };
 }
 
 const LINES = ['**sdns listener**', '配置 SDNS 监听器地址。', 'sdns listener <ip> [port]', '不配置 sdns listener 时,sdns 功能不生效。'];
 const QUOTE = '不配置 sdns listener 时,sdns 功能不生效。';
+const SECTION = { file: 'cli/rel_apv_10_5/sdns.md', anchor: 'sdns listener', lines: LINES, evidenceId: 'evd_s1' };
 
-test('a verbatim quote with its evidenceId validates and renders [evd_…] tags', (t) => {
-  const { folder, args } = workspace(t, {
+test('tagged paragraphs validate; the model section name survives and no saved path is rendered', (t) => {
+  const { folder, sectionArgs } = workspace(t, {
     answer: {
       question: '不配置 listener 会怎样?',
       status: 'answered',
-      answer: `配置 SDNS 监听器地址。\n\n${QUOTE}`,
+      answer: `sdns listener 用来配置监听器地址。 [evd_s1]\n\n具体行为是:${QUOTE} [evd_s1]`,
       citations: [
-        { evidenceId: 'evd_s1', source: 'cli/rel_apv_10_5/sdns.md', section: 'sdns listener', quote: '配置 SDNS 监听器地址。' },
-        { evidenceId: 'evd_s1', source: 'cli/rel_apv_10_5/sdns.md', section: 'sdns listener', quote: QUOTE },
+        { evidenceId: 'evd_s1', source: 'cli/rel_apv_10_5/sdns.md', section: 'sdns listener 小节', quote: '配置 SDNS 监听器地址。' },
+        { evidenceId: 'evd_s1', source: 'cli/rel_apv_10_5/sdns.md', section: 'sdns listener 小节', quote: QUOTE },
       ],
     },
-    sections: [{ file: 'cli/rel_apv_10_5/sdns.md', anchor: 'sdns listener', lines: LINES, evidenceId: 'evd_s1' }],
+    sections: [SECTION],
   });
-  const result = cite(folder, args);
+  const result = cite(folder, sectionArgs);
   assert.equal(result.status, 'answered');
-  assert.equal(result.citations, 2);
   const md = readFileSync(join(folder, 'answer.md'), 'utf8');
-  assert.ok(md.includes(`[evd_s1]`));
-  assert.ok(md.includes(QUOTE));
+  assert.ok(md.includes('[evd_s1]'));
+  assert.ok(md.includes('sdns listener 小节'), 'the model-written section name is rendered');
+  assert.ok(!md.includes(sectionArgs[0]), 'the saved return path never appears');
+  assert.ok(md.includes('回答为模型判断'));
   assert.ok(md.includes('## 引用'));
 });
 
-test('a quote that is not in any section return is rejected and no answer.md is written', (t) => {
-  const { folder, args } = workspace(t, {
-    answer: {
-      question: 'q',
-      status: 'answered',
-      answer: `段落\n\n${QUOTE}`,
-      citations: [{ evidenceId: 'evd_s1', source: 'x', section: 'y', quote: QUOTE }],
-    },
-    sections: [{ file: 'a.md', anchor: 'a', lines: ['完全不同的文字。'], evidenceId: 'evd_s1' }],
+test('a paragraph without an [evd_…] tag is rejected; a tag pointing at an unvalidated citation is rejected', (t) => {
+  const untagged = workspace(t, {
+    answer: { question: 'q', status: 'answered', answer: `没有标记的一段。\n\n${QUOTE} [evd_s1]`, citations: [{ evidenceId: 'evd_s1', source: 'x', section: 'y', quote: QUOTE }] },
+    sections: [SECTION],
   });
-  assert.throws(() => cite(folder, args), /not in any section return/);
+  assert.throws(() => cite(untagged.folder, untagged.sectionArgs), /carries no \[evd_…\] tag/);
+  assert.equal(existsSync(join(untagged.folder, 'answer.md')), false);
+  const stray = workspace(t, {
+    answer: { question: 'q', status: 'answered', answer: `${QUOTE} [evd_ghost]`, citations: [{ evidenceId: 'evd_s1', source: 'x', section: 'y', quote: QUOTE }] },
+    sections: [SECTION],
+  });
+  assert.throws(() => cite(stray.folder, stray.sectionArgs), /not a validated citation/);
+});
+
+test('a quote that is not in any section return is rejected and no answer.md is written', (t) => {
+  const { folder, sectionArgs } = workspace(t, {
+    answer: { question: 'q', status: 'answered', answer: `${QUOTE} [evd_s1]`, citations: [{ evidenceId: 'evd_s1', source: 'x', section: 'y', quote: QUOTE }] },
+    sections: [{ ...SECTION, lines: ['完全不同的文字。'] }],
+  });
+  assert.throws(() => cite(folder, sectionArgs), /not in any section return/);
   assert.equal(existsSync(join(folder, 'answer.md')), false);
 });
 
 test('an evidenceId that does not belong to the return the quote was found in is rejected', (t) => {
-  const { folder, args } = workspace(t, {
-    answer: {
-      question: 'q',
-      status: 'answered',
-      answer: QUOTE,
-      citations: [{ evidenceId: 'evd_other', source: 'x', section: 'y', quote: QUOTE }],
-    },
-    sections: [{ file: 'a.md', anchor: 'a', lines: LINES, evidenceId: 'evd_s1' }],
+  const { folder, sectionArgs } = workspace(t, {
+    answer: { question: 'q', status: 'answered', answer: `${QUOTE} [evd_other]`, citations: [{ evidenceId: 'evd_other', source: 'x', section: 'y', quote: QUOTE }] },
+    sections: [SECTION],
   });
-  assert.throws(() => cite(folder, args), /does not belong/);
-  assert.equal(existsSync(join(folder, 'answer.md')), false);
+  assert.throws(() => cite(folder, sectionArgs), /does not belong/);
 });
 
-test('no_evidence renders the not-found answer and tolerates empty citations', (t) => {
-  const { folder, args } = workspace(t, {
-    answer: { question: 'q', status: 'no_evidence', answer: '手册里没有找到能回答这个问题的内容。', citations: [] },
-    sections: [{ file: 'a.md', anchor: 'a', lines: LINES, evidenceId: 'evd_s1' }],
+test('a quote spanning lines of the section text validates', (t) => {
+  const spanning = 'sdns listener <ip> [port]\n不配置 sdns listener 时,sdns 功能不生效。';
+  const { folder, sectionArgs } = workspace(t, {
+    answer: { question: 'q', status: 'answered', answer: `跨行引用成立。 [evd_s1]`, citations: [{ evidenceId: 'evd_s1', source: 'x', section: 'y', quote: spanning }] },
+    sections: [SECTION],
   });
-  const result = cite(folder, args);
+  const result = cite(folder, sectionArgs);
+  assert.equal(result.status, 'answered');
+  assert.ok(readFileSync(join(folder, 'answer.md'), 'utf8').includes('⏎'));
+});
+
+test('identifier keys (file, anchor, evidenceId) are never matched as quote text', (t) => {
+  const { folder, sectionArgs } = workspace(t, {
+    answer: { question: 'q', status: 'answered', answer: `x [evd_s1]`, citations: [{ evidenceId: 'evd_s1', source: 'x', section: 'y', quote: 'cli/rel_apv_10_5/sdns.md' }] },
+    sections: [SECTION],
+  });
+  assert.throws(() => cite(folder, sectionArgs), /not in any section return/);
+});
+
+test('no_evidence renders the not-found answer with the query log', (t) => {
+  const { folder, sectionArgs, searchArgs } = workspace(t, {
+    answer: { question: 'q', status: 'no_evidence', answer: '手册里没有找到能回答这个问题的内容。', citations: [] },
+    sections: [SECTION],
+    searches: [{ query: 'sdns listener', version: '10.5', hits: ['a.md'] }, { query: '监听器', version: '10.5', hits: [] }],
+  });
+  const result = cite(folder, sectionArgs, searchArgs);
   assert.equal(result.status, 'no_evidence');
   const md = readFileSync(join(folder, 'answer.md'), 'utf8');
   assert.ok(md.includes('没有找到'));
-  assert.ok(md.includes('不含任何推断'));
+  assert.ok(md.includes('## 查询记录'));
+  assert.ok(md.includes('"sdns listener"'));
+  assert.ok(md.includes('命中 1'));
+  assert.ok(md.includes('命中 0'));
 });
 
 test('answered without citations, and no_evidence with citations, are both rejected', (t) => {
-  const bare = workspace(t, {
-    answer: { question: 'q', status: 'answered', answer: 'x', citations: [] },
-    sections: [{ file: 'a.md', anchor: 'a', lines: LINES, evidenceId: 'evd_s1' }],
-  });
-  assert.throws(() => cite(bare.folder, bare.args), /at least one citation/);
+  const bare = workspace(t, { answer: { question: 'q', status: 'answered', answer: 'x', citations: [] }, sections: [SECTION] });
+  assert.throws(() => cite(bare.folder, bare.sectionArgs), /at least one citation/);
   const loaded = workspace(t, {
     answer: { question: 'q', status: 'no_evidence', answer: '没有找到。', citations: [{ evidenceId: 'evd_s1', source: 'x', section: 'y', quote: QUOTE }] },
-    sections: [{ file: 'a.md', anchor: 'a', lines: LINES, evidenceId: 'evd_s1' }],
+    sections: [SECTION],
   });
-  assert.throws(() => cite(loaded.folder, loaded.args), /no_evidence must carry no citations/);
+  assert.throws(() => cite(loaded.folder, loaded.sectionArgs), /no_evidence must carry no citations/);
 });
 
-test('a paragraph no citation quote appears in is rejected', (t) => {
-  const { folder, args } = workspace(t, {
-    answer: {
-      question: 'q',
-      status: 'answered',
-      answer: `这是没有任何引用支撑的一段。\n\n${QUOTE}`,
-      citations: [{ evidenceId: 'evd_s1', source: 'x', section: 'y', quote: QUOTE }],
-    },
-    sections: [{ file: 'a.md', anchor: 'a', lines: LINES, evidenceId: 'evd_s1' }],
-  });
-  assert.throws(() => cite(folder, args), /carries no citation quote/);
-  assert.equal(existsSync(join(folder, 'answer.md')), false);
-});
-
-test('a {savedAs} pointer resolves like apv-case-review: as given, workspace root, batch folder', (t) => {
+test('a {savedAs} pointer resolves like apv-case-review: as given, workspace root, question folder', (t) => {
   const folder = mkdtempSync(join(tmpdir(), 'qa-'));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
   mkdirSync(join(folder, 'server-returns'), { recursive: true });
@@ -126,5 +147,7 @@ test('a {savedAs} pointer resolves like apv-case-review: as given, workspace roo
   writeFileSync(pointer, JSON.stringify({ savedAs: 'server-returns/section.json' }));
   const section = loadSection(folder, pointer);
   assert.deepEqual(section.evidenceIds, ['evd_ptr']);
-  assert.ok(section.strings.includes(QUOTE));
+  assert.ok(section.texts.includes(QUOTE));
+  const returns = loadReturn(folder, pointer);
+  assert.ok(returns.raw.result);
 });
