@@ -9,6 +9,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readJson, writeJson } from './lib.mjs';
 import { expectationIds } from './check-recompose.mjs';
+import { loadBedFacts, deriveFacts, checkCase } from './bed-facts.mjs';
 
 const KEYS = ['autoid', 'blocks', 'build', 'command_receipts', 'description', 'escape_hatches', 'expectation_binding', 'init_commands', 'schema'];
 const HOSTS = new Set(['APV_0', 'APV_1']);
@@ -203,11 +204,34 @@ export function gateCase(item, entry, manifestCase, build, destructive = destruc
   return { ok: violations.length === 0, terminal, violations };
 }
 
-export function gateBatch(batch, { contract = null } = {}) {
+// The bed-facts gate: without --bed-facts, or with an unusable facts file, the whole
+// batch is refused (bed_facts_unavailable) — the check never folds into a pass.
+export function gateBatch(batch, { contract = null, bedFactsPath = null } = {}) {
   const manifest = readJson(join(batch, 'manifest.json'));
   const machine = readJson(join(batch, 'machine_mindmap.json'));
   const destructive = destructivePatterns();
   const clients = contract ? contractClients(contract) : null;
+  const bed = bedFactsPath === null ? { ok: false, reason: 'not provided' } : loadBedFacts(bedFactsPath, { readFileSync });
+  const facts = bed.ok ? deriveFacts(bed) : null;
+  const refuseAll = (detail) => {
+    const results = {};
+    for (const manifestCase of manifest.cases)
+      results[manifestCase.autoid] = { ok: false, status: 'rejected', violations: [{ code: 'bed_facts_unavailable', detail }] };
+    return {
+      schema: 'apv.mindmap-compile.gate-report',
+      source_sha256: manifest.source_sha256,
+      build: machine.build,
+      display_build: machine.display_build ?? machine.build,
+      contract_sha256: null,
+      bed_facts: null,
+      cases: results,
+    };
+  };
+  if (!facts) return refuseAll(bedFactsPath === null ? '--bed-facts is required' : `bed facts ${bedFactsPath}: ${bed.reason}`);
+  // Author-verbatim disclosure needs the source text the batch was compiled from.
+  const sourcePath = join(batch, '..', manifest.source);
+  const sourceText = existsSync(sourcePath) ? readFileSync(sourcePath, 'utf8') : '';
+  const proposals = [];
   const results = {};
   for (const manifestCase of manifest.cases) {
     const entry = machine.cases.find((c) => c.autoid === manifestCase.autoid);
@@ -226,29 +250,44 @@ export function gateBatch(batch, { contract = null } = {}) {
       const result = gateCase(item, entry, manifestCase, machine.build, destructive, rawCheck, clients);
       result.violations.push(...checkProblems);
       if (checkProblems.length) result.ok = false;
-      results[manifestCase.autoid] = { ...result, status: result.ok ? 'gated' : result.terminal ?? 'rejected' };
+      // Bed-facts mechanical checks a–f; binding proposals are recorded, never applied.
+      const { violations: bedViolations, proposals: caseProposals } = checkCase(item, facts, sourceText);
+      const blocks = bedViolations.filter((v) => v.severity === 'block');
+      const warns = bedViolations.filter((v) => v.severity === 'warn');
+      const disclosure = blocks.filter((v) => v.category === 'environment');
+      result.violations.push(...blocks.map((v) => ({ code: v.code, detail: `${v.detail}${v.suggestion ? `;建议绑定 ${v.suggestion}` : ''}${v.pairedHosts ? `;同段触发机: ${v.pairedHosts.join(',')}` : ''}`, literal: v.literal, command: v.command })));
+      result.violations.push(...warns.map((v) => ({ code: v.code, detail: v.detail, literal: v.literal, command: v.command })));
+      if (blocks.length) { result.ok = false; result.terminal = disclosure.length && disclosure.length === blocks.length ? 'environment_disclosure' : 'rejected'; }
+      proposals.push(...caseProposals);
+      results[manifestCase.autoid] = { ...result, status: result.ok ? 'gated' : (result.terminal === 'environment_disclosure' ? 'environment_disclosure' : result.terminal ?? 'rejected') };
     }
   }
-  return {
+  const report = {
     schema: 'apv.mindmap-compile.gate-report',
     source_sha256: manifest.source_sha256,
     build: machine.build,
     display_build: machine.display_build ?? machine.build,
     contract_sha256: contract ? createHash('sha256').update(readFileSync(contract)).digest('hex') : null,
+    bed_facts: bedFactsPath,
     cases: results,
   };
+  writeJson(join(batch, 'bindings.proposed.json'), proposals);
+  return report;
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2);
   const at = args.indexOf('--contract');
   const contract = at >= 0 ? args[at + 1] : null;
-  const [batch] = args.filter((_, i) => i !== at && i !== at + 1);
-  if (!batch || (at >= 0 && !contract)) {
-    console.error('usage: node gate.mjs <batch folder> [--contract <excel function contract>]');
+  const bf = args.indexOf('--bed-facts');
+  const bedFacts = bf >= 0 ? args[bf + 1] : null;
+  const skip = new Set([at, at + 1, bf, bf + 1]);
+  const [batch] = args.filter((_, i) => !skip.has(i));
+  if (!batch || !bedFacts) {
+    console.error('usage: node gate.mjs <batch folder> --bed-facts <gateway.topology evidence> [--contract <excel function contract>]');
     process.exit(2);
   }
-  const report = gateBatch(batch, { contract });
+  const report = gateBatch(batch, { contract, bedFactsPath: bedFacts });
   writeJson(join(batch, 'gate_report.json'), report);
   const counts = {};
   for (const result of Object.values(report.cases)) counts[result.status] = (counts[result.status] ?? 0) + 1;

@@ -4,6 +4,7 @@
 // Writes <batch>/cases/<autoid>.xlsx for each case, <batch>/case.xlsx with all of them,
 // unsuccessful_cases.md, compile_report.json and delivery_report.md. Nothing has run on a
 // device, so a written case is "emitted, unverified", never "passed".
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { SENTINEL_AUTOID, readJson, sha256, writeBytes, writeJson } from './lib.mjs';
 import { readXlsx, writeXlsx } from './xlsx.mjs';
@@ -98,6 +99,32 @@ export function readBack(bytes) {
   return { sheet, header_row: header + 1, autoids, check_point_count: checkPoints };
 }
 
+// Confirmed bindings (batch/bindings.json, human-copied from bindings.proposed.json):
+// each entry replaces a listener literal and the dig target together, in every command of
+// the case, before rows are written. The gate must already be green with the bindings
+// applied — emit records what it replaced into the report and refuses a binding whose
+// literal does not appear in the case.
+function applyBindings(item, bindings) {
+  const applied = [];
+  const replace = (text) => {
+    let out = text;
+    for (const binding of bindings) {
+      if (!out.includes(binding.from)) continue;
+      out = out.split(binding.from).join(binding.to);
+      if (!applied.some((a) => a.autoid === binding.autoid && a.from === binding.from))
+        applied.push({ autoid: binding.autoid, rule: binding.rule ?? 'binding', from: binding.from, to: binding.to });
+    }
+    return out;
+  };
+  const rebound = structuredClone(item);
+  rebound.init_commands = (rebound.init_commands ?? []).map(replace);
+  for (const block of rebound.blocks ?? []) {
+    if (block.kind === 'CONFIG') block.cmds = (block.cmds ?? []).map(replace);
+    else if (typeof block.cmd === 'string') block.cmd = replace(block.cmd);
+  }
+  return { item: rebound, applied };
+}
+
 export function emitBatch(batch, author = 'circle', contractPath = null) {
   const manifest = readJson(join(batch, 'manifest.json'));
   const machine = readJson(join(batch, 'machine_mindmap.json'));
@@ -105,8 +132,16 @@ export function emitBatch(batch, author = 'circle', contractPath = null) {
   if (gate.source_sha256 !== manifest.source_sha256) throw new Error('gate_report.json is for another mindmap; run gate.mjs again');
   if (!contractPath) throw new Error('emit needs --contract <the registered Excel function contract copy>: the workbook must carry the IST_EXCEL_CONTRACT identity marker');
   const identity = contractIdentity(readJson(contractPath));
+  const bindingsPath = join(batch, 'bindings.json');
+  const bindings = existsSync(bindingsPath) ? readJson(bindingsPath) : [];
+  if (bindings.length) {
+    const gated = Object.values(gate.cases).filter((r) => r.ok);
+    if (!gated.length) throw new Error('bindings.json present but the gate report is not green; re-run gate with the bindings applied');
+  }
+  const bindingsFor = (autoid) => bindings.filter((b) => b.autoid === autoid);
   const buildLine = machine.display_build ?? machine.build;
   const delivered = [];
+  const appliedBindings = [];
   const cases = {};
   const unsuccessful = [];
   for (const manifestCase of manifest.cases) {
@@ -116,9 +151,11 @@ export function emitBatch(batch, author = 'circle', contractPath = null) {
       unsuccessful.push({ manifestCase, result });
       continue;
     }
-    const item = readJson(join(batch, 'cases', `${manifestCase.autoid}.json`));
+    const raw = readJson(join(batch, 'cases', `${manifestCase.autoid}.json`));
+    const { item, applied } = bindingsFor(manifestCase.autoid).length ? applyBindings(raw, bindingsFor(manifestCase.autoid)) : { item: raw, applied: [] };
     const entry = machine.cases.find((c) => c.autoid === manifestCase.autoid);
     const rows = caseRows(item, entry, manifestCase.priority ?? 1);
+    if (applied.length) appliedBindings.push(...applied);
     const bytes = workbook({ author, feature: manifestCase.autoid, cases: [rows], buildLine, identity });
     const path = join(batch, 'cases', `${manifestCase.autoid}.xlsx`);
     writeBytes(path, bytes);
@@ -145,6 +182,7 @@ export function emitBatch(batch, author = 'circle', contractPath = null) {
     display_build: machine.display_build ?? machine.build,
     totals,
     merged,
+    applied_bindings: appliedBindings,
     cases,
     note: 'Nothing here has run on a device: emitted_unverified means the workbook was written and passed the mechanical checks, not that the cases pass.',
   };
@@ -176,6 +214,10 @@ function deliveryMarkdown(report) {
     `共 ${t.cases} 个用例：已写出待上机 ${t.emitted_unverified ?? 0}，被检查拦下 ${t.rejected ?? 0}，构建不支持 ${t.unsupported_feature ?? 0}，需要你决定 ${t.needs_decision ?? 0}。`,
     '',
     report.merged ? `合并工作簿 ${report.merged.path} · ${report.merged.case_count} 个用例 · ${report.merged.check_point_count} 个检查点 · sha256 ${report.merged.sha256.slice(0, 12)}…` : '没有可写出的用例。',
+    '',
+    ...((report.applied_bindings ?? []).length
+      ? ['## 已应用的地址绑定(人确认后替换)', '', ...(report.applied_bindings).map((b) => `- ${b.autoid} · ${b.rule}: ${b.from} → ${b.to}`), '']
+      : []),
     '',
     '这些用例还没有上机执行，「已写出」不等于通过。没写出的用例和原因见 unsuccessful_cases.md。',
     '',

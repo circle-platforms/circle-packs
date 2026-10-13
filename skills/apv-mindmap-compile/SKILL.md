@@ -70,8 +70,21 @@ For each case that is not `true_gap`, write `out/cases/<autoid>.json`, the mecha
 ## 5. Gate (script)
 
 ```
-node <skill>/scripts/gate.mjs out --contract <the Excel function contract the execution side uses>
+node <skill>/scripts/gate.mjs out --bed-facts <gateway.topology evidence> --contract <the Excel function contract the execution side uses>
 ```
+
+`--bed-facts` is required: the hub's `gateway.topology` evidence file saved verbatim (it carries real addresses and never enters Git). Without it — or with an empty device list — the whole batch is refused as `bed_facts_unavailable`; the check never folds into a pass. From the facts the gate derives reachable subnets, per-device carried addresses, trigger hosts (routers/clients), load balancers, the ★ listener list (LB addresses whose subnet holds a trigger host), listener→same-subnet-trigger pairing (names lowercased), blind addresses and server addresses. Per case it then checks mechanically:
+
+| code | rule | severity |
+|---|---|---|
+| address_not_on_bed | an IPv4/IPv6 literal in no reachable subnet | block |
+| environment_disclosure | the same, but the literal is author-verbatim from the mindmap source | block, category environment |
+| listener_not_on_device | `sdns listener`/`slb virtual` address not carried by the device; proposes the device's unique in-subnet address when there is exactly one | block |
+| query_target_not_listener | a `dig`/`curl` target that is not the case's own configured listener and not on the ★ list | block |
+| trigger_host_not_paired_with_target | the dispatching host is not in the target's same-subnet pairing (paired hosts named) | block |
+| backend_not_server | a record/real/pool address that is not a server address | warn |
+
+The gate never rewrites data: binding proposals land in `out/bindings.proposed.json` ({autoid, rule, from, to}). After a human copies the accepted ones to `out/bindings.json`, emit applies each binding to the listener and the dig target together, requires the gate to be green with them applied, and lists every replacement in the delivery report.
 
 The `--contract` file is the execution side's Excel function contract (`schema` `ist.excel.function-contract`), the copy the user registered with the server; the gate takes the client names a `CLIENT` block may use from its enabled `test_env` methods and keeps no list of its own. Without it every `CLIENT` block is `client_not_checked`. `client_not_in_contract` means the framework cannot dispatch to that name (a device reboot, for instance, is not a client): the case is an **unsupported feature** as written, like a command missing from the tree — do not swap in another client or method.
 

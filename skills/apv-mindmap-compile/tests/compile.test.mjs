@@ -7,6 +7,7 @@ import { prep } from '../scripts/prep.mjs';
 import { checkRecompose } from '../scripts/check-recompose.mjs';
 import { gateBatch, gateCase, destructivePatterns, contractClients } from '../scripts/gate.mjs';
 import { emitBatch, readBack, HEADERS, CONTRACT_MARKER } from '../scripts/emit.mjs';
+const BED_FACTS = new URL('./fixtures/bed-facts.json', import.meta.url).pathname;
 import { readXlsx } from '../scripts/xlsx.mjs';
 import { sha256, writeJson } from '../scripts/lib.mjs';
 
@@ -240,7 +241,7 @@ test('emit writes the A–I workbook per case and merged, with the sentinel last
   const written = casesFor(manifest);
   for (const [id, item] of Object.entries(written)) writeJson(join(batch, 'cases', `${id}.json`), item);
   saveChecks(batch, written);
-  writeJson(join(batch, 'gate_report.json'), gateBatch(batch));
+  writeJson(join(batch, 'gate_report.json'), gateBatch(batch, { bedFactsPath: BED_FACTS }));
   writeJson(join(batch, 'contract.json'), CONTRACT);
   const report = emitBatch(batch, 'tester', join(batch, 'contract.json'));
   assert.deepEqual(report.totals, { cases: 4, emitted_unverified: 2, needs_decision: 1, unsupported_feature: 1 });

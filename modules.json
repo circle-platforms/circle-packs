@@ -66,11 +66,11 @@
       "kind": "skill-pack",
       "root": "skills/apv-mindmap-compile",
       "manifestPath": "skills/apv-mindmap-compile/skillpack.json",
-      "version": "0.2.8",
+      "version": "0.3.0",
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "88e7a35e0c494b391c0a6c09380fcc975acd6e33b5e25a6cf905ab41e02d150b"
+          "sha256": "ee5f9d6adac928757b8a670a57e7cfc67dc23f839e5361b8fb0509136f35206c"
         },
         {
           "path": "references/contract.md",
@@ -81,16 +81,20 @@
           "sha256": "7acad30a33ce0892ca66f01ce4e8578ab3ed6598ca39435209777d15b3dbeaa2"
         },
         {
+          "path": "scripts/bed-facts.mjs",
+          "sha256": "ba896f43a0d95cc4a32265d89d527ef2bd9baced38a9c9bc0b2b52b4ee21f256"
+        },
+        {
           "path": "scripts/check-recompose.mjs",
           "sha256": "f2ecc931a4710d1f16486898c1f5c40d5c76c0950f92e37ed09263e82cd504f3"
         },
         {
           "path": "scripts/emit.mjs",
-          "sha256": "9ee43dfbeeae1824394b63dff7a8765ff50ec85317dd7ed22e8d2c7d5371cd12"
+          "sha256": "b77c4b2288200fe68a440852ce9c4bd8e28630b07c8a1a46f7c0508303c1943b"
         },
         {
           "path": "scripts/gate.mjs",
-          "sha256": "05207cbc28065d2034c89b8b3d17f4b390dd32d02fc9ced888b87cbf53a4da3d"
+          "sha256": "520b04457d5423a568eb12cdbb51ab8bbe4a19dabf0407b99f05056967a3a22d"
         },
         {
           "path": "scripts/lib.mjs",
@@ -106,11 +110,19 @@
         },
         {
           "path": "skillpack.json",
-          "sha256": "e2ebab186883a0fe56e008d8660542c0cc35c77e1ab4f2e2292983355275dc21"
+          "sha256": "43f1162e71c28d305f6f38c336e3bc2d26a3dffa95ab4601ad1a30fb54693fb9"
+        },
+        {
+          "path": "tests/bed-facts.test.mjs",
+          "sha256": "4e1fe6ac6b8ac8c15fd9a732188c27a94a8bddeda226235bf404f21ad90c0538"
         },
         {
           "path": "tests/compile.test.mjs",
-          "sha256": "a9666a4af4a3133c1efca64aca7d4ab5370a811051d287bcdc53874488db5977"
+          "sha256": "39351d7345a6ea290f661a909f1bacefb18c9f31a76033747ce861735d4389eb"
+        },
+        {
+          "path": "tests/fixtures/bed-facts.json",
+          "sha256": "ca58aa738f49b9b9f57b3c3ee0d6aee5630de0c7ddcc857dcf44964e1cebff4d"
         },
         {
           "path": "tests/fixtures/excel-contract.json",
@@ -121,7 +133,7 @@
           "sha256": "6c1d0a530e901ff9686594b37b947cae760f53223711efe7f8d1868e0f1521d7"
         }
       ],
-      "digest": "c23c44db7c82b2f842abf459264d477effed323dc163c150c2ddeda6a10167fe"
+      "digest": "4115fbf3ce7bb26785f266504b336b17cc9b4f9ad716f55473c0a19ef1b1d840"
     },
     {
       "id": "apv-product-qa",
