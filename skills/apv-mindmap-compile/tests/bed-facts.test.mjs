@@ -68,8 +68,8 @@ test('b: a listener address the device does not carry is blocked with a unique-s
   ] }), f, '');
   const v = clash.violations.find((x) => x.code === 'listener_not_on_device');
   assert.ok(v && v.literal === '192.0.2.11' && v.device === 'APV_0');
-  assert.equal(v.suggestion, '192.0.2.10');
-  assert.deepEqual(clash.proposals, [{ autoid: '100000000000000001', rule: 'listener_not_on_device', from: '192.0.2.11', to: '192.0.2.10' }]);
+  assert.equal(v.category, 'underdetermined'); // compile-time literal, not author-verbatim
+  assert.ok(clash.proposals.some((p) => p.rule === 'listener_not_on_device' && p.from === '192.0.2.11' && p.to === '192.0.2.10'));
   assert.ok(!checkCase(sound(), f, '').violations.some((x) => x.code === 'listener_not_on_device'));
 });
 
@@ -115,4 +115,52 @@ test('gate: missing or unreadable bed facts refuse the whole batch as bed_facts_
       assert.ok(Object.values(report.cases).every((r) => r.violations[0]?.code === 'bed_facts_unavailable'), String(path));
     }
   } finally { rmSync(batch, { recursive: true, force: true }); }
+});
+
+test('b split: an slb virtual VIP in a trigger-hosted subnet passes; one on a foreign address is blocked', () => {
+  const f = facts();
+  // 192.0.2.88 sits in 192.0.2.0/24 (trigger-hosted by routerA/clientC) and is carried by no device
+  const vipOk = checkCase(sound({ blocks: [
+    { kind: 'CONFIG', host: 'APV_0', cmds: ['slb virtual http "v1" 192.0.2.88 80 arp 0', 'sdns listener 192.0.2.10'], desc: '' },
+    { kind: 'CLIENT', client: 'routera', cmd: 'dig @192.0.2.88 autotest.com', asserts: [{ op: 'found', pattern: 'x', expectation_id: 'u:1' }] },
+  ] }), f, '');
+  assert.ok(!vipOk.violations.some((x) => x.code === 'listener_not_on_device' && x.literal === '192.0.2.88'));
+  assert.ok(!vipOk.violations.some((x) => x.code === 'query_target_not_listener' && x.literal === '192.0.2.88'));
+  // a VIP that is another device's carried address is refused
+  const vipBad = checkCase(sound({ blocks: [
+    { kind: 'CONFIG', host: 'APV_0', cmds: ['slb virtual http "v1" 192.0.2.20 80 arp 0'], desc: '' },
+  ] }), f, '');
+  assert.ok(vipBad.violations.some((x) => x.code === 'listener_not_on_device' && x.literal === '192.0.2.20' && x.device === 'VIP'));
+});
+
+test('origins split three ways: verbatim disclosure, compile-time gap, neither blocks as error', () => {
+  const f = facts();
+  const verbatim = checkCase(sound({ init_commands: ['sdns on 203.0.114.7'] }), f, '作者亲笔 203.0.114.7');
+  assert.equal(verbatim.violations.find((v) => v.literal === '203.0.114.7').category, 'environment');
+  const introduced = checkCase(sound({ init_commands: ['sdns on 203.0.114.7'] }), f, '');
+  assert.equal(introduced.violations.find((v) => v.literal === '203.0.114.7').category, 'underdetermined');
+});
+
+test('g: forward_only without an upstream in the case blocks as underdetermined; with a server upstream it passes', () => {
+  const f = facts();
+  const noUpstream = checkCase(sound({ blocks: [
+    { kind: 'CONFIG', host: 'APV_0', cmds: ['sdns listener 192.0.2.10', 'sdns host name "s.test1" 60 forward_only'], desc: '' },
+    { kind: 'CLIENT', client: 'routera', cmd: 'dig @192.0.2.10 s.test1', asserts: [{ op: 'found', pattern: 'x', expectation_id: 'u:1' }] },
+  ] }), f, '');
+  const g = noUpstream.violations.find((v) => v.code === 'feature_prerequisite_missing');
+  assert.ok(g && g.category === 'underdetermined');
+  const withUpstream = checkCase(sound({ blocks: [
+    { kind: 'CONFIG', host: 'APV_0', cmds: ['sdns listener 192.0.2.10', 'sdns zone forward name "s.test1" "203.0.113.213%53" "default"'], desc: '' },
+    { kind: 'CLIENT', client: 'routera', cmd: 'dig @192.0.2.10 s.test1', asserts: [{ op: 'found', pattern: 'x', expectation_id: 'u:1' }] },
+  ] }), f, '');
+  assert.ok(!withUpstream.violations.some((v) => v.code === 'feature_prerequisite_missing'));
+});
+
+test('a case needing many distinct listener placeholders gets no binding proposals', () => {
+  const f = facts();
+  const sixteen = checkCase(sound({ blocks: [
+    { kind: 'CONFIG', host: 'APV_0', cmds: ['sdns listener 192.0.2.101', 'sdns listener 192.0.2.102'], desc: '' },
+  ] }), f, '');
+  assert.ok(sixteen.violations.filter((v) => v.code === 'listener_not_on_device').length >= 2);
+  assert.deepEqual(sixteen.proposals, []);
 });

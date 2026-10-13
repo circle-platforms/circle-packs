@@ -77,12 +77,16 @@ node <skill>/scripts/gate.mjs out --bed-facts <gateway.topology evidence> --cont
 
 | code | rule | severity |
 |---|---|---|
-| address_not_on_bed | an IPv4/IPv6 literal in no reachable subnet | block |
-| environment_disclosure | the same, but the literal is author-verbatim from the mindmap source | block, category environment |
-| listener_not_on_device | `sdns listener`/`slb virtual` address not carried by the device; proposes the device's unique in-subnet address when there is exactly one | block |
-| query_target_not_listener | a `dig`/`curl` target that is not the case's own configured listener and not on the ★ list | block |
+| address_not_on_bed | an IPv4/IPv6 literal in no reachable subnet, compile-time introduced | block, terminal underdetermined |
+| environment_disclosure | the same, but the literal is author-verbatim from the mindmap source | block, terminal environment_disclosure |
+| listener_not_on_device | a `sdns listener` address the device does not carry; a case with exactly one such placeholder and a unique in-subnet device address gets a binding proposal, N>1 distinct placeholders get none | block, terminal by origin |
+| listener_not_on_device (VIP) | an `slb virtual` address must sit in a trigger-hosted reachable subnet and not be another device's carried address; an `sdns listener` bound to this case's legal VIP passes | block, terminal by origin |
+| query_target_not_listener | a `dig`/`curl` target that is not the case's own configured listener or legal VIP | block |
 | trigger_host_not_paired_with_target | the dispatching host is not in the target's same-subnet pairing (paired hosts named) | block |
 | backend_not_server | a record/real/pool address that is not a server address | warn |
+| feature_prerequisite_missing | a `forward_only`/`zone forward` command whose own literals carry no upstream (a server-carried address or a `services` entry with proto=dns) | block, terminal underdetermined |
+
+Origins decide the terminal status: a compile-time literal or a missing upstream is **underdetermined** (a data gap, not the author's error and not a compile error), an author-verbatim off-bed literal is **environment_disclosure**, anything else is a compile error. None of the three produces a workbook.
 
 The gate never rewrites data: binding proposals land in `out/bindings.proposed.json` ({autoid, rule, from, to}). After a human copies the accepted ones to `out/bindings.json`, emit applies each binding to the listener and the dig target together, requires the gate to be green with them applied, and lists every replacement in the delivery report.
 

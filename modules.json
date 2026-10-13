@@ -70,7 +70,7 @@
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "ee5f9d6adac928757b8a670a57e7cfc67dc23f839e5361b8fb0509136f35206c"
+          "sha256": "96d4a4585756fdb72b45950abfe6966d3c7ad34f6cfb6021ac0e6471f120edb5"
         },
         {
           "path": "references/contract.md",
@@ -82,7 +82,7 @@
         },
         {
           "path": "scripts/bed-facts.mjs",
-          "sha256": "ba896f43a0d95cc4a32265d89d527ef2bd9baced38a9c9bc0b2b52b4ee21f256"
+          "sha256": "f6f3757e4ec670e6117aaca503b0f6c776b30fae8a2029f780b940803e181b58"
         },
         {
           "path": "scripts/check-recompose.mjs",
@@ -94,7 +94,7 @@
         },
         {
           "path": "scripts/gate.mjs",
-          "sha256": "520b04457d5423a568eb12cdbb51ab8bbe4a19dabf0407b99f05056967a3a22d"
+          "sha256": "967929f324361069d650f2405af03aeb2bbcf1c97d8258356cabd88ddfbefd44"
         },
         {
           "path": "scripts/lib.mjs",
@@ -114,7 +114,7 @@
         },
         {
           "path": "tests/bed-facts.test.mjs",
-          "sha256": "4e1fe6ac6b8ac8c15fd9a732188c27a94a8bddeda226235bf404f21ad90c0538"
+          "sha256": "9d10505c361ecd40dce38bbc92096058de1572f13936f2f462e9ed32e24f1b29"
         },
         {
           "path": "tests/compile.test.mjs",
@@ -133,7 +133,7 @@
           "sha256": "6c1d0a530e901ff9686594b37b947cae760f53223711efe7f8d1868e0f1521d7"
         }
       ],
-      "digest": "4115fbf3ce7bb26785f266504b336b17cc9b4f9ad716f55473c0a19ef1b1d840"
+      "digest": "fd4f65a5340fe3a1a2377bc8e0ca2ded4d6597be994ec611b7b73829a8e9ad6f"
     },
     {
       "id": "apv-product-qa",

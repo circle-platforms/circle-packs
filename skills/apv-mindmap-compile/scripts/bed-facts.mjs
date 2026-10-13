@@ -147,6 +147,10 @@ export function deriveFacts(file) {
     }
   }
   const serverAddresses = servers.flatMap((d) => d.addresses.map((a) => a.ip.text));
+  const dnsServices = (file.services ?? file.topology?.services ?? [])
+    .filter((s) => String(s?.proto ?? '').toLowerCase() === 'dns')
+    .map((s) => parseIp(String(s.ip ?? ''))?.text)
+    .filter(Boolean);
   return {
     subnets,
     devices,
@@ -156,6 +160,19 @@ export function deriveFacts(file) {
     pairing,
     blind,
     serverAddresses,
+    dnsServices,
+    upstreamAddresses: [...new Set([...serverAddresses, ...dnsServices])],
+    sameSubnetTriggers: (literalText) => {
+      const ip = parseIp(literalText);
+      if (ip === null) return null;
+      const cidr = subnets.find((c) => inCidr(ip, c));
+      if (!cidr) return null;
+      const hosts = [...devices.values()]
+        .filter((d) => TRIGGER_TYPES.has(d.type))
+        .filter((d) => d.addresses.some((a) => inCidr(a.ip, cidr)))
+        .map((d) => d.name.toLowerCase());
+      return hosts.length ? hosts : null;
+    },
     reachable: (literal) => {
       const ip = parseIp(literal);
       return ip !== null && subnets.some((cidr) => inCidr(ip, cidr));
@@ -193,11 +210,13 @@ const BACKEND_RE = /\b(?:record\s+ip|real|pool)\b/;
 export function checkCase(item, facts, sourceText) {
   const violations = [];
   const proposals = [];
-  const flag = (row) => violations.push(row);
+  const author = (literal) => sourceText.includes(literal);
+  const categoryOf = (literal) => (author(literal) ? 'environment' : 'underdetermined');
   const host = (block) => String(block?.host ?? 'APV_0');
   const commands = [];
   for (const command of item.init_commands ?? []) commands.push({ host: 'APV_0', command: String(command) });
-  const listeners = [];
+  const sdnsListeners = [];   // sdns listener literals (device-bound)
+  const vipAddresses = [];    // slb virtual VIP literals (subnet-bound)
   for (const block of item.blocks ?? []) {
     if (block?.kind === 'CONFIG') {
       for (const command of block.cmds ?? []) commands.push({ host: host(block), command: String(command) });
@@ -207,53 +226,113 @@ export function checkCase(item, facts, sourceText) {
       commands.push({ host: 'test_env', command: block.cmd, client: String(block.client ?? '').toLowerCase() });
     }
   }
-  for (const { host: at, command } of commands) {
+
+  // (a) off-bed literals, split by origin: author-verbatim is an environment disclosure,
+  // a compile-time literal is an underdetermined data gap — neither is an author error.
+  for (const { command } of commands) {
     for (const literal of literalsOf(command)) {
       if (facts.reachable(literal)) continue;
-      const author = sourceText.includes(literal);
-      flag(author
-        ? { code: 'environment_disclosure', severity: 'block', category: 'environment', literal, command, detail: '作者原文的地址不在本床任何可达子网' }
-        : { code: 'address_not_on_bed', severity: 'block', category: 'error', literal, command, detail: '地址不在本床任何可达子网' });
+      const category = categoryOf(literal);
+      violations.push(category === 'environment'
+        ? { code: 'environment_disclosure', severity: 'block', category, literal, command, detail: '作者原文的地址不在本床任何可达子网' }
+        : { code: 'address_not_on_bed', severity: 'block', category, literal, command, detail: '编译期引入的地址不在本床任何可达子网(数据缺口)' });
     }
   }
+
+  // (b) split by command shape: sdns listener must be carried by the device; an slb
+  // virtual VIP only has to sit in a trigger-hosted reachable subnet and not be another
+  // device's carried address.
+  const carried = (literal) => [...facts.devices.values()].some((d) => d.addresses.some((a) => a.ip.text === literal));
   for (const { host: at, command } of commands) {
     if (at === 'test_env') continue;
-    for (const re of [LISTENER_RE, SLB_VIRTUAL_RE]) {
-      const literal = re.exec(command)?.[1];
-      if (!literal || !parseIp(literal)) continue;
-      listeners.push(literal);
-      if (facts.carriedBy(literal, at)) continue;
-      const inSubnet = facts.deviceAddressInSubnetOf(literal, at);
-      const to = inSubnet.length === 1 ? inSubnet[0] : null;
-      flag({ code: 'listener_not_on_device', severity: 'block', category: 'error', literal, command, device: at, detail: `${at} 不承载 ${literal}`, ...(to ? { suggestion: to } : {}) });
-      if (to) proposals.push({ autoid: item.autoid, rule: 'listener_not_on_device', from: literal, to });
-    }
+    const listener = LISTENER_RE.exec(command)?.[1];
+    if (listener && parseIp(listener)) sdnsListeners.push(literal(listener));
+    const vip = SLB_VIRTUAL_RE.exec(command)?.[1];
+    if (vip && parseIp(vip)) vipAddresses.push(literal(vip));
   }
+  const listenerTargets = new Set();   // addresses legal for dig/curl targets (c)
+  const placeholders = new Set();      // off-device listener literals (binding candidates)
+  // VIP legality first: an slb virtual address is legal when it sits in a trigger-hosted
+  // reachable subnet and no other device carries it; an sdns listener bound to the same
+  // address as this case's legal VIP passes too (the device accepts it — proven on the bed).
+  const legalVips = new Set();
+  for (const { command } of commands) {
+    const vip = SLB_VIRTUAL_RE.exec(command)?.[1];
+    if (!vip || !parseIp(vip)) continue;
+    const subnetHasTrigger = facts.subnets.some((cidr) => {
+      const ip = parseIp(vip);
+      return ip && inCidr(ip, cidr) && triggerInSubnet(facts, cidr);
+    });
+    if (subnetHasTrigger && !carried(vip)) legalVips.add(vip);
+    else violations.push({ code: 'listener_not_on_device', severity: 'block', category: categoryOf(vip), literal: vip, command, device: 'VIP', detail: `VIP ${vip} 不在有触发机的可达子网或被其它设备承载` });
+  }
+  for (const vip of legalVips) listenerTargets.add(vip);
+  for (const { host: at, command } of commands) {
+    if (at === 'test_env') continue;
+    const literal = LISTENER_RE.exec(command)?.[1];
+    if (!literal || !parseIp(literal)) continue;
+    const lit = literal;
+    if (facts.carriedBy(lit, at) || legalVips.has(lit)) { listenerTargets.add(lit); continue; }
+    placeholders.add(lit);
+    const category = categoryOf(lit);
+    violations.push({ code: 'listener_not_on_device', severity: 'block', category, literal: lit, command, device: at, detail: `${at} 不承载 ${lit}` });
+  }
+
+  // (c/d) dig/curl target must equal a listener/VIP of this case and sit on the star
+  // list; the dispatching host must be paired with the target's subnet.
   for (const { command, client } of commands) {
     if (client === undefined) continue;
     const target = DIG_TARGET_RE.exec(command)?.[1];
     if (!target || !parseIp(target)) continue;
-    if (!listeners.includes(target) || !facts.listenerList.includes(target))
-      flag({ code: 'query_target_not_listener', severity: 'block', category: 'error', literal: target, command, detail: '查询目标不是本例已配置且在监听名单里的地址' });
+    if (!listenerTargets.has(target))
+      violations.push({ code: 'query_target_not_listener', severity: 'block', category: categoryOf(target), literal: target, command, detail: '查询目标不是本例已配置的监听地址' });
     else {
-      const paired = facts.pairing.get(target) ?? [];
+      const paired = facts.pairing.get(target) ?? facts.sameSubnetTriggers(target) ?? [];
       if (!paired.includes(client))
-        flag({ code: 'trigger_host_not_paired_with_target', severity: 'block', category: 'error', literal: target, command, host: client, pairedHosts: paired, detail: `发起主机 ${client} 不在目标 ${target} 的同段触发机里` });
+        violations.push({ code: 'trigger_host_not_paired_with_target', severity: 'block', category: categoryOf(target), literal: target, command, host: client, pairedHosts: paired, detail: `发起主机 ${client} 不在目标 ${target} 的同段触发机里` });
     }
   }
+
+  // (e) backends warn
   for (const { command } of commands) {
     if (!BACKEND_RE.test(command)) continue;
     for (const literal of literalsOf(command)) {
       if (facts.serverAddresses.includes(literal)) continue;
-      flag({ code: 'backend_not_server', severity: 'warn', category: 'warn', literal, command, detail: '后端地址不是服务器承载地址(警告,不阻断)' });
+      violations.push({ code: 'backend_not_server', severity: 'warn', category: 'warn', literal, command, detail: '后端地址不是服务器承载地址(警告,不阻断)' });
     }
   }
-  const seen = new Set();
-  const uniqueProposals = proposals.filter((p) => {
-    const key = `${p.autoid}:${p.from}:${p.to}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-  return { violations, proposals: uniqueProposals };
+
+  // (g) forward_only / zone forward need an upstream in this very case: a server-carried
+  // address or a services entry with proto=dns.
+  const forwardCommands = commands.filter(({ command }) => FORWARD_RE.test(command));
+  if (forwardCommands.length) {
+    const upstream = forwardCommands.some(({ command }) => literalsOf(command).some((l) => facts.upstreamAddresses.includes(l)));
+    if (!upstream)
+      violations.push({ code: 'feature_prerequisite_missing', severity: 'block', category: 'underdetermined', detail: 'forward_only / zone forward 需要在该命令里给出上游(服务器承载地址或 services 里 proto=dns 的条目);本床无上游' });
+  }
+
+  // Binding proposals: only when the case needs exactly one distinct listener placeholder
+  // and the device has exactly one interface address in that subnet; the dig target bound
+  // to the old listener follows along. Cases needing N>1 listeners get none.
+  if (placeholders.size === 1) {
+    const from = [...placeholders][0];
+    const device = commands.find(({ command }) => command.includes(from))?.host ?? 'APV_0';
+    const inSubnet = facts.deviceAddressInSubnetOf(from, device);
+    if (inSubnet.length === 1) {
+      const to = inSubnet[0];
+      proposals.push({ autoid: item.autoid, rule: 'listener_not_on_device', from, to });
+      for (const { command, client } of commands) {
+        if (client === undefined) continue;
+        const target = DIG_TARGET_RE.exec(command)?.[1];
+        if (target && target !== to && parseIp(target))
+          proposals.push({ autoid: item.autoid, rule: 'query_target_follows_listener', from: target, to });
+      }
+    }
+  }
+  return { violations, proposals };
 }
+const literal = (x) => x;
+const FORWARD_RE = /\bsdns\s+(?:host\s+name\s+.*forward_only|zone\s+forward\b)/;
+const triggerInSubnet = (facts, cidr) => [...facts.devices.values()]
+  .filter((d) => d.type === '路由器' || d.type === '客户端')
+  .some((d) => d.addresses.some((a) => a.cidr === cidr || inCidr(a.ip, cidr)));

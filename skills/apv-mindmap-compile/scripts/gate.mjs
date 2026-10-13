@@ -254,12 +254,19 @@ export function gateBatch(batch, { contract = null, bedFactsPath = null } = {}) 
       const { violations: bedViolations, proposals: caseProposals } = checkCase(item, facts, sourceText);
       const blocks = bedViolations.filter((v) => v.severity === 'block');
       const warns = bedViolations.filter((v) => v.severity === 'warn');
-      const disclosure = blocks.filter((v) => v.category === 'environment');
       result.violations.push(...blocks.map((v) => ({ code: v.code, detail: `${v.detail}${v.suggestion ? `;建议绑定 ${v.suggestion}` : ''}${v.pairedHosts ? `;同段触发机: ${v.pairedHosts.join(',')}` : ''}`, literal: v.literal, command: v.command })));
       result.violations.push(...warns.map((v) => ({ code: v.code, detail: v.detail, literal: v.literal, command: v.command })));
-      if (blocks.length) { result.ok = false; result.terminal = disclosure.length && disclosure.length === blocks.length ? 'environment_disclosure' : 'rejected'; }
+      if (blocks.length) {
+        result.ok = false;
+        // Terminal status by origin: an underdetermined data gap (compile-time literal,
+        // missing upstream) outranks a verbatim environment disclosure; anything else is
+        // a compile error. Neither status produces a workbook.
+        result.terminal = blocks.some((v) => v.category === 'underdetermined')
+          ? 'underdetermined'
+          : blocks.every((v) => v.category === 'environment') ? 'environment_disclosure' : 'rejected';
+      }
       proposals.push(...caseProposals);
-      results[manifestCase.autoid] = { ...result, status: result.ok ? 'gated' : (result.terminal === 'environment_disclosure' ? 'environment_disclosure' : result.terminal ?? 'rejected') };
+      results[manifestCase.autoid] = { ...result, status: result.ok ? 'gated' : (result.terminal ?? 'rejected') };
     }
   }
   const report = {
