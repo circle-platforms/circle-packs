@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { validateAnswer, loadSection, loadReturn, cite } from '../scripts/cite.mjs';
+import { validateAnswer, loadSection, loadReturn, cite, manualLog } from '../scripts/cite.mjs';
 
 function workspace(t, { answer = null, sections = [], searches = [] } = {}) {
   const folder = mkdtempSync(join(tmpdir(), 'qa-'));
@@ -150,4 +150,53 @@ test('a {savedAs} pointer resolves like apv-case-review: as given, workspace roo
   assert.ok(section.texts.includes(QUOTE));
   const returns = loadReturn(folder, pointer);
   assert.ok(returns.raw.result);
+});
+
+function listReturn(folder, dirs) {
+  const path = join(folder, `list-${Math.random().toString(36).slice(2)}.json`);
+  writeFileSync(path, JSON.stringify({
+    tool: 'docs.list',
+    args: { path: '/webdav/cli' },
+    at: '2026-10-13T00:00:00.000Z',
+    response: { result: { files: dirs.map((d) => ({ path: `/webdav/cli/${d}/`, directory: true })) }, evidence: [{ evidenceId: 'evd_list' }] },
+  }));
+  return path;
+}
+
+test('the manual listing renders into the query log and validates the chosen version', (t) => {
+  const folder = mkdtempSync(join(tmpdir(), 'qa-'));
+  t.after(() => rmSync(folder, { recursive: true, force: true }));
+  const dirs = ['rel_apv_10_4_6', 'rel_apv_10_5_0', 'rel_apv_10_5_1'];
+  const log = manualLog(folder, [listReturn(folder, dirs)], '10.5.0');
+  assert.deepEqual(log.directories, dirs);
+  assert.equal(log.chosen, '10.5.0');
+  assert.throws(() => manualLog(folder, [listReturn(folder, dirs)], '10.5'), /no manual directory/);
+  assert.throws(() => manualLog(folder, [listReturn(folder, dirs)], ''), /non-empty version/);
+});
+
+test('cite renders the manual line before the searches, also on no_evidence', (t) => {
+  const folder = mkdtempSync(join(tmpdir(), 'qa-'));
+  t.after(() => rmSync(folder, { recursive: true, force: true }));
+  const sectionPath = join(folder, 'section.json');
+  writeFileSync(sectionPath, JSON.stringify({
+    response: { result: { file: 'a.md', lines: LINES }, evidence: [{ evidenceId: 'evd_s1' }] },
+  }));
+  const searchPath = join(folder, 'search.json');
+  writeFileSync(searchPath, JSON.stringify({
+    tool: 'docs.search', args: { query: 'sdns listener', version: '10.5.0' },
+    response: { result: { hits: [{ path: 'a.md' }] }, evidence: [{ evidenceId: 'evd_q' }] },
+  }));
+  const listPath = listReturn(folder, ['rel_apv_10_4_6', 'rel_apv_10_5_0']);
+  writeFileSync(join(folder, 'answer.json'), JSON.stringify({
+    question: 'q', status: 'no_evidence', answer: '手册里没有找到能回答这个问题的内容。', citations: [],
+  }));
+  const result = cite(folder, [sectionPath], [searchPath], null, [listPath], '10.5.0');
+  const md = readFileSync(join(folder, 'answer.md'), 'utf8');
+  const manualLine = md.split('\n').find((l) => l.includes('手册目录'));
+  const searchLineIndex = md.split('\n').findIndex((l) => l.includes('"sdns listener"'));
+  assert.ok(manualLine.includes('rel_apv_10_5_0'));
+  assert.ok(manualLine.includes('选定 10.5.0'));
+  assert.ok(searchLineIndex > md.split('\n').indexOf(manualLine));
+  assert.ok(md.includes('命中 1'));
+  assert.equal(result.status, 'no_evidence');
 });

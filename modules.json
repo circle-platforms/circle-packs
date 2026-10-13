@@ -128,26 +128,26 @@
       "kind": "skill-pack",
       "root": "skills/apv-product-qa",
       "manifestPath": "skills/apv-product-qa/skillpack.json",
-      "version": "0.1.1",
+      "version": "0.1.2",
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "97cd82de9006c4c684fa935efe30f4da85d485c4fd7f7ce08afdc4189ecb22e5"
+          "sha256": "8806528067eb5996c61ae2fe3a92028dcbb1ca429710438efe5d8488a76b0021"
         },
         {
           "path": "scripts/cite.mjs",
-          "sha256": "fd5f3d11b1b3468e1644242a687fc9d3bd0bac0699c7f143134bfcebe1d634dd"
+          "sha256": "7332f7f2739aa5e41344f2937c02f6fae0a2a6a5e67eb1981fce545dcfd516fe"
         },
         {
           "path": "skillpack.json",
-          "sha256": "9270237be21353572828a116ae017ebeb4c44dd4a3baa03be7d24cdd63815393"
+          "sha256": "d3bc2b80b8506545409ab061ed575c9cdc1731696d69a580309dc3f7675dd945"
         },
         {
           "path": "tests/cite.test.mjs",
-          "sha256": "771febbdd1e0c0054ba63a48855ef4680f996bbe1018d696026d099ddca5ae68"
+          "sha256": "0cd680f2d1a499c107a3d15e7fc7e97051512144c1adc871eb1cef6674f1a42f"
         }
       ],
-      "digest": "eb5220683b692d4d74cbd522444d00b46d540c9054534310abf26c35e1a0c402"
+      "digest": "383ff8f49bb2ae9d644c34f44d9e3c5f414c9474b7c6fe8f418e03966b2ccf64"
     },
     {
       "id": "apv",

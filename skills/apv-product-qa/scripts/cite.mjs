@@ -58,6 +58,28 @@ export function loadSection(folder, arg) {
   return { texts: textsOf(raw.result), evidenceIds, name };
 }
 
+// The manual listing of the --list returns: the directory names the docs source actually
+// has (rel_apv_<version with underscores>). The chosen version must correspond to one of
+// them; a version line that is not a directory on the source is refused, not guessed.
+export function manualLog(folder, listArgs, chosenVersion) {
+  const directories = [];
+  for (const arg of listArgs) {
+    const { raw, name } = loadReturn(folder, arg);
+    const files = Array.isArray(raw.result.files) ? raw.result.files : [];
+    for (const file of files)
+      if (file && file.directory && typeof file.path === 'string') {
+        const dir = file.path.split('/').filter(Boolean).pop();
+        if (dir && !directories.includes(dir)) directories.push(dir);
+      }
+  }
+  if (chosenVersion !== null) {
+    if (typeof chosenVersion !== 'string' || !chosenVersion) throw new Error('--chosen-version must be a non-empty version');
+    const expected = `rel_apv_${chosenVersion.replaceAll('.', '_')}`;
+    if (!directories.includes(expected)) throw new Error(`chosen version ${chosenVersion} has no manual directory: expected ${expected} among ${directories.join(', ') || '(none listed)'}`);
+  }
+  return { directories, chosen: chosenVersion };
+}
+
 // The query log rendered from the --search returns: the searched terms and version from the
 // saved args, the hit count from the saved result — never re-typed by the model.
 export function searchLog(folder, searchArgs) {
@@ -104,7 +126,7 @@ export function validateAnswer(answer, sections) {
   return { status: answer.status, citations: enriched };
 }
 
-export function renderAnswer(folder, answer, validated, searches = []) {
+export function renderAnswer(folder, answer, validated, searches = [], manual = null) {
   const lines = [
     `# ${answer.question}`,
     '',
@@ -122,8 +144,9 @@ export function renderAnswer(folder, answer, validated, searches = []) {
     for (const citation of validated.citations)
       lines.push(`- ${citation.evidenceId} · ${citation.source ?? ''} · ${citation.section ?? ''}`, `  > ${citation.quote.replace(/\n/g, ' ⏎ ')}`, '');
   }
-  if (searches.length) {
+  if (searches.length || manual) {
     lines.push('## 查询记录', '');
+    if (manual) lines.push(`- 手册目录: ${manual.directories.join(', ') || '(none listed)'}${manual.chosen ? ` → 选定 ${manual.chosen}` : ''}`);
     for (const entry of searches)
       lines.push(`- 检索 ${entry.terms.map((t) => `"${t}"`).join(' · ')}${entry.hits === null ? '' : ` · 命中 ${entry.hits}`}`);
     lines.push('');
@@ -132,28 +155,31 @@ export function renderAnswer(folder, answer, validated, searches = []) {
   return join(folder, 'answer.md');
 }
 
-export function cite(folder, sectionArgs, searchArgs = [], answerPath = null) {
+export function cite(folder, sectionArgs, searchArgs = [], answerPath = null, listArgs = [], chosenVersion = null) {
   const path = answerPath ?? join(folder, 'answer.json');
   const answer = JSON.parse(readFileSync(path, 'utf8'));
   const sections = sectionArgs.map((arg) => loadSection(folder, arg));
   const validated = validateAnswer(answer, sections);
   const searches = searchLog(folder, searchArgs);
-  return { rendered: renderAnswer(folder, answer, validated, searches), status: validated.status, citations: validated.citations.length, searches: searches.length };
+  const manual = listArgs.length || chosenVersion !== null ? manualLog(folder, listArgs, chosenVersion) : null;
+  return { rendered: renderAnswer(folder, answer, validated, searches, manual), status: validated.status, citations: validated.citations.length, searches: searches.length };
 }
 
 if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
   const [folder, ...rest] = process.argv.slice(2);
-  const sections = [], searches = [];
-  let answer = null;
+  const sections = [], searches = [], lists = [];
+  let answer = null, chosenVersion = null;
   for (let i = 0; i < rest.length; i++) {
     if (rest[i] === '--section') sections.push(rest[++i]);
     else if (rest[i] === '--search') searches.push(rest[++i]);
+    else if (rest[i] === '--list') lists.push(rest[++i]);
     else if (rest[i] === '--answer') answer = rest[++i];
+    else if (rest[i] === '--chosen-version') chosenVersion = rest[++i];
   }
   if (!folder || !sections.length) {
-    console.error('usage: node cite.mjs <question folder> --section <file or pointer> [--section …] [--search <file or pointer> …] [--answer <answer.json>]');
+    console.error('usage: node cite.mjs <question folder> --section <file or pointer> [--section …] [--search <file or pointer> …] [--list <file or pointer> …] [--chosen-version <version>] [--answer <answer.json>]');
     process.exit(2);
   }
-  const result = cite(folder, sections, searches, answer);
+  const result = cite(folder, sections, searches, answer, lists, chosenVersion);
   console.log(JSON.stringify({ status: result.status, citations: result.citations, searches: result.searches, rendered: result.rendered }));
 }
