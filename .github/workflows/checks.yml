@@ -1,0 +1,30 @@
+name: Checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Manifest matches the files
+        run: node tools/modules.ts check
+      - name: Manifest and skill tests
+        run: node --test tools/*.test.ts skills/*/tests/*.test.mjs
+      - name: Fetch the hub dependency set
+        run: |
+          git clone --depth 1 https://github.com/qingshanfeihu/circle-hub ../circle-hub
+          cd ../circle-hub && npm ci --ignore-scripts
+      - name: Product-line pack tests
+        run: |
+          ln -s ../circle-hub/node_modules node_modules
+          node --experimental-strip-types --test 'products/apv/tests/*.test.mjs'
