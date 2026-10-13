@@ -2,34 +2,114 @@
   "schemaVersion": "product-line/1",
   "id": "apv",
   "version": "1.0.1",
-  "connectorPackages": ["documents", "build-site", "query-mirror", "environment-view", "case-gateway"],
-  "toolAliases": {"documents": "docs", "build-site": "buildsite", "query-mirror": "zentao", "environment-view": "env", "knowledge": "knowledge"},
+  "connectorPackages": [
+    "documents",
+    "build-site",
+    "query-mirror",
+    "environment-view",
+    "case-gateway"
+  ],
+  "toolAliases": {
+    "documents": "docs",
+    "build-site": "buildsite",
+    "query-mirror": "zentao",
+    "environment-view": "env",
+    "knowledge": "knowledge"
+  },
   "connectorOptions": {
-    "documents": {"documents": {"versionDirectoryTemplate": "cli/rel_apv_{version}/", "versionSeparator": "_", "maxDepth": 3, "maxFiles": 100}},
-    "build-site": {"buildSite": {
-      "listingPathPattern": "(?:^|/)rel_apv_(?<versionLine>\\d+(?:_\\d+){1,2})(?<variant>_[^.]+)?\\.html$",
-      "variantPlatforms": {"InfosecOS": "InfosecOS", "hg_k": "hg_k", "ft_k": "ft_k", "infose_hg_k": "infose_hg_k", "ft_kylinv10": "ft_kylinv10", "hg_uos": "hg_uos", "infose_hg_uos": "infose_hg_uos", "rocky86_hg": "rocky86_hg"}
-    }}
+    "documents": {
+      "documents": {
+        "versionDirectoryTemplate": "cli/rel_apv_{version}/",
+        "versionSeparator": "_",
+        "maxDepth": 3,
+        "maxFiles": 100
+      }
+    },
+    "build-site": {
+      "buildSite": {
+        "listingPathPattern": "(?:^|/)rel_apv_(?<versionLine>\\d+(?:_\\d+){1,2})(?<variant>_[^.]+)?\\.html$",
+        "variantPlatforms": {
+          "InfosecOS": "InfosecOS",
+          "hg_k": "hg_k",
+          "ft_k": "ft_k",
+          "infose_hg_k": "infose_hg_k",
+          "ft_kylinv10": "ft_kylinv10",
+          "hg_uos": "hg_uos",
+          "infose_hg_uos": "infose_hg_uos",
+          "rocky86_hg": "rocky86_hg"
+        }
+      }
+    }
   },
   "skills": [],
   "tools": [
-    {"manifest": "tools/mindmap.ts", "imports": {"fflate": "0.8.3"}},
-    {"manifest": "tools/contracts.ts", "imports": {}},
-    {"manifest": "tools/function-contract.ts", "imports": {}},
-    {"manifest": "tools/dialect.ts", "imports": {}},
-    {"manifest": "tools/workbook.ts", "imports": {"exceljs": "4.4.0", "fflate": "0.8.3"}}
+    {
+      "manifest": "tools/mindmap.ts",
+      "imports": {
+        "fflate": "0.8.3"
+      }
+    },
+    {
+      "manifest": "tools/contracts.ts",
+      "imports": {}
+    },
+    {
+      "manifest": "tools/function-contract.ts",
+      "imports": {}
+    },
+    {
+      "manifest": "tools/dialect.ts",
+      "imports": {}
+    },
+    {
+      "manifest": "tools/workbook.ts",
+      "imports": {
+        "exceljs": "4.4.0",
+        "fflate": "0.8.3"
+      }
+    },
+    {
+      "manifest": "tools/defect-claims.ts",
+      "imports": {}
+    }
   ],
   "hooks": [
-    {"manifest": "hooks/device-command-tree.ts", "event": "verify.deviceCommand", "order": 10},
-    {"manifest": "hooks/host-destructive.ts", "event": "verify.hostCommand", "order": 10},
-    {"manifest": "hooks/workbook-contract.ts", "event": "verify.workbook", "order": 10}
+    {
+      "manifest": "hooks/device-command-tree.ts",
+      "event": "verify.deviceCommand",
+      "order": 10
+    },
+    {
+      "manifest": "hooks/host-destructive.ts",
+      "event": "verify.hostCommand",
+      "order": 10
+    },
+    {
+      "manifest": "hooks/workbook-contract.ts",
+      "event": "verify.workbook",
+      "order": 10
+    }
   ],
-  "flows": ["flows/apv-case-execute.json"],
+  "flows": [
+    "flows/apv-case-execute.json"
+  ],
   "configuration": "Source addresses and credential references are supplied at runtime",
   "knowledgeMappings": {
     "commandAuthority": "The exact build command-tree revision",
     "releaseAuthority": "Rel_ builds with an explicit publication date",
-    "repairJoin": {"direct": {"system": "zentao", "mirrorField": "id"}, "legacy": {"system": "bugzilla", "mirrorField": "bugzillaID", "normalizedField": "legacyIssueId"}, "publicationPredicate": "fixed-issues"},
+    "repairJoin": {
+      "direct": {
+        "system": "zentao",
+        "mirrorField": "id"
+      },
+      "legacy": {
+        "system": "bugzilla",
+        "mirrorField": "bugzillaID",
+        "normalizedField": "legacyIssueId"
+      },
+      "publicationPredicate": "fixed-issues",
+      "claims": "tools/defect-claims.ts emits legacy_issue_id and fixed_in_build per zentao.bug_detail item; the bugzilla-to-zentao join itself stays this mapping, the claims only carry its two sides as script-origin candidates"
+    },
     "resolvedBuild": "Supplementary build evidence which does not prove a formal release",
     "platform": "A dimension separate from versionLine"
   }

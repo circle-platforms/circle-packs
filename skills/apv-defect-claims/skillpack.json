@@ -1,0 +1,23 @@
+{
+  "id": "apv-defect-claims",
+  "version": "0.1.0",
+  "title": "APV 缺陷声明抽取",
+  "owner": "apv-product-line",
+  "tools": [
+    "zentao.products",
+    "zentao.bug_search",
+    "zentao.bug_detail",
+    "knowledge.claim_submit"
+  ],
+  "triggers": [
+    "manual"
+  ],
+  "inputs": {
+    "product": "the product line to search under, such as APV",
+    "defects": "bug ids from a repair list, or free keywords to search"
+  },
+  "outputs": [
+    "defect_claims.json"
+  ],
+  "model": "any capable model; product resolution, search terms and bug picks are judgement; claim extraction and the submitted shape are scripts"
+}
