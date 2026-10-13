@@ -132,7 +132,7 @@
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "8806528067eb5996c61ae2fe3a92028dcbb1ca429710438efe5d8488a76b0021"
+          "sha256": "d5ce99229096819d95b8ddd6a562b147233c4bbb3c2c2a2925bb0d59aa00bba3"
         },
         {
           "path": "scripts/cite.mjs",
@@ -147,7 +147,7 @@
           "sha256": "0cd680f2d1a499c107a3d15e7fc7e97051512144c1adc871eb1cef6674f1a42f"
         }
       ],
-      "digest": "383ff8f49bb2ae9d644c34f44d9e3c5f414c9474b7c6fe8f418e03966b2ccf64"
+      "digest": "1e4b5b7633fc861d0a280de708d13fdd82fa9858e19d27e65663f2dbd9efaaaf"
     },
     {
       "id": "apv",

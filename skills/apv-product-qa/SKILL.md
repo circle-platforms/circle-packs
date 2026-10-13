@@ -22,7 +22,7 @@ Answer a product question only from what the manuals say, with every claim tied 
 
 ## 2. 检索与选段(判断 + 工具)
 
-- `srv_docs_search` 带 `version`(版本线,检索该版 CLI 手册)与检索词;读回的命中里挑出与问题相关的手册章节。
+- 检索一律**先定位再窄搜**:全目录搜索一页要读 20 个文件、每次请求间隔 200ms,容易撞 30 秒超时。先用 `srv_docs_list` 列出选定手册目录(`cli/rel_apv_<版本>/`),从中挑与问题相关的子目录或文件,再 `srv_docs_search` 带 `path` 限定到它,配 `version`(第 0 步选定的完整版本号)、检索词与 `limit`;读回的命中里挑出与问题相关的手册章节。
 - 对选中的章节用 `srv_docs_section` 取原文;hub 原样落盘每次返回(`savedAs` 指向路径),答案只引用落盘返回里的文字。
 - 检索没命中就如实说没有,不换词硬凑到「看起来答了」。`srv_docs_search` 与 `srv_docs_section` 的 `version` 一律传第 0 步选定的完整版本号。
 
