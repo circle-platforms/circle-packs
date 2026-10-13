@@ -1,11 +1,10 @@
 {
   "id": "apv-product-qa",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "title": "APV 产品问答",
   "owner": "apv-product-line",
   "tools": [
     "docs.list",
-    "docs.search",
     "docs.section"
   ],
   "triggers": [

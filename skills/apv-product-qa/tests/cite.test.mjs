@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { validateAnswer, loadSection, loadReturn, cite, manualLog } from '../scripts/cite.mjs';
 
-function workspace(t, { answer = null, sections = [], searches = [] } = {}) {
+function workspace(t, { answer = null, sections = [] } = {}) {
   const folder = mkdtempSync(join(tmpdir(), 'qa-'));
   t.after(() => rmSync(folder, { recursive: true, force: true }));
   const sectionArgs = sections.map((section, i) => {
@@ -18,18 +18,8 @@ function workspace(t, { answer = null, sections = [], searches = [] } = {}) {
     }));
     return path;
   });
-  const searchArgs = searches.map((search, i) => {
-    const path = join(folder, `search-${i}.json`);
-    writeFileSync(path, JSON.stringify({
-      tool: 'docs.search',
-      args: { query: search.query, version: search.version },
-      at: '2026-10-13T00:00:00.000Z',
-      response: { result: { hits: search.hits.map((hit) => ({ path: hit })), coverage: { complete: true } }, evidence: [{ evidenceId: 'evd_search', sha256: 'ab'.repeat(32) }] },
-    }));
-    return path;
-  });
   if (answer) writeFileSync(join(folder, 'answer.json'), JSON.stringify(answer));
-  return { folder, sectionArgs, searchArgs };
+  return { folder, sectionArgs };
 }
 
 const LINES = ['**sdns listener**', '配置 SDNS 监听器地址。', 'sdns listener <ip> [port]', '不配置 sdns listener 时,sdns 功能不生效。'];
@@ -109,20 +99,27 @@ test('identifier keys (file, anchor, evidenceId) are never matched as quote text
   assert.throws(() => cite(folder, sectionArgs), /not in any section return/);
 });
 
-test('no_evidence renders the not-found answer with the query log', (t) => {
-  const { folder, sectionArgs, searchArgs } = workspace(t, {
-    answer: { question: 'q', status: 'no_evidence', answer: '手册里没有找到能回答这个问题的内容。', citations: [] },
-    sections: [SECTION],
-    searches: [{ query: 'sdns listener', version: '10.5', hits: ['a.md'] }, { query: '监听器', version: '10.5', hits: [] }],
-  });
-  const result = cite(folder, sectionArgs, searchArgs);
+test('no_evidence renders the not-found answer with the lookup log, misses included', (t) => {
+  const folder = mkdtempSync(join(tmpdir(), 'qa-'));
+  t.after(() => rmSync(folder, { recursive: true, force: true }));
+  const sectionPath = join(folder, 'section.json');
+  writeFileSync(sectionPath, JSON.stringify({
+    tool: 'docs.section', args: { file: 'cli_cn.md', anchor: 'sdns listener', version: '10.5.0' },
+    response: { result: { file: 'cli_cn.md', lines: LINES }, evidence: [{ evidenceId: 'evd_s1' }] },
+  }));
+  const missPath = join(folder, 'miss.json');
+  writeFileSync(missPath, JSON.stringify({
+    tool: 'docs.section', args: { file: 'cli_cn.md', anchor: 'quantum something', version: '10.5.0' },
+    response: { result: null, error: { code: 'SECTION_ABSENT' } },
+  }));
+  writeFileSync(join(folder, 'answer.json'), JSON.stringify({ question: 'q', status: 'no_evidence', answer: '手册里没有找到能回答这个问题的内容。', citations: [] }));
+  const result = cite(folder, [sectionPath], [sectionPath, missPath]);
   assert.equal(result.status, 'no_evidence');
   const md = readFileSync(join(folder, 'answer.md'), 'utf8');
   assert.ok(md.includes('没有找到'));
   assert.ok(md.includes('## 查询记录'));
-  assert.ok(md.includes('"sdns listener"'));
-  assert.ok(md.includes('命中 1'));
-  assert.ok(md.includes('命中 0'));
+  assert.ok(md.includes('anchor "sdns listener" → 命中'));
+  assert.ok(md.includes('anchor "quantum something" → 未命中(SECTION_ABSENT)'));
 });
 
 test('answered without citations, and no_evidence with citations, are both rejected', (t) => {
@@ -179,24 +176,22 @@ test('cite renders the manual line before the searches, also on no_evidence', (t
   t.after(() => rmSync(folder, { recursive: true, force: true }));
   const sectionPath = join(folder, 'section.json');
   writeFileSync(sectionPath, JSON.stringify({
-    response: { result: { file: 'a.md', lines: LINES }, evidence: [{ evidenceId: 'evd_s1' }] },
+    tool: 'docs.section', args: { file: 'cli_cn.md', anchor: 'sdns listener', version: '10.5.0' },
+    response: { result: { file: 'cli_cn.md', lines: LINES }, evidence: [{ evidenceId: 'evd_s1' }] },
   }));
-  const searchPath = join(folder, 'search.json');
-  writeFileSync(searchPath, JSON.stringify({
-    tool: 'docs.search', args: { query: 'sdns listener', version: '10.5.0' },
-    response: { result: { hits: [{ path: 'a.md' }] }, evidence: [{ evidenceId: 'evd_q' }] },
-  }));
+  const lookupPath = sectionPath;
   const listPath = listReturn(folder, ['rel_apv_10_4_6', 'rel_apv_10_5_0']);
   writeFileSync(join(folder, 'answer.json'), JSON.stringify({
     question: 'q', status: 'no_evidence', answer: '手册里没有找到能回答这个问题的内容。', citations: [],
   }));
-  const result = cite(folder, [sectionPath], [searchPath], null, [listPath], '10.5.0');
+  const result = cite(folder, [sectionPath], [lookupPath], null, [listPath], '10.5.0');
   const md = readFileSync(join(folder, 'answer.md'), 'utf8');
   const manualLine = md.split('\n').find((l) => l.includes('手册目录'));
-  const searchLineIndex = md.split('\n').findIndex((l) => l.includes('"sdns listener"'));
+  const lookupLineIndex = md.split('\n').findIndex((l) => l.includes('anchor "sdns listener"'));
   assert.ok(manualLine.includes('rel_apv_10_5_0'));
   assert.ok(manualLine.includes('选定 10.5.0'));
-  assert.ok(searchLineIndex > md.split('\n').indexOf(manualLine));
-  assert.ok(md.includes('命中 1'));
+  assert.ok(manualLine.includes('section 直取'));
+  assert.ok(lookupLineIndex > md.split('\n').indexOf(manualLine));
+  assert.ok(md.includes('→ 命中'));
   assert.equal(result.status, 'no_evidence');
 });

@@ -48,7 +48,9 @@ export function loadReturn(folder, arg) {
     parsed = JSON.parse(readFileSync(path, 'utf8'));
   }
   const raw = parsed.response ?? parsed;
-  if (!raw?.result) throw new Error(`${arg}: not a hub return`);
+  // A hub return carries a result, or an error instead of one (a section miss, say);
+  // anything else is not a return this script can read.
+  if (!raw || (raw.result === undefined && raw.error === undefined)) throw new Error(`${arg}: not a hub return`);
   return { raw, args: parsed.args ?? {}, name: arg };
 }
 
@@ -80,14 +82,17 @@ export function manualLog(folder, listArgs, chosenVersion) {
   return { directories, chosen: chosenVersion };
 }
 
-// The query log rendered from the --search returns: the searched terms and version from the
-// saved args, the hit count from the saved result — never re-typed by the model.
-export function searchLog(folder, searchArgs) {
-  return searchArgs.map((arg) => {
-    const { raw, args, name } = loadReturn(folder, arg);
-    const hits = Array.isArray(raw.result.hits) ? raw.result.hits.length : null;
-    const terms = [args.query, args.version ?? args.path].filter((v) => typeof v === 'string' && v);
-    return { terms, hits, name };
+// The query log rendered from the --lookup returns: docs.section calls as they were made —
+// the file and anchor from the saved args, hit or miss from the saved result (a miss carries
+// an error code such as SECTION_ABSENT). Never re-typed by the model.
+export function lookupLog(folder, lookupArgs) {
+  return lookupArgs.map((arg) => {
+    const { raw, args } = loadReturn(folder, arg);
+    const file = typeof args.file === 'string' ? args.file : '(no file)';
+    const anchor = typeof args.anchor === 'string' && args.anchor ? args.anchor : `line ${String(args.line ?? '?')}`;
+    const hasText = raw.result !== null && typeof raw.result === 'object' && textsOf(raw.result).some((text) => text.trim() !== '');
+    const code = raw.error?.code ?? raw.result?.error?.code ?? raw.result?.code ?? null;
+    return { file, anchor, hit: hasText && !code, code };
   });
 }
 
@@ -126,7 +131,7 @@ export function validateAnswer(answer, sections) {
   return { status: answer.status, citations: enriched };
 }
 
-export function renderAnswer(folder, answer, validated, searches = [], manual = null) {
+export function renderAnswer(folder, answer, validated, lookups = [], manual = null) {
   const lines = [
     `# ${answer.question}`,
     '',
@@ -144,42 +149,42 @@ export function renderAnswer(folder, answer, validated, searches = [], manual = 
     for (const citation of validated.citations)
       lines.push(`- ${citation.evidenceId} · ${citation.source ?? ''} · ${citation.section ?? ''}`, `  > ${citation.quote.replace(/\n/g, ' ⏎ ')}`, '');
   }
-  if (searches.length || manual) {
+  if (lookups.length || manual) {
     lines.push('## 查询记录', '');
-    if (manual) lines.push(`- 手册目录: ${manual.directories.join(', ') || '(none listed)'}${manual.chosen ? ` → 选定 ${manual.chosen}` : ''}`);
-    for (const entry of searches)
-      lines.push(`- 检索 ${entry.terms.map((t) => `"${t}"`).join(' · ')}${entry.hits === null ? '' : ` · 命中 ${entry.hits}`}`);
+    if (manual) lines.push(`- 手册目录: ${manual.directories.join(', ') || '(none listed)'}${manual.chosen ? ` → 选定 ${manual.chosen}` : ''} · 定位后 section 直取`);
+    for (const entry of lookups)
+      lines.push(`- 取小节 ${entry.file} · anchor "${entry.anchor}" → ${entry.hit ? '命中' : `未命中${entry.code ? `(${entry.code})` : ''}`}`);
     lines.push('');
   }
   writeFileSync(join(folder, 'answer.md'), lines.join('\n') + '\n');
   return join(folder, 'answer.md');
 }
 
-export function cite(folder, sectionArgs, searchArgs = [], answerPath = null, listArgs = [], chosenVersion = null) {
+export function cite(folder, sectionArgs, lookupArgs = [], answerPath = null, listArgs = [], chosenVersion = null) {
   const path = answerPath ?? join(folder, 'answer.json');
   const answer = JSON.parse(readFileSync(path, 'utf8'));
   const sections = sectionArgs.map((arg) => loadSection(folder, arg));
   const validated = validateAnswer(answer, sections);
-  const searches = searchLog(folder, searchArgs);
+  const lookups = lookupLog(folder, lookupArgs);
   const manual = listArgs.length || chosenVersion !== null ? manualLog(folder, listArgs, chosenVersion) : null;
-  return { rendered: renderAnswer(folder, answer, validated, searches, manual), status: validated.status, citations: validated.citations.length, searches: searches.length };
+  return { rendered: renderAnswer(folder, answer, validated, lookups, manual), status: validated.status, citations: validated.citations.length, lookups: lookups.length };
 }
 
 if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
   const [folder, ...rest] = process.argv.slice(2);
-  const sections = [], searches = [], lists = [];
+  const sections = [], lookups = [], lists = [];
   let answer = null, chosenVersion = null;
   for (let i = 0; i < rest.length; i++) {
     if (rest[i] === '--section') sections.push(rest[++i]);
-    else if (rest[i] === '--search') searches.push(rest[++i]);
+    else if (rest[i] === '--lookup') lookups.push(rest[++i]);
     else if (rest[i] === '--list') lists.push(rest[++i]);
     else if (rest[i] === '--answer') answer = rest[++i];
     else if (rest[i] === '--chosen-version') chosenVersion = rest[++i];
   }
   if (!folder || !sections.length) {
-    console.error('usage: node cite.mjs <question folder> --section <file or pointer> [--section …] [--search <file or pointer> …] [--list <file or pointer> …] [--chosen-version <version>] [--answer <answer.json>]');
+    console.error('usage: node cite.mjs <question folder> --section <file or pointer> [--section …] [--lookup <file or pointer> …] [--list <file or pointer> …] [--chosen-version <version>] [--answer <answer.json>]');
     process.exit(2);
   }
-  const result = cite(folder, sections, searches, answer, lists, chosenVersion);
-  console.log(JSON.stringify({ status: result.status, citations: result.citations, searches: result.searches, rendered: result.rendered }));
+  const result = cite(folder, sections, lookups, answer, lists, chosenVersion);
+  console.log(JSON.stringify({ status: result.status, citations: result.citations, lookups: result.lookups, rendered: result.rendered }));
 }
