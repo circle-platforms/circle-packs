@@ -1,0 +1,10 @@
+{
+  "schema": "circle-packs/flow/1",
+  "id": "apv-case-execute",
+  "version": "apv-case-execute/1",
+  "title": "APV 工作簿上机执行",
+  "stages": ["received", "running", "waiting-input", "waiting-review", "delivered", "failed", "cancelled"],
+  "waitingReasons": ["BED_BUILD_MISMATCH", "PLACEHOLDER_IP", "MANUAL_CONFIRMATION", "RESOURCE_LEASE"],
+  "deliverables": ["case.xlsx 上机执行回执", "每用例的设备观察证据", "失败用例的固定错误码与事实"],
+  "unknown": "资源回报与预期不符时停 unknown,披露观察,不重发;由申请人选择 reconcile / 标记失败 / 放弃。"
+}

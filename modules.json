@@ -62,6 +62,88 @@
         }
       ],
       "digest": "f46ff8084ac75e24c2c2479ffa1b181576972fbc08f8025c0812716692c4c3fb"
+    },
+    {
+      "id": "apv",
+      "kind": "product-line",
+      "root": "products/apv",
+      "manifestPath": "products/apv/product-line.json",
+      "version": "1.0.0",
+      "files": [
+        {
+          "path": "README.md",
+          "sha256": "9d19be247c9e031f4bf218bab7761ad9513b0357cc2013fc96f2a2440435d67d"
+        },
+        {
+          "path": "flows/apv-case-execute.json",
+          "sha256": "97098bb9b045c560baf1c93c71cca0444eaf2aad172deda1a575cef2ba75817e"
+        },
+        {
+          "path": "hooks/device-command-tree.ts",
+          "sha256": "92cfe6a88b7b9f9ad8e2e8549e9e3d196cf42bde2b4052bc1fde9f34bfe5a748"
+        },
+        {
+          "path": "hooks/host-destructive.ts",
+          "sha256": "5eaee9e7f0ac94de2ef7b92d4b11b35420bfbfc9a04668486565e86b33d854c3"
+        },
+        {
+          "path": "hooks/workbook-contract.ts",
+          "sha256": "9bfa0ee9dc06b41c7db68a3c31c3e1db1b33238abc9e21db62c7b8e936573b52"
+        },
+        {
+          "path": "product-line.json",
+          "sha256": "baa32ace44fcabd50f4a040289a039464a312508538122a717a8e68c0c850182"
+        },
+        {
+          "path": "resources/case-gateway.json",
+          "sha256": "4806beb4f723aaf631ab5be88f3743db65ba6cc02f404ec65016ca015e5ae99d"
+        },
+        {
+          "path": "sources/command-tree.md",
+          "sha256": "5cbcd1a00044e37ee79892d0ef91509f903d86426c522e423d78678d09d2ed20"
+        },
+        {
+          "path": "sources/function-contract.md",
+          "sha256": "8393df11818bb96e41ad02fd3a90769046a90af55d3f9f611454cf3196899631"
+        },
+        {
+          "path": "tests/function-contract-dialect.test.mjs",
+          "sha256": "ec2855b7ef36e7e266d11310ba01da783c135248fa100e52c39ba8e8b30d2daf"
+        },
+        {
+          "path": "tests/hooks.test.mjs",
+          "sha256": "454ce92c5b2b115b6f2a8cd3161c6d5c35a0f51048ad58e0816b5ab8fb6df44d"
+        },
+        {
+          "path": "tests/mindmap.test.mjs",
+          "sha256": "b2f47f404437a83668e6fd5b3c957a2de93e788df414fc099a43994cf585a8a1"
+        },
+        {
+          "path": "tests/workbook.test.mjs",
+          "sha256": "ab7cadc6a61e126f4da46349a63fc34968d7d920b0dc673b7791260b56e6bc43"
+        },
+        {
+          "path": "tools/contracts.ts",
+          "sha256": "a0596c871915098b9f21bad1d7ec6e0a2c628394ed27b499ce8d9835d548a491"
+        },
+        {
+          "path": "tools/dialect.ts",
+          "sha256": "b1de93c97ce22e6b38930ee96559809dee222f70297083856055d03d629eb74d"
+        },
+        {
+          "path": "tools/function-contract.ts",
+          "sha256": "5997224a822e4dbf28a7957d2df33aa1b88450b02432bb7ee3d5577291488c34"
+        },
+        {
+          "path": "tools/mindmap.ts",
+          "sha256": "1e5d80091261b45c724e1cb3150010481ef4daa7b9a371c21242565ab274923d"
+        },
+        {
+          "path": "tools/workbook.ts",
+          "sha256": "7f46cf1bebf4dc74def75f970dea14b7d8597f548138445b76a669d89ceee6d0"
+        }
+      ],
+      "digest": "1dea5a664c4fbab50cbe0f986c587ee4bf1114e067186187cb3a5c2dc9726b3c"
     }
   ]
 }
