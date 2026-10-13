@@ -1,6 +1,6 @@
 # 产品线包：本仓库的做法与状态
 
-典范本身——布局、适配单、每类资产怎么写、开发到生效、验收清单——的权威版本在 circle-hub：[docs/design/product-line-pack.md](https://github.com/qingshanfeihu/circle-hub/blob/main/docs/design/product-line-pack.md)（中文）· [English](https://github.com/qingshanfeihu/circle-hub/blob/main/docs/design/en/product-line-pack.md)。本页不复述典范，只记录本仓库按典范做了什么、到了哪一步，以及本仓库自己的约定。
+典范本身——布局、适配单、每类资产怎么写、开发到生效、验收清单——的权威版本在 circle-hub：[docs/design/product-line-pack.md](https://github.com/circle-platforms/circle-hub/blob/main/docs/design/product-line-pack.md)（中文）· [English](https://github.com/circle-platforms/circle-hub/blob/main/docs/design/en/product-line-pack.md)。本页不复述典范，只记录本仓库按典范做了什么、到了哪一步，以及本仓库自己的约定。
 
 ## 本仓库的约定
 

@@ -22,7 +22,7 @@ jobs:
         run: node --test tools/*.test.ts skills/*/tests/*.test.mjs
       - name: Fetch the hub dependency set
         run: |
-          git clone --depth 1 https://github.com/qingshanfeihu/circle-hub ../circle-hub
+          git clone --depth 1 https://github.com/circle-platforms/circle-hub ../circle-hub
           cd ../circle-hub && npm ci --ignore-scripts
       - name: Product-line pack tests
         run: |

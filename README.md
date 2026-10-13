@@ -2,9 +2,9 @@
 
 [中文](README.zh-CN.md)
 
-Skill packs and product-line packs installed on [circle-hub](https://github.com/qingshanfeihu/circle-hub), the team hub for [Circle](https://github.com/qingshanfeihu/circle). Each module has its own version and is installed through circle-hub's own mechanism: a skill pack is pushed, a trial is recorded, and an independent reviewer approves it. Packs are not released together with circle-hub.
+Skill packs and product-line packs installed on [circle-hub](https://github.com/circle-platforms/circle-hub), the team hub for [Circle](https://github.com/circle-platforms/circle). Each module has its own version and is installed through circle-hub's own mechanism: a skill pack is pushed, a trial is recorded, and an independent reviewer approves it. Packs are not released together with circle-hub.
 
-The layout and the adaptation sheet every pack fills in are the [product-line pack exemplar](https://github.com/qingshanfeihu/circle-hub/blob/main/docs/design/product-line-pack.md) ([English](https://github.com/qingshanfeihu/circle-hub/blob/main/docs/design/en/product-line-pack.md)). APV's status in this repository is [docs/product-line-pack.md](docs/product-line-pack.md).
+The layout and the adaptation sheet every pack fills in are the [product-line pack exemplar](https://github.com/circle-platforms/circle-hub/blob/main/docs/design/product-line-pack.md) ([English](https://github.com/circle-platforms/circle-hub/blob/main/docs/design/en/product-line-pack.md)). APV's status in this repository is [docs/product-line-pack.md](docs/product-line-pack.md).
 
 ## What is here
 

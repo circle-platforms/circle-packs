@@ -1,6 +1,6 @@
 # 安全问题与支持范围
 
-circle-packs 在开发中，不是受支持的生产发行。这里的验收跑在合成样本上。把它装进任何要紧的 circle-hub 之前，先按 [产品线包典范](https://github.com/qingshanfeihu/circle-hub/blob/main/docs/design/product-line-pack.md)里的适配单和审批核对这个包。
+circle-packs 在开发中，不是受支持的生产发行。这里的验收跑在合成样本上。把它装进任何要紧的 circle-hub 之前，先按 [产品线包典范](https://github.com/circle-platforms/circle-hub/blob/main/docs/design/product-line-pack.md)里的适配单和审批核对这个包。
 
 ## 报告安全问题
 
@@ -16,4 +16,4 @@ circle-packs 在开发中，不是受支持的生产发行。这里的验收跑�
 
 ## 不属于本仓库的事
 
-运行时地址、凭据和证书由部署方保管，登记进 circle-hub，不由本仓库托管或轮换。本仓库只提供要装上去的字节。circle-hub 怎样审批和执行，见它的[审批与执行链](https://github.com/qingshanfeihu/circle-hub/blob/main/docs/design/approvals-and-enforcement.md)。
+运行时地址、凭据和证书由部署方保管，登记进 circle-hub，不由本仓库托管或轮换。本仓库只提供要装上去的字节。circle-hub 怎样审批和执行，见它的[审批与执行链](https://github.com/circle-platforms/circle-hub/blob/main/docs/design/approvals-and-enforcement.md)。

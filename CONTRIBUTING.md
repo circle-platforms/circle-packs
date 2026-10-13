@@ -1,6 +1,6 @@
 # 怎样参与 circle-packs
 
-先读 [README](README.zh-CN.md) 和 [APV 状态](docs/product-line-pack.md)。目录布局和适配单以 circle-hub 的[产品线包典范](https://github.com/qingshanfeihu/circle-hub/blob/main/docs/design/product-line-pack.md)为准（[英文](https://github.com/qingshanfeihu/circle-hub/blob/main/docs/design/en/product-line-pack.md)）。
+先读 [README](README.zh-CN.md) 和 [APV 状态](docs/product-line-pack.md)。目录布局和适配单以 circle-hub 的[产品线包典范](https://github.com/circle-platforms/circle-hub/blob/main/docs/design/product-line-pack.md)为准（[英文](https://github.com/circle-platforms/circle-hub/blob/main/docs/design/en/product-line-pack.md)）。
 
 典范是约束：产品线包从扩展点插进去；插进去的都是资产；生效走变更集；运行走执行链；平台不是审批人；产品内容不进 circle-hub 核心。一项改动如果要绕过其中一条，先改 circle-hub 里的典范，再改这里的包。
 
@@ -8,7 +8,7 @@
 
 - 一般问题和建议写 Issue，说明输入、预期、实际观察和提交号。
 - 可能涉及安全或敏感信息的问题按 [SECURITY](SECURITY.md) 处理。
-- Circle 的客户端在 [Circle 仓库](https://github.com/qingshanfeihu/circle)维护；平台在 [circle-hub](https://github.com/qingshanfeihu/circle-hub)。本仓库只放技能包和产品线包。
+- Circle 的客户端在 [Circle 仓库](https://github.com/circle-platforms/circle)维护；平台在 [circle-hub](https://github.com/circle-platforms/circle-hub)。本仓库只放技能包和产品线包。
 
 ## 环境
 

@@ -2,9 +2,9 @@
 
 [English](README.md)
 
-装在 [circle-hub](https://github.com/qingshanfeihu/circle-hub) 上的技能包和产品线包。circle-hub 是 [Circle](https://github.com/qingshanfeihu/circle) 的团队 hub。这里的每个模块单独版本、单独发布，通过 circle-hub 自己的机制装入：技能包走推送、试跑记录和独立审批人批准。包不随 circle-hub 一起发布。
+装在 [circle-hub](https://github.com/circle-platforms/circle-hub) 上的技能包和产品线包。circle-hub 是 [Circle](https://github.com/circle-platforms/circle) 的团队 hub。这里的每个模块单独版本、单独发布，通过 circle-hub 自己的机制装入：技能包走推送、试跑记录和独立审批人批准。包不随 circle-hub 一起发布。
 
-每个包要遵守的目录布局和适配单见 [产品线包典范](https://github.com/qingshanfeihu/circle-hub/blob/main/docs/design/product-line-pack.md)（[英文](https://github.com/qingshanfeihu/circle-hub/blob/main/docs/design/en/product-line-pack.md)）。本仓库里 APV 的状态见 [docs/product-line-pack.md](docs/product-line-pack.md)。
+每个包要遵守的目录布局和适配单见 [产品线包典范](https://github.com/circle-platforms/circle-hub/blob/main/docs/design/product-line-pack.md)（[英文](https://github.com/circle-platforms/circle-hub/blob/main/docs/design/en/product-line-pack.md)）。本仓库里 APV 的状态见 [docs/product-line-pack.md](docs/product-line-pack.md)。
 
 ## 里面有什么
 
