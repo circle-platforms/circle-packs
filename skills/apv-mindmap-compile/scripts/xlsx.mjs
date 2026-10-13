@@ -100,7 +100,10 @@ const column = (index) => String.fromCharCode(65 + index);
 
 // rows: arrays of up to 26 cells; a cell is a string, a number or null. Column A is
 // written as text; hidden lists 1-based row numbers to hide.
-export function writeXlsx({ sheet, rows, hidden = [], widths = {} }) {
+// The InfoTest runner locates the execution sheet through the workbook-level defined
+// name IST_EXECUTION_SHEET pointing at the A–I header row ('执行'!$A$n:$I$n); without it
+// the gateway refuses the workbook. definedNames: [{ name, ref }] writes them.
+export function writeXlsx({ sheet, rows, hidden = [], widths = {}, definedNames = [] }) {
   const lines = rows.map((cells, r) => {
     const number = r + 1;
     const attributes = hidden.includes(number) ? ' hidden="1"' : '';
@@ -132,7 +135,7 @@ export function writeXlsx({ sheet, rows, hidden = [], widths = {} }) {
     ],
     [
       'xl/workbook.xml',
-      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${escape(sheet)}" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+      `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${escape(sheet)}" sheetId="1" r:id="rId1"/></sheets>${definedNames.length ? `<definedNames>${definedNames.map(({ name, ref }) => `<definedName name="${escape(name)}">${escape(ref)}</definedName>`).join('')}</definedNames>` : ''}</workbook>`,
     ],
     [
       'xl/_rels/workbook.xml.rels',

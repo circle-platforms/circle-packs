@@ -86,7 +86,7 @@
         },
         {
           "path": "scripts/emit.mjs",
-          "sha256": "4ddd4d9ef4661f5de4886064c532bce8b95afe13144e551fa4e7a8b23e614467"
+          "sha256": "d41a19cf83c5e34ce542e2434718c72e425f597d49ece6028abb0dc5b223c5c8"
         },
         {
           "path": "scripts/gate.mjs",
@@ -102,7 +102,7 @@
         },
         {
           "path": "scripts/xlsx.mjs",
-          "sha256": "1bef6cc0c919acffd3e006db5501122366121d2e4df6513c7e64f48fd4314692"
+          "sha256": "2186cdead11261e25413a104790c61ef438b6d823a8eec515640e1d11898e765"
         },
         {
           "path": "skillpack.json",
@@ -121,7 +121,7 @@
           "sha256": "6c1d0a530e901ff9686594b37b947cae760f53223711efe7f8d1868e0f1521d7"
         }
       ],
-      "digest": "f46ff8084ac75e24c2c2479ffa1b181576972fbc08f8025c0812716692c4c3fb"
+      "digest": "3911eb6f81d0a2897fc3104061362cb740c8037a63c2e50bf539e603bb58a627"
     },
     {
       "id": "apv-product-qa",

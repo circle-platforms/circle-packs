@@ -62,7 +62,12 @@ export function workbook({ author, feature, cases, buildLine = null }) {
   const headerText = buildLine ? `Author         : ${author}\n${feature}\n构建           : ${buildLine}` : `Author         : ${author}\n${feature}`;
   rows.push([null, null, 0, headerText]);
   for (const rowsOfCase of [...cases, SENTINEL]) rows.push(...rowsOfCase, []);
-  return writeXlsx({ sheet: SHEET, rows, hidden: [1], widths: { A: 22, D: 40, G: 48 } });
+  // The InfoTest runner finds the execution sheet via this defined name; see xlsx.mjs.
+  const headerRow = 1 + NOTES.length + 1;
+  return writeXlsx({
+    sheet: SHEET, rows, hidden: [1], widths: { A: 22, D: 40, G: 48 },
+    definedNames: [{ name: 'IST_EXECUTION_SHEET', ref: `${SHEET}!$A$${headerRow}:$I$${headerRow}` }],
+  });
 }
 
 // What a reader sees: the cases by autoid and their check_point count, read from the bytes.
