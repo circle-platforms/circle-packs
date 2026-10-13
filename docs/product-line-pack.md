@@ -15,7 +15,7 @@
 
 | 能力 | 按典范拆成什么 | 状态 |
 |---|---|---|
-| 脑图编译 | 技能包 [skills/apv-mindmap-compile](../skills/apv-mindmap-compile/SKILL.md)（重组与撰写是判断，核对、过闸、出表是脚本）。[products/apv](../products/apv/README.md)：原件 role command-tree、function-contract；Tool 实现 mindmap、contracts、function-contract、dialect、workbook（只查形状，不做治理判定）；Hook 处理器 device-command-tree、host-destructive、host-policy（主机闭集 / 字面量 / 可缩小策略）、workbook-contract；流程 apv-case-execute/1；资源 case-gateway（MCP，static-secret，writes device-config） | 技能包 0.2.7 已批准；products/apv 已入 main，18 个合成测试 |
+| 脑图编译 | 技能包 [skills/apv-mindmap-compile](../skills/apv-mindmap-compile/SKILL.md)（重组与撰写是判断，核对、过闸、出表是脚本）。[products/apv](../products/apv/README.md)：原件 role command-tree、function-contract；Tool 实现 mindmap、contracts、function-contract、dialect、workbook（只查形状，不做治理判定）；Hook 处理器 device-command-tree、host-destructive、host-policy（主机闭集 / 字面量 / 可缩小策略，主机名不分大小写）、workbook-contract；流程 apv-case-execute/1；资源 case-gateway（MCP，static-secret，writes device-config） | 技能包 0.2.7 已批准；products/apv 已入 main，18 个合成测试 |
 | 用例评审 | 技能包 `skills/apv-case-review`：结构、命令、契约核对是脚本，覆盖、可验证性、风险是判断；产物是带 evidenceId 的评审报告；发现以 knowledge.claim_submit 提交为候选声明；不碰资源，只有登记要审批 | 0.1.3 已入 main，21 个合成测试 |
 | PLM 查询 | 连接器实例 query-mirror（禅道）+ zentao.products / bug_search / bug_detail；知识映射 repairJoin（bugzillaID ↔ 修复清单）；缺陷记录按脚本抽成声明（origin script） | 声明抽取已入 main（Tool defect-claims + 技能 apv-defect-claims 0.1.0）；服务凭据是 hub 侧的凭据模式，不在包里 |
 | 产品问答 | 技能包 `apv-product-qa`：docs.search / docs.section 取证据，回答带 evidenceId，判断标为模型；没有证据就说没有 | 0.1.3 已入 main；试验 hub 上 answered 与 no_evidence 两条路径试跑通过（10 次调用全在声明内），候选已由独立审批人批准 |
