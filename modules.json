@@ -2,6 +2,36 @@
   "schema": "circle-packs/modules/1",
   "modules": [
     {
+      "id": "apv-case-review",
+      "kind": "skill-pack",
+      "root": "skills/apv-case-review",
+      "manifestPath": "skills/apv-case-review/skillpack.json",
+      "version": "0.1.0",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "d22c3485eabd9bc8b982595be7b62f3b67b60f5a195aada0c6eeb431ebe72424"
+        },
+        {
+          "path": "scripts/prep.mjs",
+          "sha256": "a2db9c4e93b7a55e4a138c3347bf0f7939411fee8ed2c7f7c7b8d2f8b5c1081e"
+        },
+        {
+          "path": "scripts/report.mjs",
+          "sha256": "49f0cc5e9be70fda386dbbf13314e2f8f30661dcefc9081ffce541566e6838a8"
+        },
+        {
+          "path": "skillpack.json",
+          "sha256": "3ddd79fe84380c75d71343d9c9239c67065733b8fd64cc9a0ef91a9201769947"
+        },
+        {
+          "path": "tests/review.test.mjs",
+          "sha256": "ab586c9f412310a365f4684f4d3ad9212697d7858f33246bb3f7175ac869a530"
+        }
+      ],
+      "digest": "bfb8e9119022a427ebf0c7cb878b13e2c0389f7de93d26b48591785cdd573a3f"
+    },
+    {
       "id": "apv-mindmap-compile",
       "kind": "skill-pack",
       "root": "skills/apv-mindmap-compile",

@@ -1,0 +1,30 @@
+{
+  "id": "apv-case-review",
+  "version": "0.1.0",
+  "title": "APV 用例评审",
+  "owner": "apv-product-line",
+  "tools": [
+    "buildsite.versions",
+    "buildsite.command_check",
+    "docs.list",
+    "docs.search",
+    "zentao.products",
+    "zentao.bug_search",
+    "zentao.bug_detail",
+    "knowledge.claim_submit"
+  ],
+  "triggers": [
+    "manual"
+  ],
+  "inputs": {
+    "batch": "path of a compiled batch folder (out/) with cases/*.json, or of a case.xlsx workbook",
+    "versionLine": "the product version line, such as 10.5",
+    "build": "the build the batch was written for; required — review is always against the bound build",
+    "files": "on the server: the workbook file itself, [{path, base64}]"
+  },
+  "outputs": [
+    "out/review_report.md",
+    "out/review_report.json"
+  ],
+  "model": "any capable model; structure, command and contract checks are scripts; coverage, verifiability and risk are model judgement"
+}
