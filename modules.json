@@ -120,7 +120,7 @@
         },
         {
           "path": "tests/workbook.test.mjs",
-          "sha256": "ab7cadc6a61e126f4da46349a63fc34968d7d920b0dc673b7791260b56e6bc43"
+          "sha256": "010035de2672e9b8ecafd649fedef29cf340cf4de6d88cd4a536ee23a108a4ee"
         },
         {
           "path": "tools/contracts.ts",
@@ -143,7 +143,7 @@
           "sha256": "7f46cf1bebf4dc74def75f970dea14b7d8597f548138445b76a669d89ceee6d0"
         }
       ],
-      "digest": "0444202106efd09ac6f4d0391bdadb6270c2a53c332ce56e786e08c2125047db"
+      "digest": "0d07d0d1664cd7475b2d8cfd090a4d311f55baaa41d8bbd69c189ac9dac82602"
     }
   ]
 }

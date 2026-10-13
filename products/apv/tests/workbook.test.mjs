@@ -35,7 +35,7 @@ test('reads a sound workbook: cases, device commands, host commands, checkpoint'
   const bytes = await makeBook([
     ['100000000000000001', 'P1', 2, 'cfg', 'APV_0', 'cmd_config', 'sdns on', null, null],
     [null, null, 3, 'check', 'check_point', 'found', 'sdns', null, null],
-    ['100000000000000002', 'P1', 2, 'dig', 'test_env', 'routera', 'dig @172.16.34.70 autotest.com', null, null],
+    ['100000000000000002', 'P1', 2, 'dig', 'test_env', 'routera', 'dig @192.0.2.70 autotest.com', null, null],
     [null, null, 3, 'check', 'check_point', 'found', 'NOERROR', null, null],
     ['999999999999999', 'P9', 2, 'sentinel', 'time', 'sleep', '1', null, null],
   ]);
@@ -45,7 +45,7 @@ test('reads a sound workbook: cases, device commands, host commands, checkpoint'
   assert.equal(book.commands[0].command, 'sdns on');
   assert.equal(book.hostCommands.length, 1);
   assert.equal(book.hostCommands[0].host, 'routera');
-  assert.equal(book.hostCommands[0].command, 'dig @172.16.34.70 autotest.com');
+  assert.equal(book.hostCommands[0].command, 'dig @192.0.2.70 autotest.com');
 });
 
 test('rejects when the function contract disables a method', async () => {
