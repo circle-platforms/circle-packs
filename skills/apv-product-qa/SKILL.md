@@ -24,7 +24,7 @@ Answer a product question only from what the manuals say, with every claim tied 
 
 - `srv_docs_list` 列出选定手册目录(`cli/rel_apv_<版本>/`),定位到手册本体文件;这本手册是单文件(`cli_cn.md`),直接取段。**anchor 只能来自问题里的命令名或 catalog 条目,不许猜**——问题问哪条命令,anchor 就是那条命令的小节标题。
 - `srv_docs_section` 带 `file` 与 `anchor` 直取小节;hub 原样落盘每次返回(`savedAs` 指向路径),答案只引用落盘返回里的文字。`version` 一律传第 0 步选定的完整版本号。
-- 小节未命中(如 `SECTION_ABSENT`)也如实落盘记录。**no_evidence 必须有一次真实的 section 未命中**,不能是没查:没查不是「手册里没有」。
+- 小节未命中也如实记录。**no_evidence 必须有一次真实的 section 未命中**,不能是没查:没查不是「手册里没有」。注意:本项目对不存在的 anchor 返回的是 `SOURCE_FORBIDDEN`(与「源不可用」同码,这是 hub 的合并语义),且非 200 返回目前不落盘——未命中的证据目前只能是试跑记录里的调用本身;hub 把非 200 返回也落盘后,lookup 才能渲染未命中行。
 - 多文件目录的窄范围搜索(docs.search)目前在 hub 侧超时,是 hub 的 bug;修复后再把窄搜加回本步骤。
 
 ## 3. 作答(判断)

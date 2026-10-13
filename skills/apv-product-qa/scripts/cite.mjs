@@ -96,7 +96,7 @@ export function lookupLog(folder, lookupArgs) {
   });
 }
 
-const tagOf = (paragraph) => [...paragraph.matchAll(/\[(evd_[^\]\s]+)\]/g)].map((m) => m[1]);
+const tagOf = (paragraph) => [...paragraph.matchAll(/\[((?:evd|knr)_[^\]\s]+)\]/g)].map((m) => m[1]);
 
 // Validate answer.json against the loaded sections. The model tags each paragraph with the
 // evidenceIds it rests on; the script checks every tag resolves to a validated citation.
@@ -114,7 +114,10 @@ export function validateAnswer(answer, sections) {
   if (!citations.length) fail('answer.json: answered needs at least one citation');
   const enriched = citations.map((citation, index) => {
     if (!citation || typeof citation.quote !== 'string' || !citation.quote.trim()) fail(`citations[${index}]: quote is required`);
-    if (typeof citation.evidenceId !== 'string' || !/^evd_/.test(citation.evidenceId)) fail(`citations[${index}]: evidenceId is required`);
+    // Evidence ids take the hub's actual prefixes (knr_ for knowledge-source-backed
+    // records, evd_ for call evidence); any well-formed id is accepted and must belong
+    // to the section return the quote was found in.
+    if (typeof citation.evidenceId !== 'string' || !/^(evd|knr)_[A-Za-z0-9]{2,}$/.test(citation.evidenceId)) fail(`citations[${index}]: evidenceId is required`);
     const section = sections.find((s) => s.texts.some((text) => text.includes(citation.quote)));
     if (!section) fail(`citations[${index}]: quote is not in any section return: ${JSON.stringify(citation.quote)}`);
     if (!section.evidenceIds.includes(citation.evidenceId)) fail(`citations[${index}]: evidenceId ${citation.evidenceId} does not belong to the return the quote was found in (${section.name})`);
@@ -125,7 +128,7 @@ export function validateAnswer(answer, sections) {
   const known = new Set(enriched.map((c) => c.evidenceId));
   answer.answer.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean).forEach((paragraph, index) => {
     const tags = tagOf(paragraph);
-    if (!tags.length) fail(`answer paragraph ${index + 1} carries no [evd_…] tag — every paragraph must name the evidence it rests on`);
+    if (!tags.length) fail(`answer paragraph ${index + 1} carries no evidence tag — every paragraph must name the evidence it rests on`);
     for (const tag of tags) if (!known.has(tag)) fail(`answer paragraph ${index + 1} tags ${tag}, which is not a validated citation`);
   });
   return { status: answer.status, citations: enriched };

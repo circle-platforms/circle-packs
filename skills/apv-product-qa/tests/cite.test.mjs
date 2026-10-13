@@ -54,7 +54,7 @@ test('a paragraph without an [evd_…] tag is rejected; a tag pointing at an unv
     answer: { question: 'q', status: 'answered', answer: `没有标记的一段。\n\n${QUOTE} [evd_s1]`, citations: [{ evidenceId: 'evd_s1', source: 'x', section: 'y', quote: QUOTE }] },
     sections: [SECTION],
   });
-  assert.throws(() => cite(untagged.folder, untagged.sectionArgs), /carries no \[evd_…\] tag/);
+  assert.throws(() => cite(untagged.folder, untagged.sectionArgs), /carries no evidence tag/);
   assert.equal(existsSync(join(untagged.folder, 'answer.md')), false);
   const stray = workspace(t, {
     answer: { question: 'q', status: 'answered', answer: `${QUOTE} [evd_ghost]`, citations: [{ evidenceId: 'evd_s1', source: 'x', section: 'y', quote: QUOTE }] },

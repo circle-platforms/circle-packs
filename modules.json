@@ -132,11 +132,11 @@
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "4ca43283f70e280ab96a2a6aa69e9b513c0b4ddaadbbd78522a4e72d3b3dae8e"
+          "sha256": "ba784aafba8a9ee928f45b7e98df58c7876d4d35b7b7a50e5b8c74a03e8ad403"
         },
         {
           "path": "scripts/cite.mjs",
-          "sha256": "4ebfdfb497ce2bec137d9866439c818353009ce89f8fa81ee6303a66407d70d0"
+          "sha256": "869c4680a789be7e04b9669b425bb28831a9f0215c63bf1593ba3a81f72ebb3f"
         },
         {
           "path": "skillpack.json",
@@ -144,10 +144,10 @@
         },
         {
           "path": "tests/cite.test.mjs",
-          "sha256": "66c16e2e56084f1f17720928fd6c0c1eb76b159a3904e5d3f4e444eaefe08f66"
+          "sha256": "bb458c84d500b136c66f9d199e5208919f7f1b3ab81ed8442c2444c5d770f36f"
         }
       ],
-      "digest": "d561da4bdf56276bd6c89cdd06762e0ee25c96c2ac1abfadebf89f5cc2c66d5c"
+      "digest": "088778843e4a56ebeaeeae9c491775fd294e0d647b6da569dc66e30c24eae936"
     },
     {
       "id": "apv",
