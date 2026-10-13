@@ -3,11 +3,14 @@
 // 迁移说明:原版依赖 server-s2 contracts 包的 ApiError;本版内联 ModuleError,行为不变。
 import { ModuleError } from './mindmap.ts';
 
-// Interface names from the read-only Excel function contract; no host addresses
-// or framework implementations are installed here. Console needs bed-specific
-// role evidence and is deliberately not inferred from its method name.
-export const SHELL_HOST_METHODS = ['clientc', 'clientd', 'cliente', 'routera', 'routerb', 'server213', 'server231', 'server232'] as const;
-export const shellHost = (name: string) => (SHELL_HOST_METHODS as readonly string[]).includes(name);
+// Host-name shape only. Which hosts exist on a bed is a governance decision made by the
+// host-policy Hook against the approved resource declaration, never by this parser; here a
+// name is a host token when it looks like one and is not a reserved workbook object.
+const RESERVED_OBJECTS = new Set(['check_point', 'time', 'test_env']);
+const DEVICE_OBJECT = /^APV_\d+$/;
+const HOST_TOKEN = /^[A-Za-z][A-Za-z0-9_.-]{0,62}$/;
+export const isHostToken = (name: string): boolean =>
+  typeof name === 'string' && HOST_TOKEN.test(name) && !RESERVED_OBJECTS.has(name) && !DEVICE_OBJECT.test(name);
 
 export function frameworkArguments(input: string): { command: string; kwargs: Record<string, string | number> } {
   const fail = (message: string): never => { throw new ModuleError('INVALID_EXECUTION_WORKBOOK', message); };

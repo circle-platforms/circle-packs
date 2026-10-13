@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { FunctionContract } from '../tools/function-contract.ts';
-import { frameworkArguments, shellHost } from '../tools/dialect.ts';
+import { frameworkArguments, isHostToken } from '../tools/dialect.ts';
 
 const enc = (s) => new TextEncoder().encode(s);
 
@@ -36,8 +36,15 @@ test('frameworkArguments splits literal command and kwargs', () => {
   assert.throws(() => frameworkArguments('cmd,timeout=9999'));
 });
 
-test('shellHost admits the contract shell clients and nothing else', () => {
-  assert.ok(shellHost('routera'));
-  assert.ok(!shellHost('console'));
-  assert.ok(!shellHost('APV_0'));
+test('isHostToken checks shape only: valid names, malformed names, reserved objects', () => {
+  assert.ok(isHostToken('routera'));
+  assert.ok(isHostToken('server213.some-bed.example'));
+  assert.ok(isHostToken('client-c'));
+  assert.ok(!isHostToken('APV_0'));       // device object, not a host
+  assert.ok(!isHostToken('check_point')); // reserved workbook object
+  assert.ok(!isHostToken('test_env'));
+  assert.ok(!isHostToken('time'));
+  assert.ok(!isHostToken('0abc'));        // must start with a letter
+  assert.ok(!isHostToken('a b'));         // no spaces
+  assert.ok(!isHostToken('a'.repeat(64))); // over the 63-char bound
 });

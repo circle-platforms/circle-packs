@@ -48,12 +48,31 @@ test('reads a sound workbook: cases, device commands, host commands, checkpoint'
   assert.equal(book.hostCommands[0].command, 'dig @192.0.2.70 autotest.com');
 });
 
-test('rejects when the function contract disables a method', async () => {
+test('a disabled function annotates functionStatus instead of throwing; the Hook decides', async () => {
   const bytes = await makeBook([
-    ['100000000000000001', 'P1', 2, 'cfg', 'APV_0', 'reboot', '', null, null],
-    [null, null, 3, 'check', 'check_point', 'found', 'x', null, null],
+    ['100000000000000001', 'P1', 2, 'dig', 'routera', 'cmd', 'dig @192.0.2.70 x', null, null],
+    [null, null, 3, 'check', 'check_point', 'found', 'NOERROR', null, null],
   ]);
-  await assert.rejects(() => readExecutionWorkbook(bytes, new FunctionContract(enc(CONTRACT))), /not enabled/);
+  const disabled = JSON.stringify({ schema: 'ist.excel.function-contract', complete: true, entries: [{ e: 'routera', f: 'cmd', status: 'disabled' }] });
+  const book = await readExecutionWorkbook(bytes, new FunctionContract(enc(disabled)));
+  assert.equal(book.cases[0].steps[0].functionStatus, 'disabled'); // parser records, never rejects
+  const workbookContract = (await import('../hooks/workbook-contract.ts')).default;
+  const verdict = workbookContract({ event: 'verify.workbook', binding: {}, subject: { client: 'routera', contract: { testEnvEnabled: ['otherhost'] } } });
+  assert.equal(verdict.code, 'COMMAND_VALIDATION_FAILED'); // the Hook decides enablement
+});
+
+test('an unknown host parses; the host-policy Hook blocks it against the declaration', async () => {
+  const bytes = await makeBook([
+    ['100000000000000001', 'P1', 2, 'dig', 'some-unknown-host', 'cmd', 'dig @192.0.2.70 x', null, null],
+    [null, null, 3, 'check', 'check_point', 'found', 'NOERROR', null, null],
+  ]);
+  const book = await readExecutionWorkbook(bytes);
+  const host = book.hostCommands[0];
+  assert.equal(host.host, 'some-unknown-host'); // shape-only parser lets it through
+  // the governance decision is the Hook's, against the approved declaration:
+  const policy = (await import('../hooks/host-policy.ts')).default;
+  const verdict = policy({ event: 'verify.hostCommand', binding: { resource: { declaration: { allowedTestHosts: ['routera'], hostCommandPolicies: {} } } }, subject: { command: host.command, host: host.host, method: 'cmd', kwargs: {} } });
+  assert.equal(verdict.code, 'HOST_NOT_IN_BED');
 });
 
 test('rejects a workbook without the hidden marker row', async () => {

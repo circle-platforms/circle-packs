@@ -1,4 +1,6 @@
-// Tool: 执行工作簿读取与契约校验(纯函数,输入字节、输出结构;不读环境、不连网、不写文件)。
+// Tool: 执行工作簿读取与形状校验(纯函数,输入字节、输出结构;不读环境、不连网、不写文件)。
+// 治理判定不在此处:主机是否在床的闭集由 host-policy Hook 按已批准声明判,函数是否启用由
+// workbook-contract Hook 按契约判;本 Tool 只查形状与字面量。
 // 来源:server-s2 packs/apv/execution/workbook.ts @ bd364ac58ac16b8496c5bac39246b8c64c6e0e68
 // 迁移说明:原版用 ExcelJS + fflate + server-s2 contracts 包;本版行为逐条保留,
 // ApiError 换成同形 ModuleError,sha256/requireCondition/MAX_SOURCE_BYTES 内联为本地实现。
@@ -6,10 +8,10 @@
 import ExcelJS from 'exceljs';
 import { unzipSync } from 'fflate';
 import { ModuleError } from './mindmap.ts';
-import { frameworkArguments, shellHost } from './dialect.ts';
+import { frameworkArguments, isHostToken } from './dialect.ts';
 import type { FunctionContract } from './function-contract.ts';
 
-export interface ExecutionStep { row: number; type: number; description: string; object: string; method: string; data: string; commands: string[]; saveAs?: string; inputRegister?: string; call?: { command: string; kwargs: Record<string, string | number> } }
+export interface ExecutionStep { row: number; type: number; description: string; object: string; method: string; data: string; commands: string[]; saveAs?: string; inputRegister?: string; functionStatus?: string; call?: { command: string; kwargs: Record<string, string | number> } }
 export interface ExecutionCase { autoid: string; steps: ExecutionStep[] }
 export interface ExecutionBook {
   sha256: string; cases: ExecutionCase[]; initialization: ExecutionStep[];
@@ -72,8 +74,8 @@ export async function readExecutionWorkbook(bytes: Buffer, functions?: FunctionC
       }
       if (type >= 2 && !current) throw invalid('A step has no case identity');
       const step: ExecutionStep = { row, type, description: cells[3], object: cells[4], method: cells[5], data: cells[6], commands: [], ...(cells[7] ? { saveAs: cells[7] } : {}), ...(cells[8] ? { inputRegister: cells[8] } : {}) };
-      if (functions && (step.object || step.method || step.data) && functions.status(step.object, step.method) !== 'enabled')
-        throw invalid('Execution function is not enabled in the bound function contract', { functionStatus: functions.status(step.object, step.method) });
+      // Function-contract status is data for the workbook-contract Hook; the parser never throws on it.
+      if (functions && (step.object || step.method || step.data)) step.functionStatus = functions.status(step.object, step.method);
       const device = /^(?:APV_(\d+)|Seg(\d+)_tmp)$/.exec(step.object);
       if (device) {
         if (!['cmd', 'cmd_config', 'cmds_config', 'cmd_enable'].includes(step.method) || cells[8] !== '' || /\b(?:Reg|Seg)\d+_tmp\b|\$\{/.test(step.data))
@@ -83,10 +85,10 @@ export async function readExecutionWorkbook(bytes: Buffer, functions?: FunctionC
         if (!step.commands.length || step.commands.some((command) => !command.trim() || command.length > 2000 || /[\x00-\x08\x0b-\x1f]/.test(command)))
           throw invalid('Device command is empty or outside the contract bounds');
         for (const command of step.commands) commands.push({ autoid: type === 1 ? null : current!.autoid, row, object: step.object, deviceIndex: Number(device[1] ?? device[2]), command });
-      } else if (step.object === 'test_env' || shellHost(step.object)) {
+      } else if (step.object === 'test_env' || isHostToken(step.object)) {
         const host = step.object === 'test_env' ? step.method : step.object;
-        if (!shellHost(host) || (step.object !== 'test_env' && step.method !== 'cmd') || !step.data.trim() || step.data.length > 16384 || cells[8] !== '' || /[\x00-\x08\x0b-\x1f]/.test(step.data))
-          throw invalid('Host dispatch needs an enabled literal method; lifecycle, reboot, console without role evidence and input-register substitution are not supported');
+        if ((step.object !== 'test_env' && step.method !== 'cmd') || !step.data.trim() || step.data.length > 16384 || cells[8] !== '' || /[\x00-\x08\x0b-\x1f]/.test(step.data))
+          throw invalid('Host dispatch needs a literal command method; input-register substitution is not supported');
         step.call = frameworkArguments(step.data);
         hostCommands.push({ autoid: type === 1 ? null : current!.autoid, row, object: step.object, method: step.method, host, command: step.call.command, kwargs: step.call.kwargs });
       } else if (step.object === 'check_point') {

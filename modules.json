@@ -154,11 +154,11 @@
       "kind": "product-line",
       "root": "products/apv",
       "manifestPath": "products/apv/product-line.json",
-      "version": "1.2.0",
+      "version": "1.2.1",
       "files": [
         {
           "path": "README.md",
-          "sha256": "d0aee6a8152bf15a9ca20f095df3d1d905b43df90eb30ef1150424b73d5de33c"
+          "sha256": "cff0217eb8c1655ac02b463a235629128213e7718a7a610cde20eed9191a8658"
         },
         {
           "path": "flows/apv-case-execute.json",
@@ -182,7 +182,7 @@
         },
         {
           "path": "product-line.json",
-          "sha256": "05f0f66a5b2470faa754dedd2f13f2ba8719dc100c3027b1a88dde136bf482ad"
+          "sha256": "9bc4a1fd58e2a6d4adb8603a0f202bfda30f99dfd7a1a0f008c49f37301338ce"
         },
         {
           "path": "resources/case-gateway.json",
@@ -202,7 +202,7 @@
         },
         {
           "path": "tests/function-contract-dialect.test.mjs",
-          "sha256": "ec2855b7ef36e7e266d11310ba01da783c135248fa100e52c39ba8e8b30d2daf"
+          "sha256": "b67f771af14120716b3b9d6047a739e668c24be64b73627edda7d25303a96d34"
         },
         {
           "path": "tests/hooks.test.mjs",
@@ -218,7 +218,7 @@
         },
         {
           "path": "tests/workbook.test.mjs",
-          "sha256": "010035de2672e9b8ecafd649fedef29cf340cf4de6d88cd4a536ee23a108a4ee"
+          "sha256": "6234ef66dc2fd68b3f0ed781f288247dc11e660b7509f27864b6cbb06b3b0d55"
         },
         {
           "path": "tools/contracts.ts",
@@ -230,7 +230,7 @@
         },
         {
           "path": "tools/dialect.ts",
-          "sha256": "b1de93c97ce22e6b38930ee96559809dee222f70297083856055d03d629eb74d"
+          "sha256": "3dc252ba0c7e36e9777e9671c3b6f8e9277ada101dd7b8955aa19f26fae1fb24"
         },
         {
           "path": "tools/function-contract.ts",
@@ -242,10 +242,10 @@
         },
         {
           "path": "tools/workbook.ts",
-          "sha256": "f939fcd8a00d2583780a629bca827f774332423db8072711d1b151eb8faa25d0"
+          "sha256": "5b799dcd94e5d4b353f0efd6f94b5e72b5bf7726c7c9703b9d3cf3a1e11f622b"
         }
       ],
-      "digest": "d4f377a5d33ceb1698af44704d9b27989714cd32b24f791e389f439a10ebe752"
+      "digest": "3d30ded71682727e44a76c103a2d0a9fe87c9c22e9ab363a2f4e9b64a389a572"
     }
   ]
 }

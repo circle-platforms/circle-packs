@@ -1,7 +1,7 @@
 {
   "schemaVersion": "product-line/1",
   "id": "apv",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "connectorPackages": [
     "documents",
     "build-site",
