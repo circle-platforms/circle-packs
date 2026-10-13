@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+### Changed
+
+- **Licensed under the Apache License 2.0**, as Circle and circle-hub are. `LICENSE` carries the canonical text and `NOTICE` names the copyright holder, records that the repository was under the MIT License until 2026-10-13 and reserves the Circle and Circle Hub marks. `CONTRIBUTING.md` has Circle's contributor terms (a sign-off on every commit and a license to the project); `SECURITY.md`, the issue and pull request templates and `.gitattributes` follow Circle's, in English. The documentation is published at <https://circle-platforms.github.io/circle-packs/> with the same site setup as Circle's.
+
 ### Added
 
 - Public repository facade: English README with a Chinese translation, MIT license, contributing guide, security policy, code of conduct and this changelog.

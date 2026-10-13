@@ -1,6 +1,16 @@
-# circle-packs
+<h1 align="center">circle-packs</h1>
 
-[English](README.md)
+<p align="center">装在 circle-hub 上的技能包和产品线包：有版本、按 SHA 固定、由独立审阅人批准。</p>
+
+<p align="center">
+  <a href="https://circle-platforms.github.io/circle-packs/">文档</a> ·
+  <a href="modules.json">模块清单</a> ·
+  <a href="docs/product-line-pack.md">APV 状态</a> ·
+  <a href="CHANGELOG.md">更新日志</a> ·
+  <a href="README.md">English</a>
+</p>
+
+---
 
 装在 [circle-hub](https://github.com/circle-platforms/circle-hub) 上的技能包和产品线包。circle-hub 是 [Circle](https://github.com/circle-platforms/circle) 的团队 hub。这里的每个模块单独版本、单独发布，通过 circle-hub 自己的机制装入：技能包走推送、试跑记录和独立审批人批准。包不随 circle-hub 一起发布。
 
@@ -59,8 +69,10 @@ circle-packs 在开发中，不是受支持的生产发行。用到要紧的地�
 
 ## 参与与安全
 
-[CONTRIBUTING.md](CONTRIBUTING.md) 说明改动怎么做、怎么验。[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) 适用于所有互动。安全问题通过仓库的私密漏洞报告入口提交，见 [SECURITY.md](SECURITY.md)。
+参与开发见 [CONTRIBUTING.md](CONTRIBUTING.md)，编程助手见 [AGENTS.md](AGENTS.md)，三个仓库彼此的要求见 circle-hub 的[兼容矩阵](https://github.com/circle-platforms/circle-hub/blob/main/docs/compatibility.md)。安全问题按 [SECURITY.md](SECURITY.md) 报告。参与的每个人都遵守[行为准则](CODE_OF_CONDUCT.md)。
+
+circle-packs 是三个仓库之一：[circle](https://github.com/circle-platforms/circle) 是 agent，[circle-hub](https://github.com/circle-platforms/circle-hub) 是它登录的 hub，circle-packs 是装在 hub 上的包。
 
 ## 许可
 
-[MIT](LICENSE)。
+circle-packs 以 [Apache License 2.0](LICENSE) 发布。[NOTICE](NOTICE) 写明著作权人，并保留商标：本开源许可仅授予代码与相关文档的使用权，未经明确书面许可，不授予任何使用 Circle、Circle Hub 或相关商标、Logo 及图标的权利。2026-10-13 之前本仓库以 MIT 许可证发布。本仓库不捆绑第三方组件；包里的 Tool 只能 import circle-hub 的依赖集，见那个仓库的 THIRD_PARTY_NOTICES.md。贡献按 [CONTRIBUTING.md](CONTRIBUTING.md#contributor-terms) 的贡献者条款接受。

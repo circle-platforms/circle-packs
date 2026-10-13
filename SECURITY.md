@@ -1,19 +1,29 @@
-# 安全问题与支持范围
+# Security policy
 
-circle-packs 在开发中，不是受支持的生产发行。这里的验收跑在合成样本上。把它装进任何要紧的 circle-hub 之前，先按 [产品线包典范](https://github.com/circle-platforms/circle-hub/blob/main/docs/design/product-line-pack.md)里的适配单和审批核对这个包。
+circle-packs is under development and is not a supported production release. Acceptance here runs on synthetic samples. Before you install a pack on any circle-hub that matters, check it against the adaptation sheet and the approvals in the [product-line pack exemplar](https://github.com/circle-platforms/circle-hub/blob/main/docs/design/product-line-pack.md).
 
-## 报告安全问题
+## Report a vulnerability
 
-仓库使用 GitHub 的私密漏洞报告：在仓库的 **Security** 页面点 **Report a vulnerability**，私下提交。不要在公开 Issue 里披露漏洞细节。
+Please do not open a public issue for a security problem.
 
-报告时写清：受影响的包或脚本、最小复现、影响、版本或提交号、相关文件。不要上传口令、令牌、内网地址、原始业务资料、设备返回或完整用户会话。
+Use GitHub's private reporting: open the repository's **Security** tab and choose **Report a vulnerability**. If that option is not available, open an issue that says only that you have a security report and ask for a private way to send it. Do not put details in the issue.
 
-维护者评估后按具体问题安排复现、修复和披露。当前阶段不承诺生产响应时限。
+Include the pack or script affected, the smallest reproduction, the impact, the module version or the commit, and the files involved. Do not upload passwords, tokens, internal addresses, business originals, device returns or whole user sessions.
 
-## 仓库里不放的东西
+Reports are handled on a best-effort basis. There is no guaranteed response time at this stage.
 
-命令树、函数契约、床配置、脑图原件、设备返回、运行时地址和凭据都不进 Git。测试只用合成样本。含这些内容的提交应当被拒绝，而不是打码后留下。
+## Supported versions
 
-## 不属于本仓库的事
+Fixes go into the latest commit on `main` and the next version of the module. Nothing older is patched; a hub keeps the version it approved until it approves another.
 
-运行时地址、凭据和证书由部署方保管，登记进 circle-hub，不由本仓库托管或轮换。本仓库只提供要装上去的字节。circle-hub 怎样审批和执行，见它的[审批与执行链](https://github.com/circle-platforms/circle-hub/blob/main/docs/design/approvals-and-enforcement.md)。
+## What counts
+
+These are in scope:
+
+- A tool that is not a pure function on bytes: one that reads the environment, the network or the file system, or imports something outside its declared imports.
+- A hook that blocks what is not provably true, or passes what the exemplar says it must block.
+- A skill whose declared tools, inputs or origins differ from what it actually does.
+- An original (a command tree, a function contract, bed configuration, a mind map, a device return), a credential or an internal address that got into Git. Such a commit is rejected, not redacted and kept.
+- Anything that lets text from a source or a tool result change what a pack declares or what the hub approves.
+
+Out of scope, by design: runtime addresses, credentials and certificates are kept by the deployer and registered in circle-hub; this repository only provides the bytes that are installed. How circle-hub approves and executes is in its [approvals and enforcement chain](https://github.com/circle-platforms/circle-hub/blob/main/docs/design/approvals-and-enforcement.md).

@@ -1,0 +1,73 @@
+title: circle-packs
+description: Skill packs and product-line packs installed on circle-hub — versioned, SHA-pinned, approved by an independent reviewer
+lang: en-US
+url: https://circle-platforms.github.io
+baseurl: /circle-packs
+repository: circle-platforms/circle-packs
+
+theme: just-the-docs
+permalink: pretty
+
+plugins:
+  - jekyll-seo-tag
+  - jekyll-include-cache
+  - jekyll-sitemap
+  - jekyll-optional-front-matter
+  - jekyll-titles-from-headings
+  - jekyll-relative-links
+
+optional_front_matter:
+  remove_originals: false
+titles_from_headings:
+  enabled: true
+  strip_title: false
+relative_links:
+  enabled: true
+  collections: false
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+
+exclude:
+  - vendor
+  - .bundle
+
+aux_links:
+  GitHub:
+    - https://github.com/circle-platforms/circle-packs
+  Circle:
+    - https://circle-platforms.github.io/circle/
+  circle-hub:
+    - https://circle-platforms.github.io/circle-hub/
+aux_links_new_tab: true
+
+nav_external_links:
+  - title: Contributing
+    url: https://github.com/circle-platforms/circle-packs/blob/main/CONTRIBUTING.md
+  - title: Security policy
+    url: https://github.com/circle-platforms/circle-packs/blob/main/SECURITY.md
+  - title: Changelog
+    url: https://github.com/circle-platforms/circle-packs/blob/main/CHANGELOG.md
+nav_external_links_new_tab: true
+
+back_to_top: true
+back_to_top_text: Back to top
+
+gh_edit_link: true
+gh_edit_link_text: Edit this page on GitHub
+gh_edit_repository: https://github.com/circle-platforms/circle-packs
+gh_edit_branch: main
+gh_edit_source: docs
+gh_edit_view_mode: blob
+
+search_enabled: true
+heading_anchors: true
+nav_enabled: true
+
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+  auto_ids: true

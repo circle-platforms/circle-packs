@@ -1,0 +1,34 @@
+Circle Packs
+Copyright (c) 2026 qingshanfeihu
+
+This product is developed by qingshanfeihu and the Circle contributors
+(https://github.com/circle-platforms/circle-packs).
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not
+use this product except in compliance with the License. A copy of the License
+is in the LICENSE file next to this one and at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Until 2026-10-13 this repository was licensed under the MIT License, and
+contributions received before that date were submitted under it. Those
+contributions remain available under the MIT License as well.
+
+This repository bundles no third-party components. A pack's tools may import
+only the dependency set of Circle Hub, which that repository's
+THIRD_PARTY_NOTICES.md describes.
+
+Trademarks
+----------
+
+"Circle", "Circle Hub", the Circle logo and the Circle application icons are
+trademarks or service marks of qingshanfeihu.
+
+The open-source licenses above grant rights to the code and the related
+documentation only. They do not grant any right to use the Circle or
+Circle Hub names, the Circle logo, the application icons or any related
+trademark or service mark, in particular to name, brand, promote or endorse a
+modified version, a fork, a product or a service, without the express written
+permission of the trademark owner. Section 6 of the Apache License applies.
+Truthful, non-misleading statements that a work is derived from or works with
+Circle or Circle Hub are not restricted by this notice.

@@ -1,6 +1,16 @@
-# circle-packs
+<h1 align="center">circle-packs</h1>
 
-[中文](README.zh-CN.md)
+<p align="center">Skill packs and product-line packs installed on circle-hub: versioned, SHA-pinned, approved by an independent reviewer.</p>
+
+<p align="center">
+  <a href="https://circle-platforms.github.io/circle-packs/">Docs</a> ·
+  <a href="modules.json">Module list</a> ·
+  <a href="docs/product-line-pack.md">APV status</a> ·
+  <a href="CHANGELOG.md">Changelog</a> ·
+  <a href="README.zh-CN.md">中文</a>
+</p>
+
+---
 
 Skill packs and product-line packs installed on [circle-hub](https://github.com/circle-platforms/circle-hub), the team hub for [Circle](https://github.com/circle-platforms/circle). Each module has its own version and is installed through circle-hub's own mechanism: a skill pack is pushed, a trial is recorded, and an independent reviewer approves it. Packs are not released together with circle-hub.
 
@@ -59,8 +69,10 @@ circle-packs is under development and is not a supported production release. Rea
 
 ## Contributing and security
 
-[CONTRIBUTING.md](CONTRIBUTING.md) explains how changes are made and verified. [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) applies to every interaction. Report security problems through the repository's private vulnerability reporting, as described in [SECURITY.md](SECURITY.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md) for coding agents, and circle-hub's [compatibility matrix](https://github.com/circle-platforms/circle-hub/blob/main/docs/compatibility.md) for what the three repositories expect of each other. Report security problems as described in [SECURITY.md](SECURITY.md). Everyone taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+circle-packs is one of three repositories: [circle](https://github.com/circle-platforms/circle) is the agent, [circle-hub](https://github.com/circle-platforms/circle-hub) is the hub it signs in to, and circle-packs holds the packs installed on the hub.
 
 ## License
 
-[MIT](LICENSE).
+circle-packs is released under the [Apache License 2.0](LICENSE). The [NOTICE](NOTICE) file names the copyright holder and reserves the Circle and Circle Hub names, logos and icons: the license covers the code and its documentation, not the marks. Until 2026-10-13 the repository was under the MIT License. The repository bundles no third-party components; a pack's tools import only circle-hub's dependency set, described in that repository's THIRD_PARTY_NOTICES.md. Contributions are accepted under the [contributor terms](CONTRIBUTING.md#contributor-terms).
