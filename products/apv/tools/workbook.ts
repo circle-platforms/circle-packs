@@ -19,8 +19,8 @@ export interface ExecutionBook {
 const headers = ['自动化ID', '优先级', '语句类型', '描述', '测试对象', '方法', '数据', '临时保存期望结果', '输入变量'];
 const MAX_SOURCE_BYTES = 16 * 1024 * 1024;
 const sha256Hex = async (bytes: Uint8Array): Promise<string> => {
-  const { createHash } = await import('node:crypto');
-  return createHash('sha256').update(bytes).digest('hex');
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
 };
 
 export async function readExecutionWorkbook(bytes: Buffer, functions?: FunctionContract): Promise<ExecutionBook> {

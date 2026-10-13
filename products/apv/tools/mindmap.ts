@@ -24,8 +24,8 @@ export class ModuleError extends Error {
 const invalid = (message: string): never => { throw new ModuleError('INVALID_MINDMAP', message); };
 
 export async function sha256(bytes: Uint8Array): Promise<string> {
-  const { createHash } = await import('node:crypto');
-  return createHash('sha256').update(bytes).digest('hex');
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+  return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
 }
 export async function canonicalHash(value: unknown): Promise<string> {
   const stable = (v: unknown): string => {

@@ -68,7 +68,7 @@
       "kind": "product-line",
       "root": "products/apv",
       "manifestPath": "products/apv/product-line.json",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "files": [
         {
           "path": "README.md",
@@ -92,7 +92,7 @@
         },
         {
           "path": "product-line.json",
-          "sha256": "baa32ace44fcabd50f4a040289a039464a312508538122a717a8e68c0c850182"
+          "sha256": "9898c9886b8b31db55637aa263efab26732be7fa191b72fc1ea06ef2590c4187"
         },
         {
           "path": "resources/case-gateway.json",
@@ -136,14 +136,14 @@
         },
         {
           "path": "tools/mindmap.ts",
-          "sha256": "1e5d80091261b45c724e1cb3150010481ef4daa7b9a371c21242565ab274923d"
+          "sha256": "33b135290a43927ae3db2079c1e1f3e1db3eca658b1090c473ff68bfa29df8ac"
         },
         {
           "path": "tools/workbook.ts",
-          "sha256": "7f46cf1bebf4dc74def75f970dea14b7d8597f548138445b76a669d89ceee6d0"
+          "sha256": "f939fcd8a00d2583780a629bca827f774332423db8072711d1b151eb8faa25d0"
         }
       ],
-      "digest": "0d07d0d1664cd7475b2d8cfd090a4d311f55baaa41d8bbd69c189ac9dac82602"
+      "digest": "64fd2c9fcbac2e3ce665dc0a0e44f2741762d22f72dc0f5f61a14d7dbb85c3fc"
     }
   ]
 }

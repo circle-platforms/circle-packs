@@ -5,7 +5,7 @@
 ## 本仓库的约定
 
 - 一条产品线一个目录 `products/<line>/`，布局按典范：`product-line.json`（tools、hooks、连接器包、工具别名、知识映射、流程）、`connectors/`、`sources/`、`tools/`、`hooks/`、`flows/`、`resources/`、`README.md`（填好的适配单 + 验收记录）。技能包在 `skills/<id>/`，每个自成一体，不跨技能 import。
-- Tool 实现是纯函数：输入字节、输出结构，不读环境、不连网、不写文件。只能 import hub 自带依赖集里的包（exceljs 4.4.0、read-excel-file 9.3.12、fflate 0.8.3、zod 4.6.5、saxes、parse5），并在 `product-line.json` 的 `tools[].imports` 里声明。本仓库不装依赖、不提交 node_modules；跑产品线包的测试前把 circle-hub 的 node_modules 软链过来。
+- Tool 实现是纯函数：输入字节、输出结构，不读环境、不连网、不写文件。只能 import hub 自带依赖集里的包（exceljs 4.4.0、read-excel-file 9.3.12、fflate 0.8.3、zod 4.6.5、saxes、parse5），并在 `product-line.json` 的 `tools[].imports` 里声明；Node 内建模块（`node:*`）也不行，散列用全局 WebCrypto `crypto.subtle`，不需要 import。本仓库不装依赖、不提交 node_modules；跑产品线包的测试前把 circle-hub 的 node_modules 软链过来。
 - Hook 处理器签名 `handle({event, binding, subject}) → {decision:'pass'} | {decision:'block', code, facts}`，纯函数、确定性，只拦 100% 可证真的事。主机 shell 只拦真正自毁的命令（对根或系统目录的 rm、mkfs、dd 写设备、shutdown/reboot、passwd/userdel、对根的 chmod/chown -R）；dig、curl、ping、tc、iptables、systemctl 这类客户端步骤必须放行。
 - 技能包的 SKILL.md 每一步标明「脚本」或「判断」：有唯一答案的步骤全在 `scripts/`，工具返回由 hub 原样落盘，脚本只拿 evidenceId 指针；判断由模型做，产物里标 `origin: model`。
 - 公开仓库：不出现内网地址（样例一律用 192.0.2.0/24 文档段）、本机绝对路径、凭据、原件和真实返回。
