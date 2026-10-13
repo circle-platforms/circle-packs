@@ -154,11 +154,11 @@
       "kind": "product-line",
       "root": "products/apv",
       "manifestPath": "products/apv/product-line.json",
-      "version": "1.2.1",
+      "version": "1.2.2",
       "files": [
         {
           "path": "README.md",
-          "sha256": "cff0217eb8c1655ac02b463a235629128213e7718a7a610cde20eed9191a8658"
+          "sha256": "7c27107313ed75afbf81dc87b52398df8b7d2fb87710a8ee0d720aa10d0a7283"
         },
         {
           "path": "flows/apv-case-execute.json",
@@ -174,7 +174,7 @@
         },
         {
           "path": "hooks/host-policy.ts",
-          "sha256": "aec2b323e657942e88b1c03f06804504ced808a98fac3514db3c5aee3c2e5228"
+          "sha256": "22be59c2299650e5001fc98e7200a6ac8a0d376d528f53b9b958c8e2f456e96d"
         },
         {
           "path": "hooks/workbook-contract.ts",
@@ -182,7 +182,7 @@
         },
         {
           "path": "product-line.json",
-          "sha256": "9bc4a1fd58e2a6d4adb8603a0f202bfda30f99dfd7a1a0f008c49f37301338ce"
+          "sha256": "25c672982913a7c957a64faba60a1ee33794fe2ca2ce3b0ccb6811619a8f7f01"
         },
         {
           "path": "resources/case-gateway.json",
@@ -210,7 +210,7 @@
         },
         {
           "path": "tests/host-policy.test.mjs",
-          "sha256": "26b78ed80f87d7aae40a0dc30b95f6239263327880451e6ae2633b2befa979b7"
+          "sha256": "ed9b80d88d965c22287e903292ffb09476871028383c789c315b0f057aeb5a92"
         },
         {
           "path": "tests/mindmap.test.mjs",
@@ -245,7 +245,7 @@
           "sha256": "5b799dcd94e5d4b353f0efd6f94b5e72b5bf7726c7c9703b9d3cf3a1e11f622b"
         }
       ],
-      "digest": "3d30ded71682727e44a76c103a2d0a9fe87c9c22e9ab363a2f4e9b64a389a572"
+      "digest": "faa9e79d03a97fa1e5142a2f169cecc2caef7f52f7d714f9aac53226164c347d"
     }
   ]
 }

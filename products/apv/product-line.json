@@ -1,7 +1,7 @@
 {
   "schemaVersion": "product-line/1",
   "id": "apv",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "connectorPackages": [
     "documents",
     "build-site",
@@ -14,7 +14,8 @@
     "build-site": "buildsite",
     "query-mirror": "zentao",
     "environment-view": "env",
-    "knowledge": "knowledge"
+    "knowledge": "knowledge",
+    "case-gateway": "gateway"
   },
   "connectorOptions": {
     "documents": {

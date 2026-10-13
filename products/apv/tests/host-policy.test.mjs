@@ -56,3 +56,17 @@ test('a policy cannot admit a host outside the closed set', () => {
   const blocked = hostPolicy(input({ command: 'dig x', host: 'attacker', method: 'cmd', kwargs: {} }, declaration));
   assert.equal(blocked.code, 'HOST_NOT_IN_BED');
 });
+
+test('host comparison is case-insensitive; facts keep the original spelling', () => {
+  // the bed topology reports RouterA, the workbook/contract says routera
+  assert.deepEqual(hostPolicy(input({ command: 'dig @192.0.2.70 x', host: 'RouterA', method: 'cmd', kwargs: {} })), { decision: 'pass' });
+  const blocked = hostPolicy(input({ command: 'dig x', host: 'ATTACKER', method: 'cmd', kwargs: {} }));
+  assert.equal(blocked.code, 'HOST_NOT_IN_BED');
+  assert.equal(blocked.facts.host, 'ATTACKER');
+});
+
+test('policy keys match case-insensitively too', () => {
+  const declaration = { allowedTestHosts: ['routera'], hostCommandPolicies: { ROUTERA: { allowPrefixes: ['dig '] } } };
+  assert.deepEqual(hostPolicy(input({ command: 'dig x', host: 'routera', method: 'cmd', kwargs: {} }, declaration)), { decision: 'pass' });
+  assert.equal(hostPolicy(input({ command: 'curl x', host: 'RouterA', method: 'cmd', kwargs: {} }, declaration)).code, 'HOST_COMMAND_OUTSIDE_POLICY');
+});

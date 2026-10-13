@@ -18,7 +18,7 @@ APV 产品线的 harness 原语集合:连接器声明、原件 role、工具实�
 | E Skill 里哪些是脚本 | 见 skills/apv-mindmap-compile/SKILL.md 分段;脚本在 scripts/,只处理 B 给的字节与自己的产物。 |
 | E 清单声明什么 | `product-line.json`:连接器包、别名、连接器选项、知识映射、tools(含 imports)、hooks、flows。 |
 | E 挂哪些 Hook | 4 个:`hooks/device-command-tree.ts`(verify.deviceCommand)、`hooks/host-destructive.ts`(verify.hostCommand, order 10)、`hooks/host-policy.ts`(verify.hostCommand, order 20:主机闭集 HOST_NOT_IN_BED/HOST_SET_UNDECLARED、字面量 COMMAND_NOT_LITERAL、单主机前缀策略 HOST_COMMAND_OUTSIDE_POLICY;闭集与前缀由床管理员在 hub 登记资源时从床配置填入 declaration,不进 Git)、`hooks/workbook-contract.ts`(verify.workbook);固定错误码 COMMAND_NOT_IN_TREE / DESTRUCTIVE_COMMAND / HOST_NOT_IN_BED / HOST_SET_UNDECLARED / COMMAND_NOT_LITERAL / HOST_COMMAND_OUTSIDE_POLICY / COMMAND_VALIDATION_FAILED。 |
-- 主机闭集与方法启用均由 Hook 判定(host-policy 按已批准声明、workbook-contract 按契约),Tool 只查形状。
+- 主机闭集与方法启用均由 Hook 判定(host-policy 按已批准声明、workbook-contract 按契约),Tool 只查形状;主机名比较大小写不敏感(床拓扑回报与工作簿/契约写法可能不同),facts 保留原拼写。
 | A 用户在 Circle 看什么 | srv_buildsite_* / srv_docs_* / srv_zentao_* / srv_env_* 工具,case.xlsx 产物与审批卡片;不加新界面。 |
 
 ## 验收记录

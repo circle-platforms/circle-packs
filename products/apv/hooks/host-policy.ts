@@ -25,11 +25,15 @@ export default function handle(input) {
   const command = typeof subject.command === 'string' ? subject.command : '';
   const host = typeof subject.host === 'string' ? subject.host : '';
 
+  // 主机名不分大小写:床拓扑回报 routerA、工作簿/契约写 routera,同一主机。
+  // 比较一律按小写;facts 里的 host 保留原样。
+  const lower = (name) => (typeof name === 'string' ? name.toLowerCase() : null);
+
   // (a) 主机闭集:缺失或空视为未声明,一律拦。
-  const allowed = Array.isArray(declaration?.allowedTestHosts) ? declaration.allowedTestHosts.filter((h) => typeof h === 'string') : [];
+  const allowed = Array.isArray(declaration?.allowedTestHosts) ? declaration.allowedTestHosts.map(lower).filter(Boolean) : [];
   if (!allowed.length)
     return { decision: 'block', code: 'HOST_SET_UNDECLARED', facts: { host, event: input?.event ?? null } };
-  if (!allowed.includes(host))
+  if (!allowed.includes(lower(host)))
     // 闭集大小可证真;闭集内容不进审计。
     return { decision: 'block', code: 'HOST_NOT_IN_BED', facts: { host, allowedCount: allowed.length, event: input?.event ?? null } };
 
@@ -40,8 +44,10 @@ export default function handle(input) {
       return { decision: 'block', code: 'COMMAND_NOT_LITERAL', facts: { host, syntax: label, fragment: match[0], event: input?.event ?? null } };
   }
 
-  // (c) 单主机前缀策略:只能缩小。策略存在且命令不以其任一前缀开头 → 拦。
-  const policy = declaration?.hostCommandPolicies?.[host];
+  // (c) 单主机前缀策略:只能缩小;策略键同样大小写不敏感。策略存在且命令不以其任一前缀开头 → 拦。
+  const policies = declaration?.hostCommandPolicies ?? {};
+  const policyKey = Object.keys(policies).find((key) => lower(key) === lower(host));
+  const policy = policyKey !== undefined ? policies[policyKey] : undefined;
   if (policy && Array.isArray(policy.allowPrefixes)) {
     const prefixes = policy.allowPrefixes.filter((p) => typeof p === 'string' && p);
     if (prefixes.length && !prefixes.some((p) => command.startsWith(p)))
