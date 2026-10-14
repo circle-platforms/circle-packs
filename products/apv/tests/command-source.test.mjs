@@ -76,7 +76,7 @@ test('commandCheck marks hit/missing and argument violations exactly like the hu
 });
 
 test('checkCommands wraps the XML original into the sync receipt shape', () => {
-  const out = checkCommands(XML, ['sdns on', 'sdns listener 10.0.0.999'], { build: 'SYNTHETIC_BUILD_301', buildId: 'bld_1' });
+  const out = checkCommands(['sdns on', 'sdns listener 10.0.0.999'], { build: 'SYNTHETIC_BUILD_301', buildId: 'bld_1' }, XML);
   assert.equal(out.result.build, 'SYNTHETIC_BUILD_301');
   assert.equal(out.result.buildId, 'bld_1');
   assert.equal(out.result.sourceSha256, createHash(XML));
