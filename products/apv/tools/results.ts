@@ -8,7 +8,13 @@ import { environmentDevices, deviceAddress, type DeviceAttribution } from './env
 
 // Only explicit framework checkpoint lines establish a step verdict. Case verdicts
 // and session replay are kept separate from these observations.
-export function executionResults(book: ExecutionBook, raw: any, attribution: DeviceAttribution = {}) {
+// The driver appends byteSlots as trailing Uint8Array arguments: [book, raw,
+// attribution, workbookBytes]. When workbookBytes is present, sourceSha256 is the
+// SHA-256 of the frozen workbook original (computed with the sandbox-free
+// implementation below), never a client-supplied value.
+import { createHash } from './sha256.ts';
+export function executionResults(book: ExecutionBook, raw: any, attribution: DeviceAttribution = {}, workbookBytes?: Uint8Array) {
+  const sourceSha256 = workbookBytes ? createHash(workbookBytes) : book.sha256;
   const devices = environmentDevices(attribution);
   const unmapped: { path: string; reason: string }[] = [];
   const linesFor = (log: string) => log.split(/\r?\n/).map((line) => line.replace(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\s?/, ''));
@@ -105,7 +111,7 @@ export function executionResults(book: ExecutionBook, raw: any, attribution: Dev
     executionStatus: raw.channel === 'runner_lost' ? 'unknown' : 'completed',
     channel: raw.channel,
     rc: raw.rc ?? null,
-    sourceSha256: book.sha256,
+    sourceSha256,
     cases,
     unmapped,
     modelJudgments: [],

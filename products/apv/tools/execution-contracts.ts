@@ -18,19 +18,20 @@ export type HookEvent = (typeof HOOK_EVENTS)[number];
 export const DELIVERY_STATUSES = ['succeeded', 'partial'] as const;
 // Registered hub error codes this flow may emit (packages/contracts/src/index.ts);
 // product judgment codes that are not registered here must not appear in outcomes.
-export const OUTCOME_CODES = ['BUILD_MISMATCH', 'GATEWAY_REFUSED', 'LEASE_UNAVAILABLE', 'INVALID_EXECUTION_WORKBOOK', 'COMMAND_VALIDATION_FAILED', 'HOST_NOT_IN_BED', 'HOST_SET_UNDECLARED', 'COMMAND_NOT_LITERAL', 'HOST_COMMAND_OUTSIDE_POLICY', 'COMMAND_NOT_IN_TREE', 'HOOK_FAILED', 'EVIDENCE_INSUFFICIENT', 'SOURCE_UNREACHABLE', 'UPSTREAM_TIMEOUT', 'SOURCE_HASH_MISMATCH'] as const;
+export const OUTCOME_CODES = ['BUILD_MISMATCH', 'GATEWAY_REFUSED', 'LEASE_UNAVAILABLE', 'INVALID_EXECUTION_WORKBOOK', 'COMMAND_VALIDATION_FAILED', 'COMMAND_NOT_IN_TREE', 'HOOK_FAILED', 'EVIDENCE_INSUFFICIENT', 'SOURCE_UNREACHABLE', 'UPSTREAM_TIMEOUT', 'SOURCE_HASH_MISMATCH'] as const;
 export type OutcomeCode = (typeof OUTCOME_CODES)[number];
 
-// The provider protocol tools this flow drives, as declared by the bound resource's
-// receiptPolicy at registration time (names here are the flow's defaults).
+// The provider protocol tools this flow drives — the names the resource's
+// receiptPolicy declares (case-gateway.json's configuration): the worker drives the
+// lease trio, submit/status/results and reconcile (case_status); the transition
+// itself only issues the read-only env_prepare and bed_topology observations.
 export const PROVIDER_TOOLS = {
-  lease: { acquireTool: 'lease_acquire', heartbeatTool: 'lease_heartbeat', releaseTool: 'lease_release' },
-  prepareTool: 'case_prepare',
-  topologyTool: 'bed_topology',
   submitTool: 'case_submit',
   statusTool: 'case_status',
   resultTool: 'case_results',
-  reconcileTool: 'case_reconcile',
+  reconcileTool: 'case_status',
+  prepareTool: 'env_prepare',
+  topologyTool: 'bed_topology',
   taskIdArgument: 'task_id',
 } as const;
 
@@ -111,4 +112,21 @@ export function validateTransitionOutput(output: any): string[] {
   if (byteLength(stateSerialized) > BUDGETS.stateBytes) problems.push(`state over ${BUDGETS.stateBytes} bytes`);
   budgetOk(output.state, 1, problems);
   return problems;
+}
+
+// Projects the frozen command-tree original into the verify subject shape. The tree
+// arrives as bytes on the 'command-tree' controlled slot; the workbook projection's
+// command list is passed as the second tool argument by the driver (the transition
+// only forwards ids, not command text). Present is computed here against the frozen
+// tree: a command is present when the tree JSON's heads/commands list contains it.
+export function projectCommandTree(original: Uint8Array, commands: string[]) {
+  let parsed: any;
+  try { parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(original)); }
+  catch { throw new Error('command-tree original is not valid UTF-8 JSON'); }
+  const listed: string[] = parsed?.heads ?? parsed?.commands ?? [];
+  if (!Array.isArray(listed) || listed.some((entry: any) => typeof entry !== 'string' && typeof entry?.command !== 'string'))
+    throw new Error('command-tree original carries no usable command list');
+  const known = new Set(listed.map((entry: any) => (typeof entry === 'string' ? entry : entry.command)));
+  const list = Array.isArray(commands) ? commands.filter((c) => typeof c === 'string') : [];
+  return { heads: list.map((command) => ({ command, present: known.has(command) })) };
 }

@@ -202,7 +202,7 @@
         },
         {
           "path": "resources/case-gateway.json",
-          "sha256": "4bda08f339935dc646a513dc9e57431333f5e12d42d7657cf959e176cfe2efbc"
+          "sha256": "310afc6445f3f057ccf48cbd1af3984b7b4bcd9f453d7fc494b19ab3978a11ea"
         },
         {
           "path": "sources/command-tree.md",
@@ -218,7 +218,7 @@
         },
         {
           "path": "tests/execution-flow.test.mjs",
-          "sha256": "053b9e7d6e11e1e3eb6132d814065a1bab6138b64396a5ae05c11436a1f8a5d1"
+          "sha256": "43e5e6f9ef2a56e93f65dcf1e136208eb8872d3a503429b1c602f26a3f08fa80"
         },
         {
           "path": "tests/function-contract-dialect.test.mjs",
@@ -262,11 +262,11 @@
         },
         {
           "path": "tools/execution-contracts.ts",
-          "sha256": "eb75016c507e0125c753e5f95544b10437a6849748f98ec07a4d20b4a6a10e0b"
+          "sha256": "05d10ecbe645284914da87d73db3d584762c08fc96c72d912e31a4e2595f82dd"
         },
         {
           "path": "tools/execution-transition.ts",
-          "sha256": "72d28f2300a1981e96d9be0ad73a22d2b032b028ab17daf7309e1d92811c2b23"
+          "sha256": "ffcb76f0a4249efdc4affc6d48cbb933ca1da50e57950bb580488f890746c5e1"
         },
         {
           "path": "tools/function-contract.ts",
@@ -282,14 +282,18 @@
         },
         {
           "path": "tools/results.ts",
-          "sha256": "08ceca07a35b4ba23896eec8dcc175a32cf42ec16ccd67d91c055986a1598c68"
+          "sha256": "b8ac31723c48cbc267650baf05b41c0631b5d417b89e37f6c89264875fb9ee73"
+        },
+        {
+          "path": "tools/sha256.ts",
+          "sha256": "8b776b21605323bac1a3a080b18644123a8860139f241ebbd0e7546d824415b8"
         },
         {
           "path": "tools/workbook.ts",
           "sha256": "5b799dcd94e5d4b353f0efd6f94b5e72b5bf7726c7c9703b9d3cf3a1e11f622b"
         }
       ],
-      "digest": "54c681c1e8380cad5509c7dbf18774052b432d0b903c59ebaeb6748239a2df48"
+      "digest": "7bce9d5e3bcfed692c187cf52139b06d1d9b155bb2e0223106fb1b2d80bb8d64"
     }
   ]
 }

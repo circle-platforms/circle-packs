@@ -35,7 +35,7 @@
         "request_hash"
       ],
       "inputSha256Path": [
-        "sha256"
+        "input_sha256"
       ],
       "byteHashesPath": [
         "byte_hashes"

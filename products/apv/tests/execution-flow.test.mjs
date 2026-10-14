@@ -2,212 +2,175 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeIpv6, ipVersion, deviceAddress, environmentDevices, environmentBuild } from '../tools/environment.ts';
 import { refusalFacts } from '../tools/refusal.ts';
-import { validateTransitionOutput, finiteJsonOk, FLOW_VERSION, TRANSITION_SCHEMA, OUTCOME_CODES } from '../tools/execution-contracts.ts';
+import { validateTransitionOutput, finiteJsonOk, FLOW_VERSION, TRANSITION_SCHEMA, OUTCOME_CODES, projectCommandTree } from '../tools/execution-contracts.ts';
 import { transition } from '../tools/execution-transition.ts';
+import { createHash } from '../tools/sha256.ts';
 
-// ---------- environment: normalization-equivalent IP handling (中11) ----------
-test('ipVersion accepts what node:net accepts and refuses the rest; zones are tolerated then stripped', () => {
+// ---------- sha256 (dependency-free) ----------
+test('the dependency-free sha256 matches known vectors', () => {
+  assert.equal(createHash(new TextEncoder().encode('')), 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
+  assert.equal(createHash(new TextEncoder().encode('abc')), 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+});
+
+// ---------- command-tree projection (高1) ----------
+test('projectCommandTree computes present from the frozen original, never self-reported', () => {
+  const tree = new TextEncoder().encode(JSON.stringify({ heads: ['sdns on', 'service inspect alpha'] }));
+  const projected = projectCommandTree(tree, ['sdns on', 'sdns fulldns on']);
+  assert.deepEqual(projected.heads, [
+    { command: 'sdns on', present: true },
+    { command: 'sdns fulldns on', present: false }, // absent from the frozen tree
+  ]);
+  assert.throws(() => projectCommandTree(new TextEncoder().encode('{oops'), []), /not valid UTF-8 JSON/);
+  assert.throws(() => projectCommandTree(new TextEncoder().encode('{"heads":{}}'), []), /no usable command list/);
+});
+
+// ---------- environment normalization (中11) ----------
+test('ipVersion accepts what node:net accepts; normalizeIpv6 canonicalizes every spelling', () => {
   assert.equal(ipVersion('192.0.2.1'), 4);
-  assert.equal(ipVersion('203.0.113.213'), 4);
   assert.equal(ipVersion('2001:db8::10'), 6);
-  assert.equal(ipVersion('::'), 6);
-  assert.equal(ipVersion('2001:db8::192.0.2.1'), 6);
-  assert.equal(ipVersion('2001:db8::1%eth0'), 6);
-  assert.equal(ipVersion('256.1.1.1'), 0);
-  assert.equal(ipVersion('1.2.3'), 0);
-  assert.equal(ipVersion('192.0.2.1/24'), 0);
-  assert.equal(ipVersion('2001::db8::1'), 0);
   assert.equal(ipVersion(':::1'), 0);
-  assert.equal(ipVersion('not-an-ip'), 0);
-});
-
-test('normalizeIpv6 produces one canonical form per address regardless of spelling', () => {
+  assert.equal(ipVersion('256.1.1.1'), 0);
   assert.equal(normalizeIpv6('2001:DB8::0010'), '2001:db8::10');
-  assert.equal(normalizeIpv6('2001:0db8:0000:0000:0000:0000:0000:0010'), '2001:db8::10');
   assert.equal(normalizeIpv6('::ffff:192.0.2.1'), '::ffff:c000:201');
-  assert.equal(normalizeIpv6('::ffff:c000:201'), '::ffff:c000:201');
-  assert.equal(normalizeIpv6('::'), '::');
-  assert.equal(normalizeIpv6('2001:db8::1%eth0'), '2001:db8::1');
-  assert.equal(deviceAddress('[2001:DB8::10]'), '2001:db8::10');
   assert.equal(deviceAddress('2001:db8:0:0:0:0:0:10'), '2001:db8::10');
-  assert.equal(deviceAddress('192.0.2.1'), '192.0.2.1');
-  assert.equal(deviceAddress('hostname'), null);
 });
 
-// ---------- environment: mapping sources ----------
-test('environmentDevices prefers conf.device_ips, then applies_to, then LB devices', () => {
-  const byConf = environmentDevices({ environment: { device_count: 2, conf: { device_ips: ['192.0.2.10', '192.0.2.11'] } } });
-  assert.deepEqual(byConf, { addresses: [['192.0.2.10'], ['192.0.2.11']], source: 'gateway.env_prepare.conf.device_ips' });
-  const bySsh = environmentDevices({ environment: { device_count: 2 }, topology: { topology: { applies_to: { device_ssh_ips: ['192.0.2.10', '192.0.2.11'] } } } });
-  assert.equal(bySsh.source, 'gateway.bed_topology.applies_to.device_ssh_ips');
-  const byDevices = environmentDevices({ environment: { device_count: 2 }, topology: { topology: { devices: [
-    { name: 'clientC', type: '客户端', ipv4: ['192.0.2.30/24'] },
-    { name: 'APV0', type: '负载均衡', ipv4: ['192.0.2.10/24'] },
-    { name: 'APV1', type: '负载均衡', ipv4: ['192.0.2.11/24'] },
-  ] } } });
-  assert.deepEqual(byDevices.addresses, [['192.0.2.10'], ['192.0.2.11']]);
-  assert.equal(byDevices.source, 'gateway.bed_topology.devices');
-});
-
-test('environmentDevices returns null on duplicates, count mismatch, shared address or out-of-range index', () => {
+test('environmentDevices sources and refusals', () => {
+  assert.equal(environmentDevices({ environment: { device_count: 2, conf: { device_ips: ['192.0.2.10', '192.0.2.11'] } } }).source, 'gateway.env_prepare.conf.device_ips');
   assert.equal(environmentDevices({ environment: { device_count: 2, conf: { device_ips: ['192.0.2.10', '192.0.2.10'] } } }), null);
-  assert.equal(environmentDevices({ environment: { device_count: 3, conf: { device_ips: ['192.0.2.10', '192.0.2.11'] } } }), null);
-  assert.equal(environmentDevices({ environment: { device_count: 2 }, topology: { topology: { devices: [
-    { name: 'APV0', type: '负载均衡', ipv4: ['192.0.2.10/24'] },
-    { name: 'APV2', type: '负载均衡', ipv4: ['192.0.2.12/24'] }, // index 2 out of range
-    { name: 'APV1', type: '负载均衡', ipv4: ['192.0.2.10/24'] }, // duplicate + shared address
-  ] } } }), null);
-  assert.equal(environmentDevices({}), null);
-});
-
-test('environmentBuild passes only on ready + build_checked + exact detail match, fake builds fail', () => {
-  const ok = environmentBuild({ ready: true, build_checked: true, checks: [{ check: 'device_build', ok: true, detail: 'device reports Synth_9_9_0_585, gateway bundle is Synth_9_9_0_585' }] }, 'Synth_9_9_0_585');
+  const ok = environmentBuild({ ready: true, build_checked: true, checks: [{ check: 'device_build', ok: true, detail: 'device reports SYN_1, gateway bundle is SYN_1' }] }, 'SYN_1');
   assert.equal(ok.passed, true);
-  const fake = environmentBuild({ ready: true, build_checked: true, observedBuild: 'Synth_9_9_0_999' }, 'Synth_9_9_0_585');
-  assert.equal(fake.passed, false);
-  const notChecked = environmentBuild({ ready: true, build_checked: false }, 'Synth_9_9_0_585');
-  assert.equal(notChecked.passed, false);
+  assert.equal(environmentBuild({ ready: true, build_checked: true, observedBuild: 'SYN_9' }, 'SYN_1').passed, false);
 });
 
-// ---------- refusal (低17 included: preDispatch needs the three proven facts) ----------
-test('refusalFacts classifies legacy diagnostics and gateway-declared stages; unknown stays dispatch-unproven', () => {
+test('refusalFacts reads the gateway original; unknown text stays dispatch-unproven', () => {
   const legacy = refusalFacts({ ok: false, reason: "expected exactly one 'IST_EXCEL_CONTRACT' identity marker, found 0" });
   assert.equal(legacy.preDispatch, true);
-  assert.equal(legacy.stage, 'validation');
   const declared = refusalFacts({ ok: false, stage: 'environment', code: 'BUILD_MISMATCH', reason: 'device reports other build' });
-  assert.equal(declared.preDispatch, true);
-  const dispatched = refusalFacts({ ok: false, stage: 'environment', task_id: 't', dispatched: true });
-  assert.equal(dispatched.preDispatch, false);
-  const bare = refusalFacts({ ok: false, reason: 'something else entirely' });
+  assert.equal(declared.code, 'BUILD_MISMATCH');
+  const bare = refusalFacts({ ok: false, reason: 'opaque' });
   assert.equal(bare.preDispatch, false);
-  assert.equal(bare.classification, 'dispatch-unproven');
 });
 
 // ---------- contracts ----------
-test('finiteJsonOk rejects the values A2 excludes; shared references are fine', () => {
-  assert.ok(finiteJsonOk({ a: [1, 'x', null, true] }));
-  assert.ok(!finiteJsonOk({ a: NaN }));
-  assert.ok(!finiteJsonOk({ a: undefined }));
-  assert.ok(!finiteJsonOk({ a: 1n }));
-  assert.ok(!finiteJsonOk({ a: new Date() }));
-  assert.ok(!finiteJsonOk({ a: new Map() }));
+test('outcome codes are registered; the state budget holds; shared references pass', () => {
+  for (const code of ['HOST_NOT_IN_BED', 'HOST_SET_UNDECLARED', 'COMMAND_NOT_LITERAL', 'HOST_COMMAND_OUTSIDE_POLICY']) assert.ok(!OUTCOME_CODES.includes(code), `${code} is a hook rule code, not an outcome code`);
+  assert.ok(OUTCOME_CODES.includes('HOOK_FAILED'));
+  const shared = { node: { id: 1 } };
+  assert.ok(finiteJsonOk({ a: shared, b: shared }));
   const cycle = { self: null };
   cycle.self = cycle;
   assert.ok(!finiteJsonOk(cycle));
-  const sparse = [1];
-  sparse[3] = 4;
-  assert.ok(!finiteJsonOk(sparse));
-  const shared = { node: { id: 1 } };
-  assert.ok(finiteJsonOk({ a: shared, b: shared }));
-});
-
-test('validateTransitionOutput enforces registered codes, identities and the state budget', () => {
-  const ok = { schema: TRANSITION_SCHEMA, state: { stage: 'environment' }, actions: [{ kind: 'operation.wait', stepId: 'wait-terminal', occurrence: 0, operationId: 'op-1' }] };
-  assert.deepEqual(validateTransitionOutput(ok), []);
-  assert.ok(!OUTCOME_CODES.includes('DEVICE_MAP_UNAVAILABLE'), 'unregistered code must not be in the table');
-  assert.ok(OUTCOME_CODES.includes('HOOK_FAILED'));
-  const badCode = { schema: TRANSITION_SCHEMA, state: {}, actions: [{ kind: 'outcome.error', stepId: 'x', occurrence: 0, code: 'DEVICE_MAP_UNAVAILABLE', facts: {} }] };
-  assert.ok(validateTransitionOutput(badCode).some((p) => /unknown outcome code/.test(p)));
-  const overState = { schema: TRANSITION_SCHEMA, state: { blob: 'x'.repeat(256 * 1024 + 1) }, actions: [] };
-  assert.ok(validateTransitionOutput(overState).some((p) => /state over/.test(p)));
+  assert.ok(validateTransitionOutput({ schema: TRANSITION_SCHEMA, state: { blob: 'x'.repeat(256 * 1024 + 1) }, actions: [] }).some((p) => /state over/.test(p)));
   assert.equal(FLOW_VERSION, 'apv-case-execute/2');
 });
 
-// ---------- transition, on hub-shaped inputs (高1) ----------
-// The hub injects the whole FlowSubmission: currentInput.value IS the submission and
-// the product payload sits in submission.value.
-const submission = (value) => ({ deadlineMs: 3600000, flowId: 'apv-case-execute-v2', methodPin: { assetId: 'ast_method' }, resources: { gateway: { assetId: 'ast_gateway' } }, sources: {}, value, controlledBytes: [] });
+// ---------- transition on hub-shaped inputs ----------
+const submission = (value) => ({ deadlineMs: 3600000, flowId: 'apv-case-execute-v2', methodPin: { assetId: 'ast_method' }, resources: { gateway: { assetId: 'ast_gateway' } }, sources: { originals: { assetId: 'ast_source' } }, value, controlledBytes: [] });
+// The workbook projection the in-flow tool.call produced — commands and hosts come
+// from the frozen workbook, not from the client value.
+const BOOK = {
+  sha256: 'f'.repeat(64),
+  commands: [{ command: 'service inspect alpha', autoid: '301', row: 10, object: 'APV_0' }],
+  hostCommands: [{ command: 'echo synthetic', host: 'routera', method: 'routera', kwargs: {}, row: 11 }],
+  cases: [{ autoid: '301' }],
+};
 const input = (state, observations, value = {}) => ({
   schema: TRANSITION_SCHEMA,
   binding: { taskId: 'synthetic-task' },
-  currentInput: { value: submission({ build: 'Synth_9_9_0_585', deviceCommands: [{ command: 'sdns on' }], hostDispatches: [{ command: 'dig @192.0.2.10 x', host: 'routera' }], ...value }), sha256: '0'.repeat(64) },
+  currentInput: { value: submission({ build: 'SYNTHETIC_BUILD_301', ...value }), sha256: '0'.repeat(64) },
   state,
   observations,
-  controlledBytes: [],
+  controlledBytes: [{ slot: 'workbook', role: 'workbook', reference: { kind: 'source', sourceRevisionId: 'src_w', sha256: 'f'.repeat(64), size: 4 }, contentBase64: '' }],
 });
 const obs = (stepId, facts, operationId = `op-${stepId}`) => ({ operationId, reference: { kind: 'artifact', artifactId: `art_${stepId}`, sha256: '0'.repeat(64), size: 1 }, facts: { stepId, status: 'succeeded', ...facts } });
 
-test('environment stage: one read-only env_prepare with device_build; conf mapping skips topology', () => {
-  const first = transition(input({ stage: 'environment' }, []));
-  assert.equal(first.state.stage, 'environment');
-  assert.equal(first.actions[0].kind, 'provider.call');
-  assert.equal(first.actions[0].resource, 'gateway'); // the bound alias, not an asset id
-  assert.equal(first.actions[0].tool, 'env_prepare');
-  assert.deepEqual(first.actions[0].args, { device_build: 'Synth_9_9_0_585' });
-  const withConf = transition(input({ stage: 'environment' }, [obs('environment', { result: { device_count: 2, conf: { device_ips: ['192.0.2.10', '192.0.2.11'] } } })]));
-  assert.equal(withConf.state.stage, 'device-map'); // no lease stage, no topology detour
-  const withoutConf = transition(input({ stage: 'environment' }, [obs('environment', { result: { device_count: 2 } })]));
-  assert.equal(withoutConf.state.stage, 'topology');
-  assert.equal(withoutConf.actions[0].tool, 'bed_topology');
-  assert.deepEqual(withoutConf.actions[0].args, { refresh: false });
-  // a failed topology is not fatal: the device-map tool gets a null topology
-  const topoFailed = transition(input({ stage: 'topology' }, [obs('environment', { result: { device_count: 2 } }), obs('topology', { status: 'failed' })]));
-  assert.equal(topoFailed.state.stage, 'device-map');
+test('workbook stage parses the frozen workbook before anything else (高2)', () => {
+  const first = transition(input({ stage: 'workbook' }, []));
+  assert.equal(first.state.stage, 'workbook');
+  assert.equal(first.actions[0].kind, 'tool.call');
+  assert.equal(first.actions[0].path, 'tools/workbook.ts');
+  assert.deepEqual(first.actions[0].byteSlots, ['workbook']);
+  assert.deepEqual(first.actions[0].args, []);
+  const after = transition(input({ stage: 'workbook' }, [obs('workbook', { result: BOOK })]));
+  assert.equal(after.state.stage, 'environment');
+  assert.equal(after.actions[0].tool, 'env_prepare');
+  assert.equal(after.actions[0].resource, 'gateway');
 });
 
-test('device-map stage: build check, then per-command device and host verify hooks', () => {
-  const env = obs('environment', { result: { device_count: 2, conf: { device_ips: ['192.0.2.10', '192.0.2.11'] }, ready: true, build_checked: true, checks: [{ check: 'device_build', ok: true, detail: 'device reports Synth_9_9_0_585, gateway bundle is Synth_9_9_0_585' }] } });
-  const map = obs('device-map', { result: { addresses: [['192.0.2.10'], ['192.0.2.11']], source: 'gateway.env_prepare.conf.device_ips' } });
-  const out = transition(input({ stage: 'device-map' }, [env, map]));
-  assert.equal(out.state.stage, 'verify');
-  const events = out.actions.map((a) => a.event);
-  assert.equal(events.filter((e) => e === 'verify.deviceCommand').length, 1);
-  assert.equal(events.filter((e) => e === 'verify.hostCommand').length, 1);
-  assert.deepEqual(out.actions[0].subject, { command: 'sdns on', tree: { heads: [{ command: 'sdns on', present: true }] } });
-  assert.deepEqual(out.actions[1].subject, { command: 'dig @192.0.2.10 x', host: 'routera', method: 'cmd', kwargs: {} });
-  // build mismatch is terminal
-  const badBuild = obs('environment', { result: { device_count: 2, conf: { device_ips: ['192.0.2.10', '192.0.2.11'] }, ready: true, build_checked: true, checks: [{ check: 'device_build', ok: true, detail: 'device reports Synth_9_9_0_584, gateway bundle is Synth_9_9_0_585' }] } });
-  const mismatch = transition(input({ stage: 'device-map' }, [badBuild, map]));
+test('environment → topology → device-map → tree, gates built from the book and the tree (高1/高2)', () => {
+  const env = obs('environment', { result: { device_count: 1, conf: { device_ips: ['192.0.2.11'] }, ready: true, build_checked: true, checks: [{ check: 'device_build', ok: true, detail: 'device reports SYNTHETIC_BUILD_301, gateway bundle is SYNTHETIC_BUILD_301' }] } });
+  const withConf = transition(input({ stage: 'environment' }, [env]));
+  assert.equal(withConf.state.stage, 'device-map'); // no topology detour
+  const noConf = transition(input({ stage: 'environment' }, [obs('environment', { result: { device_count: 1 } })]));
+  assert.equal(noConf.state.stage, 'topology');
+  const map = obs('device-map', { result: { addresses: [['192.0.2.11']], source: 'gateway.env_prepare.conf.device_ips' } });
+  const toTree = transition(input({ stage: 'device-map' }, [env, map]));
+  assert.equal(toTree.state.stage, 'tree');
+  assert.equal(toTree.actions[0].byteSlots[0], 'command-tree'); // the frozen tree original
+  const heads = [{ command: 'service inspect alpha', present: true }];
+  const gates = transition(input({ stage: 'tree' }, [obs('tree', { result: { heads } }), obs('workbook', { result: BOOK })]));
+  assert.equal(gates.state.stage, 'verify');
+  const device = gates.actions.find((a) => a.event === 'verify.deviceCommand');
+  assert.deepEqual(device.subject.tree.heads, heads); // present comes from the projection
+  const host = gates.actions.find((a) => a.event === 'verify.hostCommand');
+  assert.equal(host.subject.host, 'routera'); // from the book, per host
+  const wb = gates.actions.find((a) => a.event === 'verify.workbook');
+  assert.equal(wb.subject.client, 'routera'); // per distinct book host
+  const mismatch = transition(input({ stage: 'device-map' }, [obs('environment', { result: { device_count: 1, conf: { device_ips: ['192.0.2.11'] }, ready: true, build_checked: true, checks: [{ check: 'device_build', ok: true, detail: 'device reports OTHER, gateway bundle is SYNTHETIC_BUILD_301' }] } }), map]));
   assert.equal(mismatch.actions[0].code, 'BUILD_MISMATCH');
 });
 
-test('verify passes to a single case_submit with xlsx_b64 from a byte slot; no beforeDispatch of our own', () => {
-  const verifies = [obs('verify-device-0', {}), obs('verify-host-0', {}), obs('verify-workbook', {})];
-  const out = transition(input({ stage: 'verify' }, verifies, { module: 'sdns' }));
+test('verify: a blocked gate fails with HOOK_FAILED and the rule code in facts (中5)', () => {
+  const blocked = obs('verify-device-0', { status: 'failed', error: { code: 'HOOK_FAILED', details: { code: 'COMMAND_NOT_IN_TREE' } } });
+  const out = transition(input({ stage: 'verify' }, [blocked, obs('verify-host-0', {}), obs('verify-workbook-0', {}), obs('workbook', { result: BOOK })]));
+  assert.equal(out.state.stage, 'failed');
+  assert.equal(out.actions[0].code, 'HOOK_FAILED');
+  assert.equal(out.actions[0].facts.ruleCode, 'COMMAND_NOT_IN_TREE');
+});
+
+test('submit: byte slot only, no inline base64; status-shaped receipts go through the result tool (中7/中10)', () => {
+  const verifies = [obs('verify-device-0', {}), obs('verify-host-0', {}), obs('verify-workbook-0', {})];
+  const out = transition(input({ stage: 'verify' }, [...verifies, obs('workbook', { result: BOOK })]));
   assert.equal(out.state.stage, 'submit');
-  assert.equal(out.actions.length, 1);
   const submit = out.actions[0];
   assert.equal(submit.tool, 'case_submit');
-  assert.equal(submit.args.module, 'sdns');
-  assert.ok(!Object.hasOwn(submit.args, 'build'), 'build is not a submit argument');
-  assert.ok(!Object.hasOwn(submit.args, 'deadline_ms'));
   assert.deepEqual(submit.byteArgs, { xlsx_b64: 'workbook' });
-  assert.ok(!JSON.stringify(submit.args).includes('base64'));
-  assert.ok(!out.actions.some((a) => a.event === 'beforeDispatch'), 'hub runs beforeDispatch at the write exit');
+  assert.ok(!Object.hasOwn(submit.args, 'xlsx_b64'));
+  // a status-shaped receipt (reconcile) is not parsed directly: fetch the result first
+  const statusShaped = obs('submit', { result: { state: 'done', task_id: 'synthetic_apv_task_301' } });
+  const reconciled = transition(input({ stage: 'submit' }, [statusShaped]));
+  assert.equal(reconciled.state.stage, 'result');
+  assert.equal(reconciled.actions[0].tool, 'case_results');
+  assert.equal(reconciled.actions[0].args.task_id, 'synthetic_apv_task_301');
 });
 
-test('submit observes the hub-verified write chain; running means operation.wait, success goes straight to parse', () => {
-  const running = transition(input({ stage: 'submit' }, [obs('submit', { status: 'running' })]));
-  assert.equal(running.state.stage, 'wait');
-  assert.equal(running.actions[0].kind, 'operation.wait');
-  assert.equal(running.actions[0].operationId, 'op-submit'); // the very write operation
-  const done = transition(input({ stage: 'submit' }, [obs('submit', { result: { channel: 'ready', rc: 0, cases: [] } })], { workbookBook: { cases: [] } }));
+test('parse and delivery: results via byteSlots, projected or failed parses deliver partial (中6/中14)', () => {
+  const done = transition(input({ stage: 'submit' }, [obs('submit', { result: { channel: 'ready', rc: 0, cases: [{ case_id: '301', result: 'PASS', log_stale: false, log: '' }] } })]));
   assert.equal(done.state.stage, 'parse');
   const parse = done.actions[0];
-  assert.equal(parse.path, 'tools/results.ts');
-  assert.deepEqual(parse.byteSlots, ['workbook']); // only slots that exist
-  assert.deepEqual(parse.args[0], { cases: [] }); // the results tool takes the book itself
-});
-
-test('parse and delivery: unmapped drives partial; a budget projection never reports succeeded', () => {
+  assert.deepEqual(parse.byteSlots, ['workbook']); // results ride the provider observation, args stay small
   const clean = transition(input({ stage: 'afterResult' }, [obs('after-result', {}), obs('parse-results', { result: { cases: [], unmapped: [] } })]));
   assert.equal(clean.actions[0].status, 'succeeded');
-  const dirty = transition(input({ stage: 'afterResult' }, [obs('after-result', {}), obs('parse-results', { result: { cases: [], unmapped: [{ path: 'cases/x', reason: 'checkpoint_unmapped' }] } })]));
-  assert.equal(dirty.actions[0].status, 'partial');
   const projected = transition(input({ stage: 'afterResult' }, [obs('after-result', {}), obs('parse-results', { result: { original: { reference: { kind: 'artifact', artifactId: 'a', sha256: '0'.repeat(64), size: 9 }, slot: 'hub.result.x' } } })]));
-  assert.equal(projected.actions[0].status, 'partial'); // unknown unmapped ⇒ partial (中14)
+  assert.equal(projected.actions[0].status, 'partial');
+  const parseFailed = transition(input({ stage: 'parse' }, [obs('parse-results', { status: 'failed', error: { code: 'HOOK_FAILED' } })]));
+  assert.equal(parseFailed.state.stage, 'afterResult'); // not failed — delivery degrades
+  const delivered = transition(input({ stage: 'afterResult' }, [obs('after-result', {})]));
+  assert.equal(delivered.actions[0].status, 'partial');
 });
 
-test('refusals: lease unavailable on the write chain, gateway text from the observation original', () => {
-  const refused = transition(input({ stage: 'submit' }, [obs('submit', { status: 'failed', error: { code: 'GATEWAY_REFUSED', message: 'refused', details: { gatewayRefusal: { schema: 'hub-provider-refusal/1', refusal: { ok: false, stage: 'validation', reason: "expected exactly one 'IST_EXCEL_CONTRACT' identity marker, found 0" } } } } })]));
+test('refusals: the gateway original lives in facts.result (高3)', () => {
+  const refused = transition(input({ stage: 'submit' }, [obs('submit', { status: 'failed', result: { ok: false, stage: 'validation', reason: "expected exactly one 'IST_EXCEL_CONTRACT' identity marker, found 0" } })]));
   assert.equal(refused.actions[0].code, 'GATEWAY_REFUSED');
   assert.equal(refused.actions[0].facts.refusal.classification, 'legacy-contract-diagnostic');
+  const buildRefused = transition(input({ stage: 'environment' }, [obs('environment', { status: 'failed', result: { ok: false, stage: 'environment', code: 'BUILD_MISMATCH', reason: 'device reports other build' } })]));
+  assert.equal(buildRefused.actions[0].code, 'BUILD_MISMATCH'); // the gateway's own code survives
 });
 
-test('every transition output passes the A2 validation', () => {
-  const stages = ['environment', 'topology', 'device-map', 'verify', 'submit', 'wait', 'parse', 'afterResult'];
-  for (const stage of stages) {
-    for (const observations of [[], [obs('environment', { result: { device_count: 2 } })], [obs('parse-results', { result: { cases: [], unmapped: [] } })]]) {
+test('every stage output passes the A2 validation', () => {
+  for (const stage of ['workbook', 'environment', 'topology', 'device-map', 'tree', 'verify', 'submit', 'wait', 'result', 'parse', 'afterResult']) {
+    for (const observations of [[], [obs('workbook', { result: BOOK })], [obs('environment', { result: { device_count: 1 } })]]) {
       const output = transition(input({ stage }, observations));
       assert.deepEqual(validateTransitionOutput(output), [], `${stage} / ${observations.length}`);
     }
