@@ -129,10 +129,14 @@ export function transition(input: any) {
       })),
     ];
     // The workbook gate runs per distinct host in the book (native controller checks
-    // each host command against the function contract).
+    // each host command against the function contract). testEnvEnabled is derived from
+    // the contract annotations the workbook projection carries — never assumed.
     const hosts = [...new Set((book.hostCommands ?? []).map((row: any) => row.host))];
+    const steps = (book.cases ?? []).flatMap((item: any) => item.steps ?? []);
+    const enabledHosts = hosts.filter((host) =>
+      steps.some((step: any) => step.functionStatus === 'enabled' && (step.object === 'test_env' ? step.method : step.object) === host));
     for (const [index, host] of hosts.entries())
-      actions.push(action('hook.verify', `verify-workbook-${index}`, { event: HOOK_EVENTS[2], subject: { client: host, contract: { testEnvEnabled: [] } } }));
+      actions.push(action('hook.verify', `verify-workbook-${index}`, { event: HOOK_EVENTS[2], subject: { client: host, contract: { testEnvEnabled: enabledHosts } } }));
     return result('verify', actions);
   }
 
@@ -142,7 +146,11 @@ export function transition(input: any) {
     const expected = (book.commands?.length ?? 0) + (book.hostCommands?.length ?? 0) + new Set((book.hostCommands ?? []).map((row: any) => row.host)).size;
     const verifies = input.observations?.filter((row: any) => typeof row?.facts?.stepId === 'string' && row.facts.stepId.startsWith('verify-')) ?? [];
     if (verifies.length < Math.max(expected, 1)) return result('verify', []);
-    const blocked = verifies.find((row: any) => row.facts.status !== 'succeeded');
+    // Gates can fail together; report the first in emission order (device → host →
+    // workbook), never the frame's storage order.
+    const blocked = ['verify-device-', 'verify-host-', 'verify-workbook-']
+      .map((prefix) => verifies.find((row: any) => row.facts.stepId.startsWith(prefix) && row.facts.status !== 'succeeded'))
+      .find(Boolean);
     if (blocked) {
       // hub reports HOOK_FAILED; the rule code lives in details.code — keep the
       // registered code in the outcome, the rule code in facts.

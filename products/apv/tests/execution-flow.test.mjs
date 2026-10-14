@@ -152,6 +152,27 @@ test('verify: a blocked gate fails with HOOK_FAILED and the rule code in facts (
   assert.equal(out.actions[0].facts.code, 'COMMAND_NOT_IN_TREE');
 });
 
+test('verify.workbook subjects carry the contract-derived testEnvEnabled; failures report in emission order', () => {
+  const heads = [{ command: 'service inspect alpha', present: true }];
+  const withStatus = { ...BOOK, cases: [{ autoid: '301', steps: [{ row: 11, object: 'test_env', method: 'routera', functionStatus: 'enabled' }] }] };
+  const gates = transition(input({ stage: 'tree' }, [obs('tree', { result: { heads } }), obs('workbook', { result: withStatus })]));
+  assert.deepEqual(gates.actions.find((a) => a.event === 'verify.workbook').subject.contract.testEnvEnabled, ['routera']);
+  const disabledBook = { ...BOOK, cases: [{ autoid: '301', steps: [{ row: 11, object: 'test_env', method: 'routera', functionStatus: 'disabled' }] }] };
+  const gates2 = transition(input({ stage: 'tree' }, [obs('tree', { result: { heads } }), obs('workbook', { result: disabledBook })]));
+  assert.deepEqual(gates2.actions.find((a) => a.event === 'verify.workbook').subject.contract.testEnvEnabled, []);
+  // device → host → workbook, regardless of the frame's observation order
+  const bothFailed = [
+    obs('verify-workbook-0', { status: 'failed', error: { code: 'HOOK_FAILED', details: { code: 'COMMAND_VALIDATION_FAILED' } } }),
+    obs('verify-host-0', { status: 'failed', error: { code: 'HOOK_FAILED', details: { code: 'HOST_NOT_IN_BED' } } }),
+    obs('verify-device-0', {}),
+    obs('workbook', { result: BOOK }),
+  ];
+  const out = transition(input({ stage: 'verify' }, bothFailed));
+  assert.equal(out.actions[0].code, 'HOOK_FAILED');
+  assert.equal(out.actions[0].facts.stepId, 'verify-host-0');
+  assert.equal(out.actions[0].facts.code, 'HOST_NOT_IN_BED');
+});
+
 test('submit: byte slot only, no inline base64; status-shaped receipts go through the result tool (中7/中10)', () => {
   const verifies = [obs('verify-device-0', {}), obs('verify-host-0', {}), obs('verify-workbook-0', {})];
   const out = transition(input({ stage: 'verify' }, [...verifies, obs('workbook', { result: BOOK })]));
