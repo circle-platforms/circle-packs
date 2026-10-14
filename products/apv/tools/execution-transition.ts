@@ -51,6 +51,15 @@ export function transition(input: any) {
         action('tool.call', 'workbook', { path: 'tools/workbook.ts', export: 'projectWorkbook', args: [], byteSlots: ['workbook', 'function-contract'] }),
       ]);
     if (book.facts.status !== 'succeeded') return result('failed', [action('outcome.error', 'workbook-failed', { code: book.facts.error?.code ?? 'HOOK_FAILED', facts: { stage: 'workbook' } })]);
+    // An oversized projection is hub-projected into {original:{slot}} pointing at the dynamic
+    // hub.result slot; the frame carries that slot's bytes in controlledBytes. The pointer is
+    // NOT the book — re-project from the actual slot bytes through a second occurrence of the
+    // same Tool (the small shape itself stays under the budget).
+    const projected = book.facts.result?.original?.slot;
+    if (projected)
+      return result('workbook', [
+        action('tool.call', 'workbook', { path: 'tools/workbook.ts', export: 'projectWorkbook', args: [], byteSlots: ['workbook', 'function-contract'] }, 1),
+      ]);
     return result('environment', [action('provider.call', 'environment', { resource: RESOURCE, tool: 'env_prepare', args: { device_build: build } })]);
   }
 
