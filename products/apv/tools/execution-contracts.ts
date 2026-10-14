@@ -120,7 +120,8 @@ export function validateTransitionOutput(output: any): string[] {
 // arguments,violations,...}]},evidence:[]}. present is computed from the checked
 // status — hit with no violations — never self-reported; the workbook projection's
 // command list is passed as the second tool argument.
-export function projectCommandTree(original: Uint8Array, commands: string[]) {
+export function projectCommandTree(commands: string[], original?: Uint8Array) {
+  if (!(original instanceof Uint8Array)) throw new Error('command-check original bytes are required');
   let parsed: any;
   try { parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(original)); }
   catch { throw new Error('command-check original is not valid UTF-8 JSON'); }

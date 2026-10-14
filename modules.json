@@ -262,7 +262,7 @@
         },
         {
           "path": "tools/execution-contracts.ts",
-          "sha256": "5dc273790719b74af548be9b4f9b8c1b82353c3e2237713d2be8143e403efa29"
+          "sha256": "10cae9bca8112d90cadd3b20ae31774bd87d0a8c3ebf730c34320c8bc743c43e"
         },
         {
           "path": "tools/execution-transition.ts",
@@ -290,10 +290,10 @@
         },
         {
           "path": "tools/workbook.ts",
-          "sha256": "6a9e433f2625416ee68b71da0f1e175e6e28eb586789b8ebb3e7e3529ab22c38"
+          "sha256": "3ba18aca1161d60960abf1de4ab6915215030b05325119f58424a0e97c61b8ec"
         }
       ],
-      "digest": "4d5379662e593afceb3511ad6172ff58d8f04abe92082c3eff9693adb58722c7"
+      "digest": "0996773300b8f5bc12799c8ce2be055e210f552cda25052e69fa6e16c466e556"
     }
   ]
 }

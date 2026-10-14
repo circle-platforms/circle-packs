@@ -121,7 +121,7 @@ export async function readExecutionWorkbook(bytes: Buffer, functions?: FunctionC
 // never enters the frame; the optional contract original enables status annotation
 // without blocking (the parser never enforces enablement — that is the Hook's job).
 // imports: exceljs@4.4.0 (already declared for this module)
-export async function projectWorkbook(workbookBytes: Buffer, contractBytes?: Uint8Array) {
+export async function projectWorkbook(contractBytes: Uint8Array | undefined, workbookBytes?: Buffer) {
   const book = await readExecutionWorkbook(workbookBytes, contractBytes ? new (await import('./function-contract.ts')).FunctionContract(contractBytes) : undefined);
   return {
     sha256: book.sha256,
