@@ -15,6 +15,7 @@
 import { TRANSITION_SCHEMA, HOOK_EVENTS, type ActionKind } from './execution-contracts.ts';
 import { environmentDevices, environmentBuild } from './environment.ts';
 import { refusalFacts } from './refusal.ts';
+import { presentHeads } from './command-check.ts';
 
 const action = (kind: ActionKind, stepId: string, fields: Record<string, unknown> = {}, occurrence = 0) => ({ kind, stepId, occurrence, ...fields });
 // A stepId may have several occurrences; the current observation is the one whose
@@ -138,13 +139,25 @@ export function transition(input: any) {
     if (map.facts.status !== 'succeeded') return result('failed', [action('outcome.error', 'device-map-failed', { code: 'EVIDENCE_INSUFFICIENT', facts: { stage: 'device-map' } })]);
     const buildCheck = environmentBuild(prepare?.facts?.result, build);
     if (!buildCheck.passed) return result('failed', [action('outcome.error', 'build-mismatch', { code: 'BUILD_MISMATCH', facts: { stage: 'device-map', buildCheck } })]);
-    // present comes from the frozen command-check original (the sync tool's shape,
-    // {result:{commands:[{command,status,violations}]}}), projected by a pure tool;
-    // the workbook observation supplies the command list.
+    // Two command-source shapes, both frozen originals:
+    // - XML original in the 'command-tree' slot (the real bed's source artifact): the
+    //   flow itself parses and checks it via tools/command-tree.ts + tools/command-check.ts,
+    //   so no pre-computed check original is needed.
+    // - JSON command-check original (synthetic fixtures): projected by projectCommandTree.
     const commands = (bookResult(input).commands ?? []).map((row: any) => row.command);
-    // Bind the check to this run: the flow's build and the frozen command-tree original
-    // (its sha rides the controlledBytes reference of the command-tree slot).
+    // The command-tree slot may carry the real bed's XML original or the synthetic
+    // fixture's JSON tree; skip the UTF-8 BOM and leading whitespace, then '<' means XML.
     const treeSlot = input.controlledBytes?.find((entry: any) => entry.slot === 'command-tree');
+    // skip a UTF-8 BOM and leading whitespace, then look for the XML '<'
+    const probeBytes = treeSlot?.contentBase64 ? Buffer.from(treeSlot.contentBase64, 'base64') : null;
+    let offset = 0;
+    if (probeBytes?.subarray(0, 3).equals(Buffer.from([0xEF, 0xBB, 0xBF]))) offset = 3; // UTF-8 BOM
+    while (offset < (probeBytes?.length ?? 0) && [0x20, 0x0a, 0x0d, 0x09].includes(probeBytes[offset])) offset++;
+    const probe = probeBytes ? probeBytes.subarray(offset, offset + 1).toString('latin1') : null;
+    if (treeSlot && probe === '<') {
+      const identity = { build, buildId: build };
+      return result('tree', [action('tool.call', 'tree', { path: 'tools/command-check.ts', export: 'checkCommands', args: [commands, identity], byteSlots: ['command-tree'] })]);
+    }
     const expected = { build, ...(treeSlot?.reference?.sha256 ? { sourceSha256: treeSlot.reference.sha256 } : {}) };
     return result('tree', [action('tool.call', 'tree', { path: 'tools/execution-contracts.ts', export: 'projectCommandTree', args: [commands, expected], byteSlots: ['command-check'] })]);
   }
@@ -153,7 +166,10 @@ export function transition(input: any) {
     const tree = observation(input, 'tree');
     if (!tree) return result('tree', []);
     if (tree.facts.status !== 'succeeded') return result('failed', [action('outcome.error', 'tree-failed', { code: 'HOOK_FAILED', facts: { stage: 'tree' } })]);
-    const heads = tree.facts.result.heads ?? [];
+    // Both command-source shapes yield heads under one rule; a receipt without heads
+    // (older shape) derives them with the shared presentHeads predicate.
+    const rawHeads = tree.facts.result.heads;
+    const heads = Array.isArray(rawHeads) ? rawHeads : presentHeads(tree.facts.result.commands ?? []);
     // Each device gate carries ONLY its own head: the hook reads present for its own
     // command, and a shared full head list would square the output size (216 commands
     // ≈ 2.8 MB, far over the 256 KiB budget). Source of truth stays the projection.
