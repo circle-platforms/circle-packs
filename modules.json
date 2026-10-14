@@ -170,11 +170,11 @@
       "files": [
         {
           "path": "README.md",
-          "sha256": "7c27107313ed75afbf81dc87b52398df8b7d2fb87710a8ee0d720aa10d0a7283"
+          "sha256": "05e94085aa45889943ce2f5355f58921aa3cc3a0a06bc28b42f1e83467317695"
         },
         {
           "path": "flows/apv-case-execute-v2.json",
-          "sha256": "3f8134459e2e6f4ac2127ee899b1891ad6d6b7dd8ded6e3fdcc49f2f8a009af0"
+          "sha256": "26e086daa6c6dce46b10288f112b4121422dfbcbeb69562739a70abe4d3e29cf"
         },
         {
           "path": "flows/apv-case-execute.json",
@@ -202,7 +202,7 @@
         },
         {
           "path": "resources/case-gateway.json",
-          "sha256": "0a1560b99deb50b32ed2ad0c87a80adc0145e928c69545d7503c775b3be1eeb5"
+          "sha256": "4bda08f339935dc646a513dc9e57431333f5e12d42d7657cf959e176cfe2efbc"
         },
         {
           "path": "sources/command-tree.md",
@@ -218,7 +218,7 @@
         },
         {
           "path": "tests/execution-flow.test.mjs",
-          "sha256": "e0b9039f8d6a51b7d939e414dd0c50a1d6e3e7fd92ffc7f8ec337aa5197a5ae8"
+          "sha256": "3c7cf706811a897b6d12ca5e99281e1615afb9026588731b1306ff4ff15b6b37"
         },
         {
           "path": "tests/function-contract-dialect.test.mjs",
@@ -237,6 +237,10 @@
           "sha256": "b2f47f404437a83668e6fd5b3c957a2de93e788df414fc099a43994cf585a8a1"
         },
         {
+          "path": "tests/results.test.mjs",
+          "sha256": "91be71a8f929791f08915094872d24c34b2361e9c39dc0bcda5285175bcd8e39"
+        },
+        {
           "path": "tests/workbook.test.mjs",
           "sha256": "6234ef66dc2fd68b3f0ed781f288247dc11e660b7509f27864b6cbb06b3b0d55"
         },
@@ -250,19 +254,19 @@
         },
         {
           "path": "tools/dialect.ts",
-          "sha256": "3dc252ba0c7e36e9777e9671c3b6f8e9277ada101dd7b8955aa19f26fae1fb24"
+          "sha256": "01ef4272a3690170abe6e709c163e06b16c98545510683b5df3101f822551a8e"
         },
         {
           "path": "tools/environment.ts",
-          "sha256": "d8834ce2b7ece2c045c4476ccbedeee296ce1f35e64091cc179f1d142862752b"
+          "sha256": "56fe218b202791f1658d1612b9fe9c4b37e3b14132afa7c7b0bb9d4c92762db8"
         },
         {
           "path": "tools/execution-contracts.ts",
-          "sha256": "bd32b2201adcc11e5cefe2a33135bbc2366da79b7a68f3d40dc549ed5e02c461"
+          "sha256": "eb75016c507e0125c753e5f95544b10437a6849748f98ec07a4d20b4a6a10e0b"
         },
         {
           "path": "tools/execution-transition.ts",
-          "sha256": "79a2dea83a80d5973271e5a1a55a0911ba7a2b3b64d07175571694d961803f5d"
+          "sha256": "f02b13e651c1b471f8eeb2c5eb1c75927e343a7a79338e3a87a219ef1b09314a"
         },
         {
           "path": "tools/function-contract.ts",
@@ -285,7 +289,7 @@
           "sha256": "5b799dcd94e5d4b353f0efd6f94b5e72b5bf7726c7c9703b9d3cf3a1e11f622b"
         }
       ],
-      "digest": "81a6e09ac7357318f5a93a0c6f762b0d17cad63caa1c84f096517e737fb00f8c"
+      "digest": "1e1d912ab4959bb60ce9b94624f6f4b00ccc638a27532b35f4aab1b2f13a70b2"
     }
   ]
 }
