@@ -115,3 +115,18 @@ export async function readExecutionWorkbook(bytes: Buffer, functions?: FunctionC
     throw invalid('Workbook could not be read as the execution contract');
   }
 }
+
+// The small projection the transition gates on: commands, host dispatches and case
+// identities from the frozen workbook original. Byte-oriented so an oversized book
+// never enters the frame; the optional contract original enables status annotation
+// without blocking (the parser never enforces enablement — that is the Hook's job).
+// imports: exceljs@4.4.0 (already declared for this module)
+export async function projectWorkbook(workbookBytes: Buffer, contractBytes?: Uint8Array) {
+  const book = await readExecutionWorkbook(workbookBytes, contractBytes ? new (await import('./function-contract.ts')).FunctionContract(new TextDecoder().decode(contractBytes)) : undefined);
+  return {
+    sha256: book.sha256,
+    cases: book.cases.map((item) => ({ autoid: item.autoid, steps: item.steps.map((step) => ({ row: step.row, object: step.object, method: step.method, data: step.data, functionStatus: step.functionStatus ?? null })) })),
+    commands: book.commands.map((row) => ({ autoid: row.autoid, row: row.row, object: row.object, command: row.command })),
+    hostCommands: book.hostCommands.map((row) => ({ autoid: row.autoid, row: row.row, object: row.object, method: row.method, host: row.host, command: row.command, kwargs: row.kwargs })),
+  };
+}

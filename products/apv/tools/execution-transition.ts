@@ -48,7 +48,7 @@ export function transition(input: any) {
     const book = observation(input, 'workbook');
     if (!book)
       return result('workbook', [
-        action('tool.call', 'workbook', { path: 'tools/workbook.ts', export: 'readExecutionWorkbook', args: [], byteSlots: ['workbook'] }),
+        action('tool.call', 'workbook', { path: 'tools/workbook.ts', export: 'projectWorkbook', args: [], byteSlots: ['workbook', 'function-contract'] }),
       ]);
     if (book.facts.status !== 'succeeded') return result('failed', [action('outcome.error', 'workbook-failed', { code: book.facts.error?.code ?? 'HOOK_FAILED', facts: { stage: 'workbook' } })]);
     return result('environment', [action('provider.call', 'environment', { resource: RESOURCE, tool: 'env_prepare', args: { device_build: build } })]);
@@ -89,7 +89,15 @@ export function transition(input: any) {
 
   if (state.stage === 'tree') {
     const tree = observation(input, 'tree');
-    if (!tree) return result('tree', []);
+    if (!tree) {
+      // If the workbook projection itself was hub-projected (oversized), re-run it with the
+      // dynamic result slot before gating on its content.
+      const bookObserved = observation(input, 'workbook');
+      const projected = bookObserved?.facts?.result?.original?.slot;
+      if (projected && !input.controlledBytes?.some((entry: any) => entry.slot === 'workbook'))
+        return result('workbook', [action('tool.call', 'workbook', { path: 'tools/workbook.ts', export: 'projectWorkbook', args: [], byteSlots: ['workbook', 'function-contract'] })]);
+      return result('tree', []);
+    }
     if (tree.facts.status !== 'succeeded') return result('failed', [action('outcome.error', 'tree-failed', { code: 'HOOK_FAILED', facts: { stage: 'tree' } })]);
     const heads = tree.facts.result.heads ?? [];
     // The workbook projection (from the earlier tool.call) and the tree heads drive
@@ -124,7 +132,7 @@ export function transition(input: any) {
       // hub reports HOOK_FAILED; the rule code lives in details.code — keep the
       // registered code in the outcome, the rule code in facts.
       const ruleCode = blocked.facts.error?.details?.code ?? blocked.facts.error?.code ?? null;
-      return result('failed', [action('outcome.error', 'verify-failed', { code: 'HOOK_FAILED', facts: { stage: 'verify', stepId: blocked.facts.stepId, ruleCode } })]);
+      return result('failed', [action('outcome.error', 'verify-failed', { code: 'HOOK_FAILED', facts: { stage: 'verify', stepId: blocked.facts.stepId, code: ruleCode } })]);
     }
     return result('submit', [
       action('provider.call', 'submit', { resource: RESOURCE, tool: 'case_submit', args: { ...(value.module ? { module: value.module } : {}) }, byteArgs: { xlsx_b64: 'workbook' } }),

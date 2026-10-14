@@ -97,7 +97,7 @@ test('workbook stage parses the frozen workbook before anything else (高2)', ()
   assert.equal(first.state.stage, 'workbook');
   assert.equal(first.actions[0].kind, 'tool.call');
   assert.equal(first.actions[0].path, 'tools/workbook.ts');
-  assert.deepEqual(first.actions[0].byteSlots, ['workbook']);
+  assert.deepEqual(first.actions[0].byteSlots, ['workbook', 'function-contract']);
   assert.deepEqual(first.actions[0].args, []);
   const after = transition(input({ stage: 'workbook' }, [obs('workbook', { result: BOOK })]));
   assert.equal(after.state.stage, 'environment');
@@ -133,7 +133,7 @@ test('verify: a blocked gate fails with HOOK_FAILED and the rule code in facts (
   const out = transition(input({ stage: 'verify' }, [blocked, obs('verify-host-0', {}), obs('verify-workbook-0', {}), obs('workbook', { result: BOOK })]));
   assert.equal(out.state.stage, 'failed');
   assert.equal(out.actions[0].code, 'HOOK_FAILED');
-  assert.equal(out.actions[0].facts.ruleCode, 'COMMAND_NOT_IN_TREE');
+  assert.equal(out.actions[0].facts.code, 'COMMAND_NOT_IN_TREE');
 });
 
 test('submit: byte slot only, no inline base64; status-shaped receipts go through the result tool (中7/中10)', () => {
