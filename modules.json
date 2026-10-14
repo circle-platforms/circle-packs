@@ -218,7 +218,7 @@
         },
         {
           "path": "tests/execution-flow.test.mjs",
-          "sha256": "c42c96d68bb8658b5e8d657173c8c782caa841e387f5a5ef0672efc58ddaeeca"
+          "sha256": "1ca9bf919cf83a7bb175e4e744a53e3602876ee8d700a8652233429188121042"
         },
         {
           "path": "tests/function-contract-dialect.test.mjs",
@@ -293,7 +293,7 @@
           "sha256": "3ba18aca1161d60960abf1de4ab6915215030b05325119f58424a0e97c61b8ec"
         }
       ],
-      "digest": "0996773300b8f5bc12799c8ce2be055e210f552cda25052e69fa6e16c466e556"
+      "digest": "28a400f5729b5038cd583edcf7a51d8b3dc2769c22b3393f1d357541b70148eb"
     }
   ]
 }

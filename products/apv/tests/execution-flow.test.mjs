@@ -21,14 +21,14 @@ test('projectCommandTree computes present from the frozen command-check original
     { command: 'sdns host name x', status: 'hit', violations: [{ code: 'ARGUMENT_COUNT' }] }, // hit but violating
     { command: 'sdns fulldns on', status: 'missing', violations: [{ code: 'HEAD_MISSING' }] },
   ] } }));
-  const projected = projectCommandTree(check, ['sdns on', 'sdns host name x', 'sdns fulldns on']);
+  const projected = projectCommandTree(['sdns on', 'sdns host name x', 'sdns fulldns on'], check);
   assert.deepEqual(projected.heads, [
     { command: 'sdns on', present: true },
     { command: 'sdns host name x', present: false }, // violations disprove presence
     { command: 'sdns fulldns on', present: false },
   ]);
-  assert.throws(() => projectCommandTree(new TextEncoder().encode('{oops'), []), /not valid UTF-8 JSON/);
-  assert.throws(() => projectCommandTree(new TextEncoder().encode('{"result":{"commands":{}}}'), []), /no usable command list/);
+  assert.throws(() => projectCommandTree([], new TextEncoder().encode('{oops')), /not valid UTF-8 JSON/);
+  assert.throws(() => projectCommandTree([], new TextEncoder().encode('{"result":{"commands":{}}}')), /no usable command list/);
 });
 
 // ---------- environment normalization (中11) ----------
