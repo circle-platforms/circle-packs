@@ -81,7 +81,10 @@ export function transition(input: any) {
     const buildCheck = environmentBuild(prepare?.facts?.result, build);
     if (!buildCheck.passed) return result('failed', [action('outcome.error', 'build-mismatch', { code: 'BUILD_MISMATCH', facts: { stage: 'device-map', buildCheck } })]);
     // project the frozen command-tree: present comes from the original, not from us
-    return result('tree', [action('tool.call', 'tree', { path: 'tools/execution-contracts.ts', export: 'projectCommandTree', args: [], byteSlots: ['command-tree'] })]);
+    // The commands to project come from the workbook observation (frozen original),
+    // passed as tool args; the tree original rides its byte slot.
+    const commands = ((observation(input, 'workbook')?.facts?.result ?? {}).commands ?? []).map((row: any) => row.command);
+    return result('tree', [action('tool.call', 'tree', { path: 'tools/execution-contracts.ts', export: 'projectCommandTree', args: [commands], byteSlots: ['command-tree'] })]);
   }
 
   if (state.stage === 'tree') {
@@ -141,8 +144,10 @@ export function transition(input: any) {
     const carried = submitted.facts.result;
     if (carried && typeof carried === 'object' && Array.isArray((carried as any).cases) === false && (carried as any).state !== undefined)
       return result('result', [action('provider.call', 'result', { resource: RESOURCE, tool: 'case_results', args: { task_id: carried.task_id ?? null } })]);
+    const raw = submitted.facts.result;
+    const attribution = { environment: observation(input, 'environment')?.facts?.result ?? null, topology: observation(input, 'topology')?.facts?.result ?? null };
     return result('parse', [
-      action('tool.call', 'parse-results', { path: 'tools/results.ts', export: 'executionResults', args: [], byteSlots: ['workbook'] }),
+      action('tool.call', 'parse-results', { path: 'tools/results.ts', export: 'executionResults', args: [{ cases: [], ...(typeof raw === 'object' && raw !== null ? raw : {}) }, attribution], byteSlots: ['workbook'] }),
     ]);
   }
 
@@ -150,8 +155,10 @@ export function transition(input: any) {
     const resultObserved = observation(input, 'result');
     if (!resultObserved) return result('result', []);
     if (resultObserved.facts.status !== 'succeeded') return refusalError('result-failed', 'result', resultObserved);
+    const raw = resultObserved.facts.result;
+    const attribution = { environment: observation(input, 'environment')?.facts?.result ?? null, topology: observation(input, 'topology')?.facts?.result ?? null };
     return result('parse', [
-      action('tool.call', 'parse-results', { path: 'tools/results.ts', export: 'executionResults', args: [], byteSlots: ['workbook'] }),
+      action('tool.call', 'parse-results', { path: 'tools/results.ts', export: 'executionResults', args: [raw, attribution], byteSlots: ['workbook'] }),
     ]);
   }
 
@@ -163,6 +170,7 @@ export function transition(input: any) {
     if (waited.facts.status === 'running' || waited.facts.status === 'unknown') return result('wait', []);
     if (waited.facts.status !== 'succeeded') return refusalError('wait-failed', 'submit', waited);
     return result('result', [action('provider.call', 'result', { resource: RESOURCE, tool: 'case_results', args: { task_id: waited.facts.result?.task_id ?? null } })]);
+
   }
 
   if (state.stage === 'parse') {

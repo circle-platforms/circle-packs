@@ -266,7 +266,7 @@
         },
         {
           "path": "tools/execution-transition.ts",
-          "sha256": "ffcb76f0a4249efdc4affc6d48cbb933ca1da50e57950bb580488f890746c5e1"
+          "sha256": "8aa2bf5a529bd68d9d0a99a5b92e554b02ef9406aa5c8192c84a7c47509a08ea"
         },
         {
           "path": "tools/function-contract.ts",
@@ -293,7 +293,7 @@
           "sha256": "5b799dcd94e5d4b353f0efd6f94b5e72b5bf7726c7c9703b9d3cf3a1e11f622b"
         }
       ],
-      "digest": "7bce9d5e3bcfed692c187cf52139b06d1d9b155bb2e0223106fb1b2d80bb8d64"
+      "digest": "2a47ead8cf3499025ff4fd1f761d135e9ff422f03b80bf3b6285a0c1e4a99f1c"
     }
   ]
 }
