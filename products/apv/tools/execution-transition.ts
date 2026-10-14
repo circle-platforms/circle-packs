@@ -254,10 +254,12 @@ export function transition(input: any) {
   if (state.stage === 'afterResult') {
     const checked = observation(input, 'after-result');
     if (!checked) return result('afterResult', []);
-    // The delivery candidate is exactly the afterResult Hook subject result — hub's
-    // delivery gate compares their canonical bytes and refuses mismatches.
-    const hookSubjectResult = checked.facts.result ?? checked.facts?.error?.details?.result ?? null;
-    const parsedResult = hookSubjectResult ?? observation(input, 'parse-results')?.facts?.result;
+    // The delivery candidate is the canonical candidate from the parse stage — the same
+    // object the afterResult Hook received as its subject (hub's delivery gate compares
+    // the candidate with that subject). The hook's own observation carries handler
+    // decisions, not the candidate, so the candidate is re-derived identically here.
+    const parseObserved = observation(input, 'parse-results');
+    const parsedResult = parseObserved?.facts?.status === 'succeeded' ? parseObserved.facts.result : { parseFailed: true, error: parseObserved?.facts?.error ?? null };
     const parseFailed = parsedResult?.parseFailed === true;
     // unknown unmapped (a budget projection replaced the payload) or a parse failure
     // both mean partial; a real empty unmapped list means succeeded.
