@@ -138,14 +138,18 @@ export function transition(input: any) {
     if (map.facts.status !== 'succeeded') return result('failed', [action('outcome.error', 'device-map-failed', { code: 'EVIDENCE_INSUFFICIENT', facts: { stage: 'device-map' } })]);
     const buildCheck = environmentBuild(prepare?.facts?.result, build);
     if (!buildCheck.passed) return result('failed', [action('outcome.error', 'build-mismatch', { code: 'BUILD_MISMATCH', facts: { stage: 'device-map', buildCheck } })]);
-    // present comes from the frozen command-check original (the sync tool's shape,
-    // {result:{commands:[{command,status,violations}]}}), projected by a pure tool;
-    // the workbook observation supplies the command list.
+    // Two command-source shapes, both frozen originals:
+    // - XML original in the 'command-tree' slot (the real bed's source artifact): the
+    //   flow itself parses and checks it via tools/command-tree.ts + tools/command-check.ts,
+    //   so no pre-computed check original is needed.
+    // - JSON command-check original (synthetic fixtures): projected by projectCommandTree.
     const commands = (bookResult(input).commands ?? []).map((row: any) => row.command);
-    // Bind the check to this run: the flow's build and the frozen command-tree original
-    // (its sha rides the controlledBytes reference of the command-tree slot).
     const treeSlot = input.controlledBytes?.find((entry: any) => entry.slot === 'command-tree');
-    const expected = { build, ...(treeSlot?.reference?.sha256 ? { sourceSha256: treeSlot.reference.sha256 } : {}) };
+    if (treeSlot) {
+      const identity = { build, buildId: build };
+      return result('tree', [action('tool.call', 'tree', { path: 'tools/command-check.ts', export: 'checkCommands', args: [commands, identity], byteSlots: ['command-tree'] })]);
+    }
+    const expected = { build };
     return result('tree', [action('tool.call', 'tree', { path: 'tools/execution-contracts.ts', export: 'projectCommandTree', args: [commands, expected], byteSlots: ['command-check'] })]);
   }
 

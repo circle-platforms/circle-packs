@@ -260,3 +260,30 @@ test('projectCommandTree refuses a check from another build or another tree (中
   const noVersion = new TextEncoder().encode(JSON.stringify({ result: { build: 'SYNTHETIC_BUILD_301', commands: [] } }));
   assert.throws(() => projectCommandTree([], undefined, noVersion), /no ruleVersion/);
 });
+
+test('the XML command original drives the in-flow check when the tree slot is present (1.3.1)', () => {
+  const xml = new TextEncoder().encode('<?xml version="1.0"?><tree><scope name="configuration"><menu name="service"><item name="inspect"><arg type="STRING"/></item></menu></scope></tree>');
+  const withTree = input({ stage: 'device-map' }, [
+    obs('workbook', { result: BOOK }),
+    obs('environment', { result: { device_count: 1, conf: { device_ips: ['192.0.2.11'] }, ready: true, build_checked: true, checks: [{ check: 'device_build', ok: true, detail: 'device reports SYNTHETIC_BUILD_301, gateway bundle is SYNTHETIC_BUILD_301' }] } }),
+    obs('device-map', { result: { addresses: [['192.0.2.11']], source: 'gateway.env_prepare.conf.device_ips' } }),
+  ]);
+  withTree.controlledBytes = [{ slot: 'command-tree', role: 'command-tree', reference: { kind: 'source', sourceRevisionId: 'src_t', sha256: 'x'.repeat(64), size: xml.length }, contentBase64: '' }];
+  const out = transition(withTree);
+  assert.equal(out.state.stage, 'tree');
+  const treeAction = out.actions[0];
+  assert.equal(treeAction.path, 'tools/command-check.ts');
+  assert.equal(treeAction.export, 'checkCommands');
+  assert.deepEqual(treeAction.byteSlots, ['command-tree']);
+  assert.deepEqual(treeAction.args[0], ['service inspect alpha']); // workbook commands
+  assert.deepEqual(treeAction.args[1], { build: 'SYNTHETIC_BUILD_301', buildId: 'SYNTHETIC_BUILD_301' });
+  // without the tree slot the JSON command-check path stays (synthetic fixtures)
+  const withoutTree = input({ stage: 'device-map' }, [
+    obs('workbook', { result: BOOK }),
+    obs('environment', { result: { device_count: 1, conf: { device_ips: ['192.0.2.11'] }, ready: true, build_checked: true, checks: [{ check: 'device_build', ok: true, detail: 'device reports SYNTHETIC_BUILD_301, gateway bundle is SYNTHETIC_BUILD_301' }] } }),
+    obs('device-map', { result: { addresses: [['192.0.2.11']], source: 'gateway.env_prepare.conf.device_ips' } }),
+  ]);
+  const jsonPath = transition(withoutTree);
+  assert.equal(jsonPath.actions[0].path, 'tools/execution-contracts.ts');
+  assert.deepEqual(jsonPath.actions[0].byteSlots, ['command-check']);
+});
