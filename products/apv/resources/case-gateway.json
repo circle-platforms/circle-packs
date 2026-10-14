@@ -10,7 +10,7 @@
   "credentialMode": "static-secret",
   "runtimeProfileRef": "profiles/case-gateway.json",
   "executionIsChange": false,
-  "notes": "测试床网关;租约、提交、状态、结果由 hub 通用 worker 按 configuration.receiptPolicy 驱动(核对 sha256 与 case_ids);transition 只做只读 env_prepare/bed_topology 与解释。端点、CA、超时在库外 profile,凭据在保险箱,运行时由 worker 注入。租约字段按 lease.argumentsByTool 逐工具注入(env_prepare/bed_topology/case_submit/lease_heartbeat/lease_release 带 lease_id+token,case_status/case_results 显式不带,未列出的工具不注入);case_submit 的 module 与 env_prepare 的 device_build 由批准的 toolArguments 映射注入(literal / 冻结输入 value.build),产品动作里写同名参数会被拒绝;工作簿字节由动作 byteArgs 直接引用受控槽(xlsx_b64←workbook),不需要 byteArguments 映射。",
+  "notes": "测试床网关;租约、提交、状态、结果由 hub 通用 worker 按 configuration.receiptPolicy 驱动(核对 sha256 与 case_ids);transition 只做只读 env_prepare/bed_topology 与解释。端点、CA、超时在库外 profile,凭据在保险箱,运行时由 worker 注入。租约字段按 lease.argumentsByTool 逐工具注入(env_prepare/bed_topology/case_submit/lease_heartbeat/lease_release 带 lease_id+token,case_status/case_results 显式不带,未列出的工具不注入);case_submit 的 module 与 env_prepare 的 device_build 由批准的 toolArguments 映射注入(literal / 冻结输入 value.build),产品动作里写同名参数会被拒绝;工作簿字节由动作 byteArgs 直接引用受控槽(xlsx_b64←workbook),不需要 byteArguments 映射。receipts 按阶段声明回执形状:submit 回 sha256+case_ids(与病例身份对核),status/reconcile 回 state(完成度与 rc),results 回 xlsx_sha256;identityProjection 指向 workbook 投影(stepId workbook、export projectWorkbook、byteArgument xlsx_b64、sha256Path sha256、caseIdsPath cases、idPath autoid),hub 用真实成功的该 Tool 调用与 B 原件核出病例身份后冻结,不信调用方自报列表;旧 echo 字段保留,旧 hub 仍兼容。",
   "declaration": {
     "allowedTestHosts": "string[]: 主机闭集——本床允许下发 shell 命令的全部测试主机名;登记时由床管理员从床配置(网关 env_prepare/bed_topology 回报的主机清单)填入,不进 Git。缺失或为空视为未声明,verify.hostCommand 一律 HOST_SET_UNDECLARED。",
     "hostCommandPolicies": "Record<host, {allowPrefixes: string[]}>: 可选的单主机命令前缀策略,只能缩小 allowedTestHosts 内主机的可用命令,不能放行闭集外主机;登记时由床管理员按该主机承担的角色从床配置填写,不进 Git。"
@@ -37,6 +37,85 @@
             ]
           }
         }
+      },
+      "receipts": {
+        "submit": {
+          "receiptSchema": {
+            "type": "object",
+            "required": ["ok", "task_id", "sha256", "case_ids"],
+            "properties": {
+              "ok": { "const": true },
+              "task_id": { "type": "string" },
+              "sha256": { "type": "string" },
+              "case_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+            },
+            "additionalProperties": true
+          },
+          "remoteIdPath": ["task_id"],
+          "sha256Path": ["sha256"],
+          "caseIdsPath": ["case_ids"]
+        },
+        "status": {
+          "receiptSchema": {
+            "type": "object",
+            "required": ["ok", "task_id", "state"],
+            "properties": {
+              "ok": { "const": true },
+              "task_id": { "type": "string" },
+              "state": { "type": "string" }
+            },
+            "additionalProperties": true
+          },
+          "remoteIdPath": ["task_id"],
+          "completion": {
+            "path": ["state"],
+            "runningValues": ["running"],
+            "terminalValues": ["done"],
+            "rcPath": ["rc"]
+          }
+        },
+        "results": {
+          "receiptSchema": {
+            "type": "object",
+            "required": ["ok", "task_id", "xlsx_sha256"],
+            "properties": {
+              "ok": { "const": true },
+              "task_id": { "type": "string" },
+              "xlsx_sha256": { "type": "string" }
+            },
+            "additionalProperties": true
+          },
+          "remoteIdPath": ["task_id"],
+          "sha256Path": ["xlsx_sha256"]
+        },
+        "reconcile": {
+          "receiptSchema": {
+            "type": "object",
+            "required": ["ok", "task_id", "state"],
+            "properties": {
+              "ok": { "const": true },
+              "task_id": { "type": "string" },
+              "state": { "type": "string" }
+            },
+            "additionalProperties": true
+          },
+          "remoteIdPath": ["task_id"],
+          "completion": {
+            "path": ["state"],
+            "runningValues": ["running"],
+            "terminalValues": ["done"],
+            "rcPath": ["rc"]
+          }
+        }
+      },
+      "identityProjection": {
+        "stepId": "workbook",
+        "path": "tools/workbook.ts",
+        "export": "projectWorkbook",
+        "byteArgument": "xlsx_b64",
+        "sha256Path": ["sha256"],
+        "caseIdsPath": ["cases"],
+        "idPath": ["autoid"]
       },
       "submitTool": "case_submit",
       "statusTool": "case_status",

@@ -202,7 +202,7 @@
         },
         {
           "path": "resources/case-gateway.json",
-          "sha256": "40d8d8b523c00eb9addd704e8285357a97c76041d2d834b0a52d70bfa85d2844"
+          "sha256": "d02af569522b7b773c2286d024cf91920337249c5e413dcdbfcddbe1f6172829"
         },
         {
           "path": "sources/command-tree.md",
@@ -293,7 +293,7 @@
           "sha256": "1c1372e36f85700388b7950162062570387da6faf8a3d14b754917d007fcf2b4"
         }
       ],
-      "digest": "a8cbb3dd5570bbb15847a793efa701c86175a64047819444d57decd3c9d22103"
+      "digest": "992a57b93375e7824b803b431064a931a56b579fad76cc67936a0093b4ae4b90"
     }
   ]
 }
