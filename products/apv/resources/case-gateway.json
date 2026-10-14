@@ -10,46 +10,86 @@
   "credentialMode": "static-secret",
   "runtimeProfileRef": "profiles/case-gateway.json",
   "executionIsChange": false,
-  "notes": "测试床网关;实验床默认不声明 executionIsChange,生产资源登记时声明 true。端点、CA、超时在库外 profile,凭据在保险箱,运行时由 worker 注入。",
+  "notes": "测试床网关;租约、提交、状态、结果由 hub 通用 worker 按 configuration.receiptPolicy 驱动(核对 sha256 与 case_ids);transition 只做只读 env_prepare/bed_topology 与解释。端点、CA、超时在库外 profile,凭据在保险箱,运行时由 worker 注入。",
   "declaration": {
     "allowedTestHosts": "string[]: 主机闭集——本床允许下发 shell 命令的全部测试主机名;登记时由床管理员从床配置(网关 env_prepare/bed_topology 回报的主机清单)填入,不进 Git。缺失或为空视为未声明,verify.hostCommand 一律 HOST_SET_UNDECLARED。",
-    "hostCommandPolicies": "Record<host, {allowPrefixes: string[]}>: 可选的单主机命令前缀策略,只能缩小 allowedTestHosts 内主机的可用命令,不能放行闭集外主机;登记时由床管理员按该主机承担的角色从床配置填写,不进 Git。",
+    "hostCommandPolicies": "Record<host, {allowPrefixes: string[]}>: 可选的单主机命令前缀策略,只能缩小 allowedTestHosts 内主机的可用命令,不能放行闭集外主机;登记时由床管理员按该主机承担的角色从床配置填写,不进 Git。"
+  },
+  "configuration": {
+    "schema": "hub-provider/1",
+    "transport": "streamable-http",
+    "runtimeProfileType": "execution",
+    "runtimeProfileRef": "profiles/case-gateway.json",
+    "credentialMode": "static-secret",
     "receiptPolicy": {
       "schema": "hub-provider-observation/1",
+      "submitTool": "case_submit",
+      "statusTool": "case_status",
+      "resultTool": "case_results",
+      "reconcileTool": "case_status",
+      "taskIdArgument": "task_id",
+      "remoteIdPath": [
+        "task_id"
+      ],
+      "requestHashPath": [
+        "request_hash"
+      ],
+      "inputSha256Path": [
+        "sha256"
+      ],
+      "byteHashesPath": [
+        "byte_hashes"
+      ],
+      "statePath": [
+        "state"
+      ],
+      "runningValues": [
+        "running"
+      ],
+      "terminalValues": [
+        "done"
+      ],
+      "receiptSchema": {
+        "type": "object"
+      },
       "lease": {
         "acquireTool": "lease_acquire",
         "heartbeatTool": "lease_heartbeat",
         "releaseTool": "lease_release",
-        "idPath": ["lease_id"],
-        "fencePath": ["token"],
+        "idPath": [
+          "lease_id"
+        ],
+        "fencePath": [
+          "token"
+        ],
         "idArgument": "lease_id",
         "fenceArgument": "token",
-        "ttlSecondsPath": ["ttl"]
+        "ttlSecondsPath": [
+          "expires_in_s"
+        ]
       },
-      "prepareTool": "case_prepare",
-      "topologyTool": "bed_topology",
-      "submitTool": "case_submit",
-      "statusTool": "case_status",
-      "resultTool": "case_results",
-      "reconcileTool": "case_reconcile",
-      "taskIdArgument": "task_id",
-      "remoteIdPath": ["task_id"],
-      "requestHashPath": ["request_hash"],
-      "inputSha256Path": ["input_sha256"],
-      "byteHashesPath": ["byte_hashes"],
-      "statePath": ["state"],
-      "runningValues": ["running"],
-      "terminalValues": ["done"],
-      "receiptSchema": { "type": "object" },
       "refusal": {
-        "stagePath": ["stage"],
-        "preDispatchStages": ["lease", "environment", "validation"],
-        "dispatchedPath": ["dispatched"],
-        "remoteIdPath": ["task_id"],
-        "codePath": ["code"],
-        "reasonPath": ["reason"]
+        "stagePath": [
+          "stage"
+        ],
+        "preDispatchStages": [
+          "lease",
+          "environment",
+          "validation"
+        ],
+        "dispatchedPath": [
+          "dispatched"
+        ],
+        "remoteIdPath": [
+          "task_id"
+        ],
+        "codePath": [
+          "code"
+        ],
+        "reasonPath": [
+          "reason"
+        ]
       }
     }
-  },
-  "receiptPolicyNotes": "receiptPolicy 是 hub-provider/observation/1 的通用协议数据(工具名、回报路径、状态词表、拒绝字段),驱动器机械核对 provider 回报与原请求身份。工具名与路径为包内默认值,登记时以床网关实际提供的工具名为准覆盖。"
+  }
 }
