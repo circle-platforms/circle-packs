@@ -46,7 +46,7 @@ toolArguments/receipts/identityProjection/argumentsByTool 这些网关策略映�
 
 `flows/apv-case-execute-v2.json`(id `apv-case-execute-v2`,driver `hub-execution-transition/1`)把执行流迁入本包:transition 纯函数按观察推进(environment → [topology] → device-map → verify → submit → wait → parse → afterResult → deliver),租约、beforeDispatch、终态核验由 hub 驱动与 worker 完成;工作簿字节经 provider.call 的 byteArgs 受控槽(xlsx_b64),不在 args 内联。环境/结果/拒绝解释是本包纯 Tool(environment/results/refusal),设备映射优先 env_prepare.conf.device_ips。资源声明在 `resources/case-gateway.json` 的 configuration.receiptPolicy(hub-provider/observation/1),登记时以床网关实际工具名覆盖。
 
-## 命令来源(1.3.1)
+## 命令来源(1.3.0,并入执行流)
 
 verify.deviceCommand 的 present 来自两种冻结原件之一:真实床的命令来源制品给 **XML 原件**(command-tree 槽)——流程内 tools/command-tree.ts 解析(与 hub BuildSite.commandsFrom 逐字一致的 scope/menu 遍历,imports 声明 saxes@5.0.1)、tools/command-check.ts 按 hub commandCheck 规则逐条核对并出 `{result:{build,buildId,sourceSha256:XML 字节 SHA,ruleVersion,commands:[…]}}`;合成夹具的 JSON command-check 原件走 projectCommandTree 兼容路径(role 不变)。两条路的核对身份都绑流程的 build 与树原件。
 

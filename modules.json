@@ -166,11 +166,11 @@
       "kind": "product-line",
       "root": "products/apv",
       "manifestPath": "products/apv/product-line.json",
-      "version": "1.3.1",
+      "version": "1.3.0",
       "files": [
         {
           "path": "README.md",
-          "sha256": "9937344ab38454b17029b31cf92d1f8a5020c735582f14852de641bcc09cebd5"
+          "sha256": "1dbd2ce52da67156b3c69553dd40300e01b524f5e17ff8c5e6ac79e69947c81c"
         },
         {
           "path": "flows/apv-case-execute-v2.json",
@@ -198,7 +198,7 @@
         },
         {
           "path": "product-line.json",
-          "sha256": "808c28cbd2f2b1d7ac500decfb20933f50131398e2a1f35dc59c7950d783669b"
+          "sha256": "49aaa89309ff4deb2e0784a4271b21d7990620862c34d02afeadb9e064b6e8c5"
         },
         {
           "path": "resources/case-gateway.json",
@@ -305,7 +305,7 @@
           "sha256": "1c1372e36f85700388b7950162062570387da6faf8a3d14b754917d007fcf2b4"
         }
       ],
-      "digest": "4d92f2e6fc6a9bc2135f5931f8fd4b1ccf845dd9314740054844c6b26952edc7"
+      "digest": "c0890c1907f7b6024d52c3e8faf41e6e0ceea67cd27146f537a14cd3385e7f70"
     }
   ]
 }
