@@ -80,11 +80,11 @@ export function transition(input: any) {
     if (map.facts.status !== 'succeeded') return result('failed', [action('outcome.error', 'device-map-failed', { code: 'EVIDENCE_INSUFFICIENT', facts: { stage: 'device-map' } })]);
     const buildCheck = environmentBuild(prepare?.facts?.result, build);
     if (!buildCheck.passed) return result('failed', [action('outcome.error', 'build-mismatch', { code: 'BUILD_MISMATCH', facts: { stage: 'device-map', buildCheck } })]);
-    // project the frozen command-tree: present comes from the original, not from us
-    // The commands to project come from the workbook observation (frozen original),
-    // passed as tool args; the tree original rides its byte slot.
+    // present comes from the frozen command-check original (the sync tool's shape,
+    // {result:{commands:[{command,status,violations}]}}), projected by a pure tool;
+    // the workbook observation supplies the command list.
     const commands = ((observation(input, 'workbook')?.facts?.result ?? {}).commands ?? []).map((row: any) => row.command);
-    return result('tree', [action('tool.call', 'tree', { path: 'tools/execution-contracts.ts', export: 'projectCommandTree', args: [commands], byteSlots: ['command-tree'] })]);
+    return result('tree', [action('tool.call', 'tree', { path: 'tools/execution-contracts.ts', export: 'projectCommandTree', args: [commands], byteSlots: ['command-check'] })]);
   }
 
   if (state.stage === 'tree') {

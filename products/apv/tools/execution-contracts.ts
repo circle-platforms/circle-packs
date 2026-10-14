@@ -114,19 +114,20 @@ export function validateTransitionOutput(output: any): string[] {
   return problems;
 }
 
-// Projects the frozen command-tree original into the verify subject shape. The tree
-// arrives as bytes on the 'command-tree' controlled slot; the workbook projection's
-// command list is passed as the second tool argument by the driver (the transition
-// only forwards ids, not command text). Present is computed here against the frozen
-// tree: a command is present when the tree JSON's heads/commands list contains it.
+// Projects the frozen command-check original into verify subjects. The check arrives
+// as bytes on the 'command-check' controlled slot in the sync tool's own shape:
+// {result:{build,buildId,sourceSha256,ruleVersion,commands:[{command,status,head,
+// arguments,violations,...}]},evidence:[]}. present is computed from the checked
+// status — hit with no violations — never self-reported; the workbook projection's
+// command list is passed as the second tool argument.
 export function projectCommandTree(original: Uint8Array, commands: string[]) {
   let parsed: any;
   try { parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(original)); }
-  catch { throw new Error('command-tree original is not valid UTF-8 JSON'); }
-  const listed: string[] = parsed?.heads ?? parsed?.commands ?? [];
-  if (!Array.isArray(listed) || listed.some((entry: any) => typeof entry !== 'string' && typeof entry?.command !== 'string'))
-    throw new Error('command-tree original carries no usable command list');
-  const known = new Set(listed.map((entry: any) => (typeof entry === 'string' ? entry : entry.command)));
+  catch { throw new Error('command-check original is not valid UTF-8 JSON'); }
+  const checked: any[] = parsed?.result?.commands ?? parsed?.commands ?? [];
+  if (!Array.isArray(checked) || checked.some((entry: any) => typeof entry?.command !== 'string'))
+    throw new Error('command-check original carries no usable command list');
+  const present = new Set(checked.filter((entry: any) => entry.status === 'hit' && !(entry.violations ?? []).length).map((entry: any) => entry.command));
   const list = Array.isArray(commands) ? commands.filter((c) => typeof c === 'string') : [];
-  return { heads: list.map((command) => ({ command, present: known.has(command) })) };
+  return { heads: list.map((command) => ({ command, present: present.has(command) })) };
 }

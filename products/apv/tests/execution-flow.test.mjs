@@ -13,15 +13,22 @@ test('the dependency-free sha256 matches known vectors', () => {
 });
 
 // ---------- command-tree projection (高1) ----------
-test('projectCommandTree computes present from the frozen original, never self-reported', () => {
-  const tree = new TextEncoder().encode(JSON.stringify({ heads: ['sdns on', 'service inspect alpha'] }));
-  const projected = projectCommandTree(tree, ['sdns on', 'sdns fulldns on']);
+test('projectCommandTree computes present from the frozen command-check original, never self-reported', () => {
+  // the sync tool's own shape: {result:{commands:[{command,status,violations}]}}
+  const check = new TextEncoder().encode(JSON.stringify({ result: { commands: [
+    { command: 'sdns on', status: 'hit', violations: [] },
+    { command: 'service inspect alpha', status: 'hit', violations: [] },
+    { command: 'sdns host name x', status: 'hit', violations: [{ code: 'ARGUMENT_COUNT' }] }, // hit but violating
+    { command: 'sdns fulldns on', status: 'missing', violations: [{ code: 'HEAD_MISSING' }] },
+  ] } }));
+  const projected = projectCommandTree(check, ['sdns on', 'sdns host name x', 'sdns fulldns on']);
   assert.deepEqual(projected.heads, [
     { command: 'sdns on', present: true },
-    { command: 'sdns fulldns on', present: false }, // absent from the frozen tree
+    { command: 'sdns host name x', present: false }, // violations disprove presence
+    { command: 'sdns fulldns on', present: false },
   ]);
   assert.throws(() => projectCommandTree(new TextEncoder().encode('{oops'), []), /not valid UTF-8 JSON/);
-  assert.throws(() => projectCommandTree(new TextEncoder().encode('{"heads":{}}'), []), /no usable command list/);
+  assert.throws(() => projectCommandTree(new TextEncoder().encode('{"result":{"commands":{}}}'), []), /no usable command list/);
 });
 
 // ---------- environment normalization (中11) ----------
@@ -107,7 +114,7 @@ test('environment → topology → device-map → tree, gates built from the boo
   const map = obs('device-map', { result: { addresses: [['192.0.2.11']], source: 'gateway.env_prepare.conf.device_ips' } });
   const toTree = transition(input({ stage: 'device-map' }, [env, map]));
   assert.equal(toTree.state.stage, 'tree');
-  assert.equal(toTree.actions[0].byteSlots[0], 'command-tree'); // the frozen tree original
+  assert.equal(toTree.actions[0].byteSlots[0], 'command-check'); // the frozen command-check original
   const heads = [{ command: 'service inspect alpha', present: true }];
   const gates = transition(input({ stage: 'tree' }, [obs('tree', { result: { heads } }), obs('workbook', { result: BOOK })]));
   assert.equal(gates.state.stage, 'verify');
