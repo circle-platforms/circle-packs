@@ -146,10 +146,12 @@ test('submit: byte slot only, no inline base64; status-shaped receipts go throug
 });
 
 test('parse and delivery: results via byteSlots, projected or failed parses deliver partial (中6/中14)', () => {
-  const done = transition(input({ stage: 'submit' }, [obs('submit', { result: { channel: 'ready', rc: 0, cases: [{ case_id: '301', result: 'PASS', log_stale: false, log: '' }] } })]));
+  const done = transition(input({ stage: 'submit' }, [obs('submit', { result: { channel: 'ready', rc: 0, cases: [{ case_id: '301', result: 'PASS', log_stale: false, log: '' }] } }), obs('workbook', { result: BOOK })]));
   assert.equal(done.state.stage, 'parse');
   const parse = done.actions[0];
   assert.deepEqual(parse.byteSlots, ['workbook']); // results ride the provider observation, args stay small
+  assert.equal(parse.args[0], BOOK); // the book comes from the frozen workbook observation
+  assert.equal(parse.args[1].channel, 'ready');
   const clean = transition(input({ stage: 'afterResult' }, [obs('after-result', {}), obs('parse-results', { result: { cases: [], unmapped: [] } })]));
   assert.equal(clean.actions[0].status, 'succeeded');
   const projected = transition(input({ stage: 'afterResult' }, [obs('after-result', {}), obs('parse-results', { result: { original: { reference: { kind: 'artifact', artifactId: 'a', sha256: '0'.repeat(64), size: 9 }, slot: 'hub.result.x' } } })]));

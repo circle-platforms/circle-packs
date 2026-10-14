@@ -145,9 +145,10 @@ export function transition(input: any) {
     if (carried && typeof carried === 'object' && Array.isArray((carried as any).cases) === false && (carried as any).state !== undefined)
       return result('result', [action('provider.call', 'result', { resource: RESOURCE, tool: 'case_results', args: { task_id: carried.task_id ?? null } })]);
     const raw = submitted.facts.result;
+    const book = observation(input, 'workbook')?.facts?.result ?? { cases: [] };
     const attribution = { environment: observation(input, 'environment')?.facts?.result ?? null, topology: observation(input, 'topology')?.facts?.result ?? null };
     return result('parse', [
-      action('tool.call', 'parse-results', { path: 'tools/results.ts', export: 'executionResults', args: [{ cases: [], ...(typeof raw === 'object' && raw !== null ? raw : {}) }, attribution], byteSlots: ['workbook'] }),
+      action('tool.call', 'parse-results', { path: 'tools/results.ts', export: 'executionResults', args: [book, raw, attribution], byteSlots: ['workbook'] }),
     ]);
   }
 
@@ -156,9 +157,10 @@ export function transition(input: any) {
     if (!resultObserved) return result('result', []);
     if (resultObserved.facts.status !== 'succeeded') return refusalError('result-failed', 'result', resultObserved);
     const raw = resultObserved.facts.result;
+    const book = observation(input, 'workbook')?.facts?.result ?? { cases: [] };
     const attribution = { environment: observation(input, 'environment')?.facts?.result ?? null, topology: observation(input, 'topology')?.facts?.result ?? null };
     return result('parse', [
-      action('tool.call', 'parse-results', { path: 'tools/results.ts', export: 'executionResults', args: [raw, attribution], byteSlots: ['workbook'] }),
+      action('tool.call', 'parse-results', { path: 'tools/results.ts', export: 'executionResults', args: [book, raw, attribution], byteSlots: ['workbook'] }),
     ]);
   }
 
