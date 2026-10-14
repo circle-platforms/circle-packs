@@ -268,7 +268,7 @@ test('the XML command original drives the in-flow check when the tree slot is pr
     obs('environment', { result: { device_count: 1, conf: { device_ips: ['192.0.2.11'] }, ready: true, build_checked: true, checks: [{ check: 'device_build', ok: true, detail: 'device reports SYNTHETIC_BUILD_301, gateway bundle is SYNTHETIC_BUILD_301' }] } }),
     obs('device-map', { result: { addresses: [['192.0.2.11']], source: 'gateway.env_prepare.conf.device_ips' } }),
   ]);
-  withTree.controlledBytes = [{ slot: 'command-tree', role: 'command-tree', reference: { kind: 'source', sourceRevisionId: 'src_t', sha256: 'x'.repeat(64), size: xml.length }, contentBase64: '' }];
+  withTree.controlledBytes = [{ slot: 'command-tree', role: 'command-tree', reference: { kind: 'source', sourceRevisionId: 'src_t', sha256: 'x'.repeat(64), size: xml.length }, contentBase64: Buffer.from(xml).toString('base64') }];
   const out = transition(withTree);
   assert.equal(out.state.stage, 'tree');
   const treeAction = out.actions[0];

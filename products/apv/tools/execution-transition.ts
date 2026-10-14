@@ -144,8 +144,11 @@ export function transition(input: any) {
     //   so no pre-computed check original is needed.
     // - JSON command-check original (synthetic fixtures): projected by projectCommandTree.
     const commands = (bookResult(input).commands ?? []).map((row: any) => row.command);
+    // The command-tree slot may carry the real bed's XML original or the synthetic
+    // fixture's JSON tree; probe the first non-space byte — '<' means XML.
     const treeSlot = input.controlledBytes?.find((entry: any) => entry.slot === 'command-tree');
-    if (treeSlot) {
+    const probe = treeSlot?.contentBase64 ? Buffer.from(treeSlot.contentBase64, 'base64').subarray(0, 1).toString('latin1') : null;
+    if (treeSlot && probe === '<') {
       const identity = { build, buildId: build };
       return result('tree', [action('tool.call', 'tree', { path: 'tools/command-check.ts', export: 'checkCommands', args: [commands, identity], byteSlots: ['command-tree'] })]);
     }
