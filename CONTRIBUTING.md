@@ -13,7 +13,7 @@ Read the [README](README.md) and the [APV status page](docs/product-line-pack.md
 
 ## Set up
 
-circle-packs needs Node.js 24 or newer and has no dependency manifest of its own. The manifest check and the skill tests run as they are. The product-line pack tests need circle-hub's dependency set: link that checkout's `node_modules` into this repository.
+circle-packs needs Node.js 24 or newer and has no dependency manifest of its own. The manifest check and the skill tests run as they are. The product-line pack tests use circle-hub commit `dc93c69826f73f16d2f20f7520ba4c6663d014ac`, pinned in `.github/workflows/checks.yml`. Check out that commit and run `npm ci --ignore-scripts` there, then link its `node_modules` into this repository. Updating this pin is an explicit test-dependency upgrade and requires rerunning the pack tests. It does not change the separately confirmed acceptance baseline or declare production compatibility.
 
 ```bash
 git clone https://github.com/circle-platforms/circle-packs

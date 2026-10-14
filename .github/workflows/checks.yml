@@ -10,7 +10,10 @@ permissions:
 
 jobs:
   checks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      HUB_DEPENDENCY_COMMIT: dc93c69826f73f16d2f20f7520ba4c6663d014ac
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,7 +25,11 @@ jobs:
         run: node --test tools/*.test.ts skills/*/tests/*.test.mjs
       - name: Fetch the hub dependency set
         run: |
-          git clone --depth 1 https://github.com/circle-platforms/circle-hub ../circle-hub
+          git init ../circle-hub
+          git -C ../circle-hub remote add origin https://github.com/circle-platforms/circle-hub
+          git -C ../circle-hub fetch --depth 1 origin "$HUB_DEPENDENCY_COMMIT"
+          git -C ../circle-hub checkout --detach FETCH_HEAD
+          test "$(git -C ../circle-hub rev-parse HEAD)" = "$HUB_DEPENDENCY_COMMIT"
           cd ../circle-hub && npm ci --ignore-scripts
       - name: Product-line pack tests
         run: |

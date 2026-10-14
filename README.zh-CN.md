@@ -54,7 +54,7 @@ node tools/modules.ts check
 node --test tools/*.test.ts skills/*/tests/*.test.mjs
 ```
 
-产品线包测试需要 circle-hub 的依赖集。把它的 `node_modules` 软链到本仓库后运行：
+产品线包测试使用 circle-hub 提交 `dc93c69826f73f16d2f20f7520ba4c6663d014ac` 的依赖集，与 `.github/workflows/checks.yml` 固定的提交一致。先检出该提交并在其中运行 `npm ci --ignore-scripts`，再把它的 `node_modules` 软链到本仓库后运行。这只固定测试环境，不代表已支持该 hub 的生产版本：
 
 ```sh
 ln -s <circle-hub-checkout>/node_modules node_modules

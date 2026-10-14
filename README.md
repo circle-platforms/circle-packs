@@ -54,7 +54,7 @@ node tools/modules.ts check
 node --test tools/*.test.ts skills/*/tests/*.test.mjs
 ```
 
-Product-line pack tests need circle-hub's dependency set. Symlink that checkout's `node_modules` into this repository, then:
+Product-line pack tests use the dependency set from circle-hub commit `dc93c69826f73f16d2f20f7520ba4c6663d014ac`, the same commit pinned by `.github/workflows/checks.yml`. Check out that commit and run `npm ci --ignore-scripts` there before linking its `node_modules` into this repository. This pins the test environment, not a supported production hub version. Then:
 
 ```sh
 ln -s <circle-hub-checkout>/node_modules node_modules
