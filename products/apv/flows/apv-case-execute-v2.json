@@ -8,6 +8,6 @@
     "export": "transition"
   },
   "initialState": {
-    "stage": "environment"
+    "stage": "workbook"
   }
 }
