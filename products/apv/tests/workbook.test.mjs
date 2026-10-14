@@ -97,6 +97,19 @@ test('projectWorkbook keeps description, commands and call on every step', async
   assert.equal(projection.hostCommands[0].functionStatus, 'enabled'); // the host row's contract annotation, for testEnvEnabled
 });
 
+test('the projection carries the identity fields: workbook SHA and the unique case ids', async () => {
+  const bytes = await makeBook([
+    ['100000000000000001', 'P1', 2, 'device cfg', 'APV_0', 'cmd_config', 'sdns on', null, null],
+    [null, null, 3, 'check', 'check_point', 'found', 'sdns', null, null],
+  ]);
+  const projection = await projectWorkbook(bytes, enc(CONTRACT));
+  // hub 的 identityProjection 按 export=projectWorkbook、sha256Path=sha256、
+  // caseIdsPath=cases、idPath=autoid 核取病例身份——三个字段一个不能少。
+  const digest = Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), (b) => b.toString(16).padStart(2, '0')).join('');
+  assert.equal(projection.sha256, digest);
+  assert.deepEqual(projection.cases.map((item) => item.autoid), ['100000000000000001']);
+});
+
 test('projectWorkbookSlim drops descriptions and keeps the gating fields', async () => {
   const bytes = await makeBook([
     ['100000000000000001', 'P1', 2, 'device cfg', 'APV_0', 'cmd_config', 'sdns on', null, null],

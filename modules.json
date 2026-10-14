@@ -242,7 +242,7 @@
         },
         {
           "path": "tests/workbook.test.mjs",
-          "sha256": "9a8960941a308f76046d2f2e7644b5d9bdbfdc6690a1512f6dc46d39579d6cac"
+          "sha256": "cdc49d77c3977bf463eb4ab0a5e23d18a7ec37bfe1258cd316d79ee6c2c2c8a4"
         },
         {
           "path": "tools/contracts.ts",
@@ -293,7 +293,7 @@
           "sha256": "1c1372e36f85700388b7950162062570387da6faf8a3d14b754917d007fcf2b4"
         }
       ],
-      "digest": "7b02b25edf64256908fa5ba8674ca080fe82189d630f12823c7373b19b508a93"
+      "digest": "a8cbb3dd5570bbb15847a793efa701c86175a64047819444d57decd3c9d22103"
     }
   ]
 }
