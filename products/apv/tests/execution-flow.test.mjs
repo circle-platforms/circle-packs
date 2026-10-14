@@ -21,14 +21,14 @@ test('projectCommandTree computes present from the frozen command-check original
     { command: 'sdns host name x', status: 'hit', violations: [{ code: 'ARGUMENT_COUNT' }] }, // hit but violating
     { command: 'sdns fulldns on', status: 'missing', violations: [{ code: 'HEAD_MISSING' }] },
   ] } }));
-  const projected = projectCommandTree(['sdns on', 'sdns host name x', 'sdns fulldns on'], check);
+  const projected = projectCommandTree(['sdns on', 'sdns host name x', 'sdns fulldns on'], undefined, check);
   assert.deepEqual(projected.heads, [
     { command: 'sdns on', present: true },
     { command: 'sdns host name x', present: false }, // violations disprove presence
     { command: 'sdns fulldns on', present: false },
   ]);
-  assert.throws(() => projectCommandTree([], new TextEncoder().encode('{oops')), /not valid UTF-8 JSON/);
-  assert.throws(() => projectCommandTree([], new TextEncoder().encode('{"result":{"ruleVersion":"command-tree/1.1.0","commands":{}}}')), /no usable command list/);
+  assert.throws(() => projectCommandTree([], undefined, new TextEncoder().encode('{oops')), /not valid UTF-8 JSON/);
+  assert.throws(() => projectCommandTree([], undefined, new TextEncoder().encode('{"result":{"ruleVersion":"command-tree/1.1.0","commands":{}}}')), /no usable command list/);
 });
 
 // ---------- environment normalization (中11) ----------
@@ -254,9 +254,9 @@ test('every stage output passes the A2 validation', () => {
 
 test('projectCommandTree refuses a check from another build or another tree (中5)', () => {
   const other = new TextEncoder().encode(JSON.stringify({ result: { build: 'OTHER_BUILD', sourceSha256: 'a'.repeat(64), ruleVersion: 'command-tree/1.1.0', commands: [{ command: 'sdns on', status: 'hit', violations: [] }] } }));
-  assert.throws(() => projectCommandTree(['sdns on'], other, { build: 'SYNTHETIC_BUILD_301' }), /belongs to build OTHER_BUILD/);
+  assert.throws(() => projectCommandTree(['sdns on'], { build: 'SYNTHETIC_BUILD_301' }, other), /belongs to build OTHER_BUILD/);
   const otherTree = new TextEncoder().encode(JSON.stringify({ result: { build: 'SYNTHETIC_BUILD_301', sourceSha256: 'b'.repeat(64), ruleVersion: 'command-tree/1.1.0', commands: [{ command: 'sdns on', status: 'hit', violations: [] }] } }));
-  assert.throws(() => projectCommandTree(['sdns on'], otherTree, { build: 'SYNTHETIC_BUILD_301', sourceSha256: 'a'.repeat(64) }), /different command tree/);
+  assert.throws(() => projectCommandTree(['sdns on'], { build: 'SYNTHETIC_BUILD_301', sourceSha256: 'a'.repeat(64) }, otherTree), /different command tree/);
   const noVersion = new TextEncoder().encode(JSON.stringify({ result: { build: 'SYNTHETIC_BUILD_301', commands: [] } }));
-  assert.throws(() => projectCommandTree([], noVersion), /no ruleVersion/);
+  assert.throws(() => projectCommandTree([], undefined, noVersion), /no ruleVersion/);
 });
