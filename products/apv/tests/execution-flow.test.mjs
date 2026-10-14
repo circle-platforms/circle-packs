@@ -162,7 +162,7 @@ test('device-map stage: build check, then per-command device and host verify hoo
 });
 
 test('verify passes to a single case_submit with xlsx_b64 from a byte slot; no beforeDispatch of our own', () => {
-  const verifies = [obs('verify-device-0', {}), obs('verify-host-0', {})];
+  const verifies = [obs('verify-device-0', {}), obs('verify-host-0', {}), obs('verify-workbook', {})];
   const out = transition(input({ stage: 'verify' }, verifies, { module: 'sdns' }));
   assert.equal(out.state.stage, 'submit');
   assert.equal(out.actions.length, 1);

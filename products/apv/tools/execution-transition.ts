@@ -86,13 +86,18 @@ export function transition(input: any) {
         subject: { command: row.command, host: row.host, method: row.method ?? 'cmd', kwargs: row.kwargs ?? {} },
       })),
     ];
-    return result('verify', actions.length ? actions : [action('hook.verify', 'verify-workbook', { event: HOOK_EVENTS[2], subject: { client: value.client ?? '', contract: { testEnvEnabled: value.testEnvEnabled ?? [] } } })]);
+    // The workbook gate runs alongside the per-command gates on every flow (the hub
+    // acceptance requires all three verify points), with the client set from the
+    // bound function contract projection, never client self-report alone.
+    const client = value.client ?? (Array.isArray(value.testEnvEnabled) && value.testEnvEnabled.length === 1 ? value.testEnvEnabled[0] : '');
+    actions.push(action('hook.verify', 'verify-workbook', { event: HOOK_EVENTS[2], subject: { client, contract: { testEnvEnabled: value.testEnvEnabled ?? [] } } }));
+    return result('verify', actions);
   }
 
   // verify: all verify hooks must have succeeded; then the single write submission.
   if (state.stage === 'verify') {
     const verifies = input.observations?.filter((row: any) => typeof row?.facts?.stepId === 'string' && row.facts.stepId.startsWith('verify-')) ?? [];
-    const expected = (value.deviceCommands?.length ?? 0) + (value.hostDispatches?.length ?? 0);
+    const expected = (value.deviceCommands?.length ?? 0) + (value.hostDispatches?.length ?? 0) + 1; // + the workbook gate
     if (verifies.length < Math.max(expected, 1)) return result('verify', []);
     const blocked = verifies.find((row: any) => row.facts.status !== 'succeeded');
     if (blocked) return result('failed', [action('outcome.error', 'verify-failed', { code: blocked.facts.error?.code === 'HOST_NOT_IN_BED' ? 'HOST_NOT_IN_BED' : 'COMMAND_NOT_IN_TREE', facts: { stage: 'verify', stepId: blocked.facts.stepId } })]);
