@@ -150,6 +150,7 @@ export function projectWorkbookSlim(projectionBytes: Uint8Array) {
 // imports: exceljs@4.4.0 (already declared for this module)
 export async function projectWorkbook(workbookBytes: Buffer, contractBytes?: Uint8Array) {
   const book = await readExecutionWorkbook(workbookBytes, contractBytes ? new (await import('./function-contract.ts')).FunctionContract(contractBytes) : undefined);
+  const statusByRow = new Map([...book.initialization, ...book.cases.flatMap((item) => item.steps)].map((step) => [step.row, step.functionStatus ?? null]));
   return {
     sha256: book.sha256,
     cases: book.cases.map((item) => ({
@@ -160,6 +161,6 @@ export async function projectWorkbook(workbookBytes: Buffer, contractBytes?: Uin
       })),
     })),
     commands: book.commands.map((row) => ({ autoid: row.autoid, row: row.row, object: row.object, command: row.command })),
-    hostCommands: book.hostCommands.map((row) => ({ autoid: row.autoid, row: row.row, object: row.object, method: row.method, host: row.host, command: row.command, kwargs: row.kwargs })),
+    hostCommands: book.hostCommands.map((row) => ({ autoid: row.autoid, row: row.row, object: row.object, method: row.method, host: row.host, command: row.command, kwargs: row.kwargs, functionStatus: statusByRow.get(row.row) ?? null })),
   };
 }

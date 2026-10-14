@@ -156,10 +156,10 @@ test('verify: a blocked gate fails with HOOK_FAILED and the rule code in facts (
 
 test('verify.workbook subjects carry the contract-derived testEnvEnabled; failures report in emission order', () => {
   const heads = [{ command: 'service inspect alpha', present: true }];
-  const withStatus = { ...BOOK, cases: [{ autoid: '301', steps: [{ row: 11, object: 'test_env', method: 'routera', functionStatus: 'enabled' }] }] };
+  const withStatus = { ...BOOK, hostCommands: [{ ...BOOK.hostCommands[0], functionStatus: 'enabled' }] };
   const gates = transition(input({ stage: 'tree' }, [obs('tree', { result: { heads } }), obs('workbook', { result: withStatus })]));
   assert.deepEqual(gates.actions.find((a) => a.event === 'verify.workbook').subject.contract.testEnvEnabled, ['routera']);
-  const disabledBook = { ...BOOK, cases: [{ autoid: '301', steps: [{ row: 11, object: 'test_env', method: 'routera', functionStatus: 'disabled' }] }] };
+  const disabledBook = { ...BOOK, hostCommands: [{ ...BOOK.hostCommands[0], functionStatus: 'disabled' }] };
   const gates2 = transition(input({ stage: 'tree' }, [obs('tree', { result: { heads } }), obs('workbook', { result: disabledBook })]));
   assert.deepEqual(gates2.actions.find((a) => a.event === 'verify.workbook').subject.contract.testEnvEnabled, []);
   // device → host → workbook, regardless of the frame's observation order

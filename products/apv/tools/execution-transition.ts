@@ -140,12 +140,11 @@ export function transition(input: any) {
       })),
     ];
     // The workbook gate runs per distinct host in the book (native controller checks
-    // each host command against the function contract). testEnvEnabled is derived from
-    // the contract annotations the workbook projection carries — never assumed.
+    // each host command against the function contract). testEnvEnabled is the enabled
+    // list of the checked function contract itself — the workbook projection carries
+    // its per-row annotations from the frozen function-contract original.
     const hosts = [...new Set((book.hostCommands ?? []).map((row: any) => row.host))];
-    const steps = (book.cases ?? []).flatMap((item: any) => item.steps ?? []);
-    const enabledHosts = hosts.filter((host) =>
-      steps.some((step: any) => step.functionStatus === 'enabled' && (step.object === 'test_env' ? step.method : step.object) === host));
+    const enabledHosts = hosts.filter((host) => (book.hostCommands ?? []).some((row: any) => row.host === host && row.functionStatus === 'enabled'));
     for (const [index, host] of hosts.entries())
       actions.push(action('hook.verify', `verify-workbook-${index}`, { event: HOOK_EVENTS[2], subject: { client: host, contract: { testEnvEnabled: enabledHosts } } }));
     return result('verify', actions);

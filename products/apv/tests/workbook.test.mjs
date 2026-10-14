@@ -94,6 +94,7 @@ test('projectWorkbook keeps description, commands and call on every step', async
   assert.equal(steps[1].description, 'host dig');
   assert.equal(steps[1].call.command, 'dig @192.0.2.70 autotest.com');
   assert.equal(steps[1].functionStatus, 'enabled');
+  assert.equal(projection.hostCommands[0].functionStatus, 'enabled'); // the host row's contract annotation, for testEnvEnabled
 });
 
 test('projectWorkbookSlim drops descriptions and keeps the gating fields', async () => {
