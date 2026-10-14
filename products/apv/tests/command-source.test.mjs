@@ -176,9 +176,10 @@ test('an unterminated quote reports TOKENIZE_ERROR as missing', () => {
 test('the IPv6 zone id rule matches node:net exactly', () => {
   const xml = new TextEncoder().encode('<?xml version="1.0"?><tree><item name="addr"><arg type="IPADDR"/></item></tree>');
   const { commands } = parseCommandTree(xml);
-  const checked = commandCheck(commands, ['addr fe80::1%eth0', 'addr fe80::1%eth_0', 'addr fe80::1%']);
+  const checked = commandCheck(commands, ['addr fe80::1%eth0', 'addr 1.2.3.4%eth0', 'addr fe80::1%eth_0', 'addr fe80::1%']);
   const by = (input) => checked.commands.find((c) => c.command === input);
-  assert.deepEqual(by('addr fe80::1%eth0').violations, []);
+  assert.deepEqual(by('addr fe80::1%eth0').violations, []); // IPv6 with a valid zone
+  assert.deepEqual(by('addr 1.2.3.4%eth0').violations, [{ code: 'TYPE_MISMATCH', position: 1, type: 'IPADDR' }]); // zones are IPv6-only
   assert.deepEqual(by('addr fe80::1%eth_0').violations, [{ code: 'TYPE_MISMATCH', position: 1, type: 'IPADDR' }]);
   assert.deepEqual(by('addr fe80::1%').violations, [{ code: 'TYPE_MISMATCH', position: 1, type: 'IPADDR' }]);
 });
