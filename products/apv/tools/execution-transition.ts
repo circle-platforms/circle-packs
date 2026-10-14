@@ -15,6 +15,7 @@
 import { TRANSITION_SCHEMA, HOOK_EVENTS, type ActionKind } from './execution-contracts.ts';
 import { environmentDevices, environmentBuild } from './environment.ts';
 import { refusalFacts } from './refusal.ts';
+import { presentHeads } from './command-check.ts';
 
 const action = (kind: ActionKind, stepId: string, fields: Record<string, unknown> = {}, occurrence = 0) => ({ kind, stepId, occurrence, ...fields });
 // A stepId may have several occurrences; the current observation is the one whose
@@ -145,14 +146,19 @@ export function transition(input: any) {
     // - JSON command-check original (synthetic fixtures): projected by projectCommandTree.
     const commands = (bookResult(input).commands ?? []).map((row: any) => row.command);
     // The command-tree slot may carry the real bed's XML original or the synthetic
-    // fixture's JSON tree; probe the first non-space byte — '<' means XML.
+    // fixture's JSON tree; skip the UTF-8 BOM and leading whitespace, then '<' means XML.
     const treeSlot = input.controlledBytes?.find((entry: any) => entry.slot === 'command-tree');
-    const probe = treeSlot?.contentBase64 ? Buffer.from(treeSlot.contentBase64, 'base64').subarray(0, 1).toString('latin1') : null;
+    // skip a UTF-8 BOM and leading whitespace, then look for the XML '<'
+    const probeBytes = treeSlot?.contentBase64 ? Buffer.from(treeSlot.contentBase64, 'base64') : null;
+    let offset = 0;
+    if (probeBytes?.subarray(0, 3).equals(Buffer.from([0xEF, 0xBB, 0xBF]))) offset = 3; // UTF-8 BOM
+    while (offset < (probeBytes?.length ?? 0) && [0x20, 0x0a, 0x0d, 0x09].includes(probeBytes[offset])) offset++;
+    const probe = probeBytes ? probeBytes.subarray(offset, offset + 1).toString('latin1') : null;
     if (treeSlot && probe === '<') {
       const identity = { build, buildId: build };
       return result('tree', [action('tool.call', 'tree', { path: 'tools/command-check.ts', export: 'checkCommands', args: [commands, identity], byteSlots: ['command-tree'] })]);
     }
-    const expected = { build };
+    const expected = { build, ...(treeSlot?.reference?.sha256 ? { sourceSha256: treeSlot.reference.sha256 } : {}) };
     return result('tree', [action('tool.call', 'tree', { path: 'tools/execution-contracts.ts', export: 'projectCommandTree', args: [commands, expected], byteSlots: ['command-check'] })]);
   }
 
@@ -160,7 +166,10 @@ export function transition(input: any) {
     const tree = observation(input, 'tree');
     if (!tree) return result('tree', []);
     if (tree.facts.status !== 'succeeded') return result('failed', [action('outcome.error', 'tree-failed', { code: 'HOOK_FAILED', facts: { stage: 'tree' } })]);
-    const heads = tree.facts.result.heads ?? [];
+    // Both command-source shapes yield heads under one rule; a receipt without heads
+    // (older shape) derives them with the shared presentHeads predicate.
+    const rawHeads = tree.facts.result.heads;
+    const heads = Array.isArray(rawHeads) ? rawHeads : presentHeads(tree.facts.result.commands ?? []);
     // Each device gate carries ONLY its own head: the hook reads present for its own
     // command, and a shared full head list would square the output size (216 commands
     // ≈ 2.8 MB, far over the 256 KiB budget). Source of truth stays the projection.

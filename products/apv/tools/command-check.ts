@@ -169,5 +169,19 @@ import { parseCommandTree } from './command-tree.ts';
 export function checkCommands(treeBytes: Uint8Array, commands: string[], identity: { build: string; buildId: string }) {
   const { commands: tree } = parseCommandTree(treeBytes);
   const checked = commandCheck(tree as Command[], commands);
-  return { result: { build: identity.build, buildId: identity.buildId, sourceSha256: createHash(treeBytes), ...checked }, evidence: [] };
+  // The verify-gate heads derive from the SAME rule both paths share: a command is
+  // present when its check is hit with no violations. The receipt keeps only the
+  // fields the gates need (command/status/head/violations) — signature detail would
+  // blow up the frame on a full workbook.
+  const slim = checked.commands.map((entry: any) => ({ command: entry.command, status: entry.status, head: entry.head, violations: entry.violations }));
+  return {
+    heads: presentHeads(slim),
+    result: { build: identity.build, buildId: identity.buildId, sourceSha256: createHash(treeBytes), ruleVersion: checked.ruleVersion, commands: slim },
+    evidence: [],
+  };
+}
+
+// One present rule for both command-source shapes: hit and violation-free.
+export function presentHeads(entries: { command: string; status: string; violations: any[] }[]) {
+  return entries.map((entry) => ({ command: entry.command, present: entry.status === 'hit' && !(entry.violations ?? []).length }));
 }

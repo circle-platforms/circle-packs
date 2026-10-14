@@ -287,3 +287,43 @@ test('the XML command original drives the in-flow check when the tree slot is pr
   assert.equal(jsonPath.actions[0].path, 'tools/execution-contracts.ts');
   assert.deepEqual(jsonPath.actions[0].byteSlots, ['command-check']);
 });
+
+test('the XML path gates verify from one present rule: hit, missing head, argument violation (高1)', async () => {
+  const { checkCommands } = await import('../tools/command-check.ts');
+  const { transition } = await import('../tools/execution-transition.ts');
+  const xml = new TextEncoder().encode('<?xml version="1.0"?><tree><scope name="configuration"><menu name="sdns"><item name="on"/><item name="listener"><arg type="IPADDR"/><arg type="U16" optional="true"/></item></menu></scope></tree>');
+  const commands = ['sdns on', 'sdns listener 192.0.2.10', 'sdns listener', 'sdns fulldns on'];
+  const checked = checkCommands(xml, commands, { build: 'SYNTHETIC_BUILD_301', buildId: 'SYNTHETIC_BUILD_301' });
+  // receipt carries heads under the shared rule and slim commands
+  assert.deepEqual(checked.heads, [
+    { command: 'sdns on', present: true },
+    { command: 'sdns listener 192.0.2.10', present: true },
+    { command: 'sdns listener', present: false }, // hit but ARGUMENT_COUNT
+    { command: 'sdns fulldns on', present: false }, // missing head
+  ]);
+  assert.ok(checked.result.commands.every((c) => !('signatureChecks' in c) && !('matchedSignatures' in c)), 'the receipt is slim');
+  // tree stage derives heads from a receipt without them, with the same rule
+  const treeObserved = { facts: { stepId: 'tree', status: 'succeeded', result: { ...checked.result } } };
+  const gates = transition(input({ stage: 'tree' }, [
+    obs('workbook', { result: { ...BOOK, commands: commands.map((command, index) => ({ command, autoid: '301', row: 10 + index, object: 'APV_0' })) } }),
+    treeObserved,
+  ]));
+  assert.equal(gates.state.stage, 'verify');
+  for (const device of gates.actions.filter((a) => a.event === 'verify.deviceCommand')) {
+    const expected = checked.heads.find((h) => h.command === device.subject.command);
+    assert.deepEqual(device.subject.tree.heads, [expected], device.subject.command);
+  }
+});
+
+test('a UTF-8 BOM before the XML declaration still selects the XML path (中3)', async () => {
+  const { transition } = await import('../tools/execution-transition.ts');
+  const xml = Buffer.concat([Buffer.from([0xEF, 0xBB, 0xBF]), Buffer.from('<?xml version="1.0"?><tree><scope name="configuration"><item name="service"><arg type="STRING"/></item></scope></tree>')]);
+  const frame = input({ stage: 'device-map' }, [
+    obs('workbook', { result: BOOK }),
+    obs('environment', { result: { device_count: 1, conf: { device_ips: ['192.0.2.11'] }, ready: true, build_checked: true, checks: [{ check: 'device_build', ok: true, detail: 'device reports SYNTHETIC_BUILD_301, gateway bundle is SYNTHETIC_BUILD_301' }] } }),
+    obs('device-map', { result: { addresses: [['192.0.2.11']], source: 'gateway.env_prepare.conf.device_ips' } }),
+  ]);
+  frame.controlledBytes = [{ slot: 'command-tree', role: 'command-tree', reference: { kind: 'source', sourceRevisionId: 'src_t', sha256: 'x'.repeat(64), size: xml.length }, contentBase64: xml.toString('base64') }];
+  const out = transition(frame);
+  assert.equal(out.actions[0].path, 'tools/command-check.ts');
+});

@@ -86,3 +86,40 @@ test('checkCommands wraps the XML original into the sync receipt shape', () => {
   assert.equal(bad.status, 'hit');
   assert.deepEqual(bad.violations, [{ code: 'TYPE_MISMATCH', position: 1, type: 'IPADDR' }]);
 });
+
+test('an ISO-8859-1 declared tree decodes latin1 text (真实树形状)', () => {
+  const latin = Buffer.from(`<?xml version="1.0" encoding="ISO-8859-1"?>
+<tree><scope name="configuration"><menu name="slb"><item name="virtual"/></menu></scope></tree>`, 'latin1');
+  const { commands } = parseCommandTree(latin);
+  assert.deepEqual(commands.map((c) => c.name), ['slb virtual']);
+});
+
+test('a DOCTYPE declaration is refused', () => {
+  const xml = new TextEncoder().encode('<?xml version="1.0"?><!DOCTYPE tree><tree><item name="x"/></tree>');
+  assert.throws(() => parseCommandTree(xml), /document types and entities/);
+});
+
+test('two menu levels compose the command name in order', () => {
+  const xml = new TextEncoder().encode('<?xml version="1.0"?><tree><menu name="slb"><menu name="virtual"><item name="http"/></menu></menu></tree>');
+  const { commands } = parseCommandTree(xml);
+  assert.deepEqual(commands.map((c) => c.name), ['slb virtual http']);
+});
+
+test('quoted arguments keep their spacing through the check', () => {
+  const { commands } = parseCommandTree(XML);
+  const checked = commandCheck(commands, ['sdns zone forward name "a b" "192.0.2.9%53"']);
+  const entry = checked.commands[0];
+  assert.equal(entry.status, 'hit');
+  assert.deepEqual(entry.arguments, ['a b', '192.0.2.9%53']); // one quoted token stays one argument
+  assert.deepEqual(entry.violations, []); // two required args supplied, optional third absent
+});
+
+test('two signatures of the same head (overload) pick the matching arity', () => {
+  const xml = new TextEncoder().encode('<?xml version="1.0"?><tree><scope name="configuration"><menu name="sdns"><item name="listener"><arg type="IPADDR"/></item><item name="listener"><arg type="IPADDR"/><arg type="U16"/></item></menu></scope></tree>');
+  const { commands } = parseCommandTree(xml);
+  const checked = commandCheck(commands, ['sdns listener 192.0.2.10 53']);
+  const entry = checked.commands[0];
+  assert.equal(entry.status, 'hit');
+  assert.deepEqual(entry.violations, []);
+  assert.ok(entry.matchedSignatures.length === 1);
+});

@@ -166,11 +166,11 @@
       "kind": "product-line",
       "root": "products/apv",
       "manifestPath": "products/apv/product-line.json",
-      "version": "1.3.0",
+      "version": "1.3.1",
       "files": [
         {
           "path": "README.md",
-          "sha256": "1dbd2ce52da67156b3c69553dd40300e01b524f5e17ff8c5e6ac79e69947c81c"
+          "sha256": "01e4c8c34c2446851a02d7e62db12dc06b0a6b6cb276d6ae6fd17b109bc7d1bb"
         },
         {
           "path": "flows/apv-case-execute-v2.json",
@@ -198,7 +198,7 @@
         },
         {
           "path": "product-line.json",
-          "sha256": "49aaa89309ff4deb2e0784a4271b21d7990620862c34d02afeadb9e064b6e8c5"
+          "sha256": "808c28cbd2f2b1d7ac500decfb20933f50131398e2a1f35dc59c7950d783669b"
         },
         {
           "path": "resources/case-gateway.json",
@@ -214,7 +214,7 @@
         },
         {
           "path": "tests/command-source.test.mjs",
-          "sha256": "af7dcc2de1b163edb7168f31e5db12f5384013edc353f047e0823c5c2e820a6e"
+          "sha256": "e97b23ac528d0fe33b2a5e55eff6ecaa7c23c8a59ba49270ebef0d9142489c66"
         },
         {
           "path": "tests/defect-claims.test.mjs",
@@ -222,7 +222,7 @@
         },
         {
           "path": "tests/execution-flow.test.mjs",
-          "sha256": "0a55814db6c9f542ee116adbe1ff57ba622b3a568b275cc10ea126a3f810f4a4"
+          "sha256": "f4a92a19198eca0321663330c195f0e517fa98d2931a06f44f69bc59225d5a6c"
         },
         {
           "path": "tests/function-contract-dialect.test.mjs",
@@ -250,7 +250,7 @@
         },
         {
           "path": "tools/command-check.ts",
-          "sha256": "3c178f336d86e02c16e68ba31f6f18e8334022c143fb2146fa706ebd5199cb4f"
+          "sha256": "51290533548ff68651c5e92323bd00e701e0d892c55c5f485b0335ac51c4f6cd"
         },
         {
           "path": "tools/command-tree.ts",
@@ -278,7 +278,7 @@
         },
         {
           "path": "tools/execution-transition.ts",
-          "sha256": "9072cd32fdfe954d4791aac76f7a6f8a023d886927f34a5e0b8db366b0e27328"
+          "sha256": "a77882106c37e68a1e80ce06e3c13135f36db7a4c94cb0c0988623b80baa0d0a"
         },
         {
           "path": "tools/function-contract.ts",
@@ -305,7 +305,7 @@
           "sha256": "1c1372e36f85700388b7950162062570387da6faf8a3d14b754917d007fcf2b4"
         }
       ],
-      "digest": "c0890c1907f7b6024d52c3e8faf41e6e0ceea67cd27146f537a14cd3385e7f70"
+      "digest": "70a6ad016a0130d8d31c8ea604f7b26cb6a7c8979dfa59ff4fdddb6d83518ccc"
     }
   ]
 }
