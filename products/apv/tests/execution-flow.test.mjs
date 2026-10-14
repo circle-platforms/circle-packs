@@ -82,13 +82,14 @@ const BOOK = {
   hostCommands: [{ command: 'echo synthetic', host: 'routera', method: 'routera', kwargs: {}, row: 11 }],
   cases: [{ autoid: '301' }],
 };
-const input = (state, observations, value = {}) => ({
+const input = (state, observations, value = {}, expectedOccurrences) => ({
   schema: TRANSITION_SCHEMA,
   binding: { taskId: 'synthetic-task' },
   currentInput: { value: submission({ build: 'SYNTHETIC_BUILD_301', ...value }), sha256: '0'.repeat(64) },
   state,
   observations,
   controlledBytes: [{ slot: 'workbook', role: 'workbook', reference: { kind: 'source', sourceRevisionId: 'src_w', sha256: 'f'.repeat(64), size: 4 }, contentBase64: '' }],
+  ...(expectedOccurrences ? { expectedOccurrences } : {}),
 });
 const obs = (stepId, facts, operationId = `op-${stepId}`) => ({ operationId, reference: { kind: 'artifact', artifactId: `art_${stepId}`, sha256: '0'.repeat(64), size: 1 }, facts: { stepId, status: 'succeeded', ...facts } });
 
@@ -174,7 +175,28 @@ test('verify.workbook subjects carry the contract-derived testEnvEnabled; failur
   assert.equal(out.actions[0].facts.code, 'HOST_NOT_IN_BED');
 });
 
+test('a repeated stepId resolves to the current occurrence per expectedOccurrences, and operation.wait targets its operationId', () => {
+  const heads = [{ command: 'service inspect alpha', present: true }];
+  const oldBook = { sha256: BOOK.sha256, commands: [], hostCommands: [], cases: [] };
+  // occurrence 1 is stored before occurrence 0 in the frame: array order proves nothing
+  const frame = [obs('workbook', { result: BOOK, occurrence: 1 }, 'op-new'), obs('workbook', { result: oldBook, occurrence: 0 }, 'op-old')];
+  const gates = transition(input({ stage: 'tree' }, [obs('tree', { result: { heads } }), ...frame], {}, [{ stepId: 'workbook', nextOccurrence: 2 }]));
+  assert.equal(gates.actions.find((a) => a.event === 'verify.deviceCommand').subject.command, 'service inspect alpha');
+  // expectedOccurrences, not recency, decides: with only occurrence 0 completed the old book is current
+  const older = transition(input({ stage: 'tree' }, [obs('tree', { result: { heads } }), ...frame], {}, [{ stepId: 'workbook', nextOccurrence: 1 }]));
+  assert.equal(older.actions.length, 0); // occ 0 has no commands to gate
+  const noExpected = transition(input({ stage: 'tree' }, [obs('tree', { result: { heads } }), ...frame]));
+  assert.equal(noExpected.actions.find((a) => a.event === 'verify.deviceCommand').subject.command, 'service inspect alpha'); // fallback: highest occurrence
+  const waiting = transition(input({ stage: 'submit' }, [
+    obs('submit', { status: 'running', occurrence: 1, result: { state: 'running' } }, 'op-new-submit'),
+    obs('submit', { status: 'running', occurrence: 0, result: { state: 'running' } }, 'op-old-submit'),
+  ], {}, [{ stepId: 'submit', nextOccurrence: 2 }]));
+  assert.equal(waiting.actions[0].kind, 'operation.wait');
+  assert.equal(waiting.actions[0].operationId, 'op-new-submit');
+});
+
 test('submit: byte slot only, no inline base64; status-shaped receipts go through the result tool (中7/中10)', () => {
+
   const verifies = [obs('verify-device-0', {}), obs('verify-host-0', {}), obs('verify-workbook-0', {})];
   const out = transition(input({ stage: 'verify' }, [...verifies, obs('workbook', { result: BOOK })]));
   assert.equal(out.state.stage, 'submit');

@@ -17,7 +17,18 @@ import { environmentDevices, environmentBuild } from './environment.ts';
 import { refusalFacts } from './refusal.ts';
 
 const action = (kind: ActionKind, stepId: string, fields: Record<string, unknown> = {}, occurrence = 0) => ({ kind, stepId, occurrence, ...fields });
-const observation = (input: any, stepId: string) => input.observations?.find((row: any) => row?.facts?.stepId === stepId);
+// A stepId may have several occurrences; the current observation is the one whose
+// occurrence is the latest completed per C's expectedOccurrences (nextOccurrence - 1) —
+// never the first array row. Its operationId then identifies the step's real operation
+// (operation.wait targets it). Without expectedOccurrences, fall back to the highest
+// occurrence present.
+const observation = (input: any, stepId: string) => {
+  const rows = (input.observations ?? []).filter((row: any) => row?.facts?.stepId === stepId);
+  if (rows.length <= 1) return rows[0];
+  const expected = (input.expectedOccurrences ?? []).find((row: any) => row?.stepId === stepId);
+  const current = expected ? Number(expected.nextOccurrence) - 1 : Math.max(...rows.map((row: any) => Number(row.facts?.occurrence ?? 0)));
+  return rows.find((row: any) => Number(row.facts?.occurrence) === current) ?? rows[rows.length - 1];
+};
 
 // The book every stage reads: the slim re-projection once hub projected the full one
 // into a hub.result slot, otherwise the plain projection. A bare {original:{slot}}
@@ -167,7 +178,7 @@ export function transition(input: any) {
   // submit: the hub write chain verifies the receipt and the terminal state; the
   // observation's facts.result carries the result original (or its projection).
   if (state.stage === 'submit') {
-    const submitted = input.observations?.find((row: any) => row?.facts?.stepId === 'submit' && row.facts.status !== undefined);
+    const submitted = observation(input, 'submit');
     if (!submitted) return result('submit', []);
     if (submitted.facts.status === 'running' || submitted.facts.status === 'unknown') return result('wait', [action('operation.wait', 'wait-terminal', { operationId: submitted.operationId })]);
     if (submitted.facts.status !== 'succeeded') return refusalError('submit-refused', 'submit', submitted);
@@ -200,7 +211,7 @@ export function transition(input: any) {
   if (state.stage === 'wait') {
     // The write chain ends in one terminal observation; when the wait reports a
     // status-shaped receipt, pull the result original via the result tool.
-    const waited = observation(input, 'wait-terminal') ?? input.observations?.find((row: any) => row?.facts?.stepId === 'submit');
+    const waited = observation(input, 'wait-terminal') ?? observation(input, 'submit');
     if (!waited) return result('wait', []);
     if (waited.facts.status === 'running' || waited.facts.status === 'unknown') return result('wait', []);
     if (waited.facts.status !== 'succeeded') return refusalError('wait-failed', 'submit', waited);
