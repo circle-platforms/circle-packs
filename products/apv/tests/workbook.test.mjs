@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import ExcelJS from 'exceljs';
-import { readExecutionWorkbook } from '../tools/workbook.ts';
+import { readExecutionWorkbook, projectWorkbook } from '../tools/workbook.ts';
 import { FunctionContract } from '../tools/function-contract.ts';
 
 const HEADERS = ['自动化ID', '优先级', '语句类型', '描述', '测试对象', '方法', '数据', '临时保存期望结果', '输入变量'];
@@ -78,6 +78,22 @@ test('an unknown host parses; the host-policy Hook blocks it against the declara
 test('rejects a workbook without the hidden marker row', async () => {
   const bytes = await makeBook([['1', 'P1', 2, 'x', 'APV_0', 'cmd_config', 'sdns on', null, null]], { hidden: false });
   await assert.rejects(() => readExecutionWorkbook(bytes), /marker/);
+});
+
+test('projectWorkbook keeps description, commands and call on every step', async () => {
+  const bytes = await makeBook([
+    ['100000000000000001', 'P1', 2, 'device cfg', 'APV_0', 'cmd_config', 'sdns on', null, null],
+    [null, null, 2, 'host dig', 'test_env', 'routera', 'dig @192.0.2.70 autotest.com', null, null],
+    [null, null, 3, 'check', 'check_point', 'found', 'sdns', null, null],
+  ]);
+  const projection = await projectWorkbook(bytes, enc(CONTRACT));
+  const steps = projection.cases[0].steps;
+  assert.equal(steps[0].description, 'device cfg');
+  assert.deepEqual(steps[0].commands, ['sdns on']);
+  assert.equal(steps[0].call.command, 'sdns on');
+  assert.equal(steps[1].description, 'host dig');
+  assert.equal(steps[1].call.command, 'dig @192.0.2.70 autotest.com');
+  assert.equal(steps[1].functionStatus, 'enabled');
 });
 
 test('rejects a case without a checkpoint', async () => {

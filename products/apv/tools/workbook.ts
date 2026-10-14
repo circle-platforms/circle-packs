@@ -127,7 +127,13 @@ export async function projectWorkbook(workbookBytes: Buffer, contractBytes?: Uin
   const book = await readExecutionWorkbook(workbookBytes, contractBytes ? new (await import('./function-contract.ts')).FunctionContract(contractBytes) : undefined);
   return {
     sha256: book.sha256,
-    cases: book.cases.map((item) => ({ autoid: item.autoid, steps: item.steps.map((step) => ({ row: step.row, object: step.object, method: step.method, data: step.data, functionStatus: step.functionStatus ?? null })) })),
+    cases: book.cases.map((item) => ({
+      autoid: item.autoid,
+      steps: item.steps.map((step) => ({
+        row: step.row, description: step.description, object: step.object, method: step.method, data: step.data,
+        functionStatus: step.functionStatus ?? null, commands: step.commands, ...(step.call ? { call: step.call } : {}),
+      })),
+    })),
     commands: book.commands.map((row) => ({ autoid: row.autoid, row: row.row, object: row.object, command: row.command })),
     hostCommands: book.hostCommands.map((row) => ({ autoid: row.autoid, row: row.row, object: row.object, method: row.method, host: row.host, command: row.command, kwargs: row.kwargs })),
   };
