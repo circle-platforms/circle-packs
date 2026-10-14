@@ -42,69 +42,146 @@
         "submit": {
           "receiptSchema": {
             "type": "object",
-            "required": ["ok", "task_id", "sha256", "case_ids"],
+            "required": [
+              "ok",
+              "task_id",
+              "sha256",
+              "case_ids"
+            ],
             "properties": {
-              "ok": { "const": true },
-              "task_id": { "type": "string" },
-              "sha256": { "type": "string" },
-              "case_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 }
+              "ok": {
+                "const": true
+              },
+              "task_id": {
+                "type": "string"
+              },
+              "sha256": {
+                "type": "string"
+              },
+              "case_ids": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              }
             },
             "additionalProperties": true
           },
-          "remoteIdPath": ["task_id"],
-          "sha256Path": ["sha256"],
-          "caseIdsPath": ["case_ids"]
+          "remoteIdPath": [
+            "task_id"
+          ],
+          "sha256Path": [
+            "sha256"
+          ],
+          "caseIdsPath": [
+            "case_ids"
+          ]
         },
         "status": {
           "receiptSchema": {
             "type": "object",
-            "required": ["ok", "task_id", "state"],
+            "required": [
+              "ok",
+              "task_id",
+              "state"
+            ],
             "properties": {
-              "ok": { "const": true },
-              "task_id": { "type": "string" },
-              "state": { "type": "string" }
+              "ok": {
+                "const": true
+              },
+              "task_id": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              }
             },
             "additionalProperties": true
           },
-          "remoteIdPath": ["task_id"],
+          "remoteIdPath": [
+            "task_id"
+          ],
           "completion": {
-            "path": ["state"],
-            "runningValues": ["running"],
-            "terminalValues": ["done"],
-            "rcPath": ["rc"]
+            "path": [
+              "state"
+            ],
+            "runningValues": [
+              "running"
+            ],
+            "terminalValues": [
+              "done"
+            ],
+            "rcPath": [
+              "rc"
+            ]
           }
         },
         "results": {
           "receiptSchema": {
             "type": "object",
-            "required": ["ok", "task_id", "xlsx_sha256"],
+            "required": [
+              "ok",
+              "task_id",
+              "xlsx_sha256"
+            ],
             "properties": {
-              "ok": { "const": true },
-              "task_id": { "type": "string" },
-              "xlsx_sha256": { "type": "string" }
+              "ok": {
+                "const": true
+              },
+              "task_id": {
+                "type": "string"
+              },
+              "xlsx_sha256": {
+                "type": "string"
+              }
             },
             "additionalProperties": true
           },
-          "remoteIdPath": ["task_id"],
-          "sha256Path": ["xlsx_sha256"]
+          "remoteIdPath": [
+            "task_id"
+          ],
+          "sha256Path": [
+            "xlsx_sha256"
+          ]
         },
         "reconcile": {
           "receiptSchema": {
             "type": "object",
-            "required": ["ok", "task_id", "state"],
+            "required": [
+              "ok",
+              "task_id",
+              "state"
+            ],
             "properties": {
-              "ok": { "const": true },
-              "task_id": { "type": "string" },
-              "state": { "type": "string" }
+              "ok": {
+                "const": true
+              },
+              "task_id": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              }
             },
             "additionalProperties": true
           },
-          "remoteIdPath": ["task_id"],
+          "remoteIdPath": [
+            "task_id"
+          ],
           "completion": {
-            "path": ["state"],
-            "runningValues": ["running"],
-            "terminalValues": ["done"],
-            "rcPath": ["rc"]
+            "path": [
+              "state"
+            ],
+            "runningValues": [
+              "running"
+            ],
+            "terminalValues": [
+              "done"
+            ],
+            "rcPath": [
+              "rc"
+            ]
           }
         }
       },
@@ -113,9 +190,15 @@
         "path": "tools/workbook.ts",
         "export": "projectWorkbook",
         "byteArgument": "xlsx_b64",
-        "sha256Path": ["sha256"],
-        "caseIdsPath": ["cases"],
-        "idPath": ["autoid"]
+        "sha256Path": [
+          "sha256"
+        ],
+        "caseIdsPath": [
+          "cases"
+        ],
+        "idPath": [
+          "autoid"
+        ]
       },
       "submitTool": "case_submit",
       "statusTool": "case_status",
@@ -138,10 +221,12 @@
         "state"
       ],
       "runningValues": [
+        "queued",
         "running"
       ],
       "terminalValues": [
-        "done"
+        "done",
+        "lost"
       ],
       "receiptSchema": {
         "type": "object"

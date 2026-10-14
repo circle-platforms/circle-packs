@@ -45,6 +45,20 @@ const RESOURCE = 'gateway';
 // A tree head projected from the frozen command-tree original. The projection tool
 // emits [{command, present}]; present is computed against the frozen tree, never
 // self-reported here.
+// Builds the parse action. The raw result rides the hub's dynamic result slot when the
+// observation was projected ({original:{slot}} — the frame carries those bytes); the
+// frozen workbook original rides its 'workbook' slot. Literal args stay tiny: only the
+// attribution facts. results.ts signature: (book, raw, attribution, workbookBytes?).
+function parseAction(input: any, raw: any, stepIdOfResult: string) {
+  void stepIdOfResult;
+  const slot = raw && typeof raw === 'object' && raw.original?.slot ? raw.original.slot : null;
+  const attribution = { environment: observation(input, 'environment')?.facts?.result ?? null, topology: observation(input, 'topology')?.facts?.result ?? null };
+  const args = [null, null, attribution];
+  const byteSlots = ['workbook'];
+  if (slot) byteSlots.push(slot);
+  return { schema: TRANSITION_SCHEMA, state: { ...(input.state ?? {}), stage: 'parse' }, actions: [action('tool.call', 'parse-results', { path: 'tools/results.ts', export: 'executionResults', args, byteSlots })] };
+}
+
 export function transition(input: any) {
   const state = input.state ?? { stage: 'workbook' };
   const submission = input.currentInput?.value ?? {};
@@ -57,10 +71,14 @@ export function transition(input: any) {
   // pointer 后的观察投影)。阶段映射:环境阶段网关自报 BUILD_MISMATCH 保持其码,
   // 其余按 refusalFacts 的码表;lease 不可用类拒绝映射 LEASE_UNAVAILABLE。
   const refusalError = (stepId: string, stageKind: string, observed: any) => {
-    const original = observed?.facts?.result ?? null;
-    const facts = refusalFacts(original);
-    const code = stageKind === 'lease' ? 'LEASE_UNAVAILABLE' : facts.code;
-    return result('failed', [action('outcome.error', stepId, { code, facts: { stage: stageKind, refusal: facts } })]);
+    // A refusal original lives in facts.result; a NON-refusal failure (timeout, credential)
+    // leaves facts.result as {} and carries its own hub error code in facts.error.code —
+    // pass that through verbatim instead of inventing GATEWAY_REFUSED.
+    const error = observed?.facts?.error;
+    if (error?.code && !(observed?.facts?.result && Object.keys(observed.facts.result).length))
+      return result('failed', [action('outcome.error', stepId, { code: error.code, facts: { stage: stageKind, error: { code: error.code, message: error.message ?? null } } })]);
+    const facts = refusalFacts(observed?.facts?.result ?? null);
+    return result('failed', [action('outcome.error', stepId, { code: facts.code, facts: { stage: stageKind, refusal: facts } })]);
   };
 
   // workbook: parse the frozen workbook original once; every gate and the parse feed
@@ -118,7 +136,11 @@ export function transition(input: any) {
     // {result:{commands:[{command,status,violations}]}}), projected by a pure tool;
     // the workbook observation supplies the command list.
     const commands = (bookResult(input).commands ?? []).map((row: any) => row.command);
-    return result('tree', [action('tool.call', 'tree', { path: 'tools/execution-contracts.ts', export: 'projectCommandTree', args: [commands], byteSlots: ['command-check'] })]);
+    // Bind the check to this run: the flow's build and the frozen command-tree original
+    // (its sha rides the controlledBytes reference of the command-tree slot).
+    const treeSlot = input.controlledBytes?.find((entry: any) => entry.slot === 'command-tree');
+    const expected = { build, ...(treeSlot?.reference?.sha256 ? { sourceSha256: treeSlot.reference.sha256 } : {}) };
+    return result('tree', [action('tool.call', 'tree', { path: 'tools/execution-contracts.ts', export: 'projectCommandTree', args: [commands, expected], byteSlots: ['command-check'] })]);
   }
 
   if (state.stage === 'tree') {
@@ -126,13 +148,15 @@ export function transition(input: any) {
     if (!tree) return result('tree', []);
     if (tree.facts.status !== 'succeeded') return result('failed', [action('outcome.error', 'tree-failed', { code: 'HOOK_FAILED', facts: { stage: 'tree' } })]);
     const heads = tree.facts.result.heads ?? [];
-    // The workbook projection (from the earlier tool.call) and the tree heads drive
-    // the verify gates; clients cannot widen or narrow either list.
+    // Each device gate carries ONLY its own head: the hook reads present for its own
+    // command, and a shared full head list would square the output size (216 commands
+    // ≈ 2.8 MB, far over the 256 KiB budget). Source of truth stays the projection.
+    const headFor = (command: string) => heads.filter((head: any) => head.command === command).slice(0, 1);
     const book = bookResult(input);
     const actions = [
       ...(book.commands ?? []).map((row: any, index: number) => action('hook.verify', `verify-device-${index}`, {
         event: HOOK_EVENTS[0],
-        subject: { command: row.command, tree: { heads } },
+        subject: { command: row.command, tree: { heads: headFor(row.command) } },
       })),
       ...(book.hostCommands ?? []).map((row: any, index: number) => action('hook.verify', `verify-host-${index}`, {
         event: HOOK_EVENTS[1],
@@ -187,56 +211,48 @@ export function transition(input: any) {
     const carried = submitted.facts.result;
     if (carried && typeof carried === 'object' && Array.isArray((carried as any).cases) === false && (carried as any).state !== undefined)
       return result('result', [action('provider.call', 'result', { resource: RESOURCE, tool: 'case_results', args: { task_id: carried.task_id ?? null } })]);
-    const raw = submitted.facts.result;
-    const book = bookResult(input).cases ? bookResult(input) : { cases: [] };
-    const attribution = { environment: observation(input, 'environment')?.facts?.result ?? null, topology: observation(input, 'topology')?.facts?.result ?? null };
-    return result('parse', [
-      action('tool.call', 'parse-results', { path: 'tools/results.ts', export: 'executionResults', args: [book, raw, attribution], byteSlots: ['workbook'] }),
-    ]);
+    return parseAction(input, submitted.facts.result, 'submit');
+  }
+
+  // wait: the operation.wait observation lands on the same stepId; when the write chain
+  // reports its terminal observation we go straight to parsing via the result slot.
+  if (state.stage === 'wait') {
+    const waited = observation(input, 'submit');
+    if (!waited || waited.facts.status === 'running' || waited.facts.status === 'unknown') return result('wait', []);
+    if (waited.facts.status !== 'succeeded') return refusalError('wait-failed', 'submit', waited);
+    return parseAction(input, waited.facts.result, 'submit');
   }
 
   if (state.stage === 'result') {
     const resultObserved = observation(input, 'result');
     if (!resultObserved) return result('result', []);
     if (resultObserved.facts.status !== 'succeeded') return refusalError('result-failed', 'result', resultObserved);
-    const raw = resultObserved.facts.result;
-    const book = bookResult(input).cases ? bookResult(input) : { cases: [] };
-    const attribution = { environment: observation(input, 'environment')?.facts?.result ?? null, topology: observation(input, 'topology')?.facts?.result ?? null };
-    return result('parse', [
-      action('tool.call', 'parse-results', { path: 'tools/results.ts', export: 'executionResults', args: [book, raw, attribution], byteSlots: ['workbook'] }),
-    ]);
+    return parseAction(input, resultObserved.facts.result, 'result');
   }
 
-  if (state.stage === 'wait') {
-    // The write chain ends in one terminal observation; when the wait reports a
-    // status-shaped receipt, pull the result original via the result tool.
-    const waited = observation(input, 'wait-terminal') ?? observation(input, 'submit');
-    if (!waited) return result('wait', []);
-    if (waited.facts.status === 'running' || waited.facts.status === 'unknown') return result('wait', []);
-    if (waited.facts.status !== 'succeeded') return refusalError('wait-failed', 'submit', waited);
-    return result('result', [action('provider.call', 'result', { resource: RESOURCE, tool: 'case_results', args: { task_id: waited.facts.result?.task_id ?? null } })]);
-
-  }
 
   if (state.stage === 'parse') {
     const parsed = observation(input, 'parse-results');
     if (!parsed) return result('parse', []);
-    // A parse failure after a proven terminal state degrades delivery to partial —
-    // the device outcome stands; the interpretation does not.
-    if (parsed.facts.status !== 'succeeded') return result('afterResult', [
-      action('hook.verify', 'after-result', { event: HOOK_EVENTS[4], subject: { result: { parseFailed: true, error: parsed.facts.error ?? null }, operationId: input.observations?.find((row: any) => row?.facts?.stepId === 'submit')?.operationId ?? null } }),
-    ]);
-    const parsedResult = parsed.facts.result;
+    // One canonical delivery candidate: on a parse failure (hub records facts.result as
+    // {} for a failed Tool) the candidate carries parseFailed; on success it is the
+    // parsed result. The SAME object goes to the afterResult Hook and to delivery —
+    // the delivery gate compares candidate bytes with the Hook subject.
+    const operationId = input.observations?.find((row: any) => row?.facts?.stepId === 'submit')?.operationId ?? null;
+    const candidate = parsed.facts.status === 'succeeded' ? parsed.facts.result : { parseFailed: true, error: parsed.facts.error ?? null };
     return result('afterResult', [
-      action('hook.verify', 'after-result', { event: HOOK_EVENTS[4], subject: { result: parsedResult, operationId: input.observations?.find((row: any) => row?.facts?.stepId === 'submit')?.operationId ?? null } }),
+      action('hook.verify', 'after-result', { event: HOOK_EVENTS[4], subject: { result: candidate, operationId } }),
     ]);
   }
 
   if (state.stage === 'afterResult') {
     const checked = observation(input, 'after-result');
     if (!checked) return result('afterResult', []);
-    const parsedResult = observation(input, 'parse-results')?.facts?.result;
-    const parseFailed = parsedResult === undefined || parsedResult?.parseFailed === true;
+    // The delivery candidate is exactly the afterResult Hook subject result — hub's
+    // delivery gate compares their canonical bytes and refuses mismatches.
+    const hookSubjectResult = checked.facts.result ?? checked.facts?.error?.details?.result ?? null;
+    const parsedResult = hookSubjectResult ?? observation(input, 'parse-results')?.facts?.result;
+    const parseFailed = parsedResult?.parseFailed === true;
     // unknown unmapped (a budget projection replaced the payload) or a parse failure
     // both mean partial; a real empty unmapped list means succeeded.
     const unmapped = Array.isArray(parsedResult?.unmapped) ? parsedResult.unmapped.length : null;

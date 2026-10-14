@@ -15,7 +15,7 @@ test('the dependency-free sha256 matches known vectors', () => {
 // ---------- command-tree projection (高1) ----------
 test('projectCommandTree computes present from the frozen command-check original, never self-reported', () => {
   // the sync tool's own shape: {result:{commands:[{command,status,violations}]}}
-  const check = new TextEncoder().encode(JSON.stringify({ result: { commands: [
+  const check = new TextEncoder().encode(JSON.stringify({ result: { build: 'SYNTHETIC_BUILD_301', sourceSha256: 'a'.repeat(64), ruleVersion: 'command-tree/1.1.0', commands: [
     { command: 'sdns on', status: 'hit', violations: [] },
     { command: 'service inspect alpha', status: 'hit', violations: [] },
     { command: 'sdns host name x', status: 'hit', violations: [{ code: 'ARGUMENT_COUNT' }] }, // hit but violating
@@ -28,7 +28,7 @@ test('projectCommandTree computes present from the frozen command-check original
     { command: 'sdns fulldns on', present: false },
   ]);
   assert.throws(() => projectCommandTree([], new TextEncoder().encode('{oops')), /not valid UTF-8 JSON/);
-  assert.throws(() => projectCommandTree([], new TextEncoder().encode('{"result":{"commands":{}}}')), /no usable command list/);
+  assert.throws(() => projectCommandTree([], new TextEncoder().encode('{"result":{"ruleVersion":"command-tree/1.1.0","commands":{}}}')), /no usable command list/);
 });
 
 // ---------- environment normalization (中11) ----------
@@ -137,7 +137,8 @@ test('environment → topology → device-map → tree, gates built from the boo
   const gates = transition(input({ stage: 'tree' }, [obs('tree', { result: { heads } }), obs('workbook', { result: BOOK })]));
   assert.equal(gates.state.stage, 'verify');
   const device = gates.actions.find((a) => a.event === 'verify.deviceCommand');
-  assert.deepEqual(device.subject.tree.heads, heads); // present comes from the projection
+  // each gate carries ONLY its own head — a full shared list squares the output size
+  assert.deepEqual(device.subject.tree.heads, heads.filter((h) => h.command === device.subject.command));
   const host = gates.actions.find((a) => a.event === 'verify.hostCommand');
   assert.equal(host.subject.host, 'routera'); // from the book, per host
   const wb = gates.actions.find((a) => a.event === 'verify.workbook');
@@ -216,9 +217,14 @@ test('parse and delivery: results via byteSlots, projected or failed parses deli
   const done = transition(input({ stage: 'submit' }, [obs('submit', { result: { channel: 'ready', rc: 0, cases: [{ case_id: '301', result: 'PASS', log_stale: false, log: '' }] } }), obs('workbook', { result: BOOK })]));
   assert.equal(done.state.stage, 'parse');
   const parse = done.actions[0];
-  assert.deepEqual(parse.byteSlots, ['workbook']); // results ride the provider observation, args stay small
-  assert.equal(parse.args[0], BOOK); // the book comes from the frozen workbook observation
-  assert.equal(parse.args[1].channel, 'ready');
+  // args stay tiny (identifiers/attribution only); the book and the raw ride byte slots
+  assert.deepEqual(parse.byteSlots, ['workbook']);
+  assert.equal(parse.args[0], null);
+  assert.equal(parse.args[1], null);
+  assert.equal(parse.args[2].environment, null); // no environment observation in this frame
+  // when the raw was hub-projected, its dynamic slot joins the byte slots
+  const withSlot = transition(input({ stage: 'submit' }, [obs('submit', { result: { original: { reference: { kind: 'artifact', artifactId: 'a', sha256: '0'.repeat(64), size: 9 }, slot: 'hub.result.op-submit' } } })]));
+  assert.deepEqual(withSlot.actions[0].byteSlots, ['workbook', 'hub.result.op-submit']);
   const clean = transition(input({ stage: 'afterResult' }, [obs('after-result', {}), obs('parse-results', { result: { cases: [], unmapped: [] } })]));
   assert.equal(clean.actions[0].status, 'succeeded');
   const projected = transition(input({ stage: 'afterResult' }, [obs('after-result', {}), obs('parse-results', { result: { original: { reference: { kind: 'artifact', artifactId: 'a', sha256: '0'.repeat(64), size: 9 }, slot: 'hub.result.x' } } })]));
@@ -244,4 +250,13 @@ test('every stage output passes the A2 validation', () => {
       assert.deepEqual(validateTransitionOutput(output), [], `${stage} / ${observations.length}`);
     }
   }
+});
+
+test('projectCommandTree refuses a check from another build or another tree (中5)', () => {
+  const other = new TextEncoder().encode(JSON.stringify({ result: { build: 'OTHER_BUILD', sourceSha256: 'a'.repeat(64), ruleVersion: 'command-tree/1.1.0', commands: [{ command: 'sdns on', status: 'hit', violations: [] }] } }));
+  assert.throws(() => projectCommandTree(['sdns on'], other, { build: 'SYNTHETIC_BUILD_301' }), /belongs to build OTHER_BUILD/);
+  const otherTree = new TextEncoder().encode(JSON.stringify({ result: { build: 'SYNTHETIC_BUILD_301', sourceSha256: 'b'.repeat(64), ruleVersion: 'command-tree/1.1.0', commands: [{ command: 'sdns on', status: 'hit', violations: [] }] } }));
+  assert.throws(() => projectCommandTree(['sdns on'], otherTree, { build: 'SYNTHETIC_BUILD_301', sourceSha256: 'a'.repeat(64) }), /different command tree/);
+  const noVersion = new TextEncoder().encode(JSON.stringify({ result: { build: 'SYNTHETIC_BUILD_301', commands: [] } }));
+  assert.throws(() => projectCommandTree([], noVersion), /no ruleVersion/);
 });

@@ -170,7 +170,7 @@
       "files": [
         {
           "path": "README.md",
-          "sha256": "05e94085aa45889943ce2f5355f58921aa3cc3a0a06bc28b42f1e83467317695"
+          "sha256": "2ec86ac0c6d25f4d4ecc0979948dca9c6554b9699be13a311f0c0f1e262f0762"
         },
         {
           "path": "flows/apv-case-execute-v2.json",
@@ -202,7 +202,7 @@
         },
         {
           "path": "resources/case-gateway.json",
-          "sha256": "d02af569522b7b773c2286d024cf91920337249c5e413dcdbfcddbe1f6172829"
+          "sha256": "d708c5d943826679eaa354e70675dc0e9fe617cfd616194a1d863ffcf725413f"
         },
         {
           "path": "sources/command-tree.md",
@@ -218,7 +218,7 @@
         },
         {
           "path": "tests/execution-flow.test.mjs",
-          "sha256": "fa3065686628adca2a79486cc9c0c86199d15bb30aab8bafcf61e6842e60029a"
+          "sha256": "017a59e5da1451bd14872795dda4914a1781904a0a65842b8d51e6f3103ce046"
         },
         {
           "path": "tests/function-contract-dialect.test.mjs",
@@ -262,11 +262,11 @@
         },
         {
           "path": "tools/execution-contracts.ts",
-          "sha256": "949578a5fee584cd3060d82417103ef8881c430c2395ff3b5255900e360cf1c1"
+          "sha256": "b0dc0d6c9a6aa740789a6777bdfe1897a351fdd9f20889fe8138c8b8987aa876"
         },
         {
           "path": "tools/execution-transition.ts",
-          "sha256": "34c3cd9ee0673849fe9ca218ac0df82ab28ba3a0557a80a3052145ce97d73213"
+          "sha256": "efdd1e5e45ff5f143893d6269bbf782aea25c2e90cc8ef5a70aa45c50c60bd17"
         },
         {
           "path": "tools/function-contract.ts",
@@ -282,7 +282,7 @@
         },
         {
           "path": "tools/results.ts",
-          "sha256": "b8ac31723c48cbc267650baf05b41c0631b5d417b89e37f6c89264875fb9ee73"
+          "sha256": "8c3f7bc02a8bcdba06016f089f1d29a774addc16e1b5d1aa7843656b985ceee1"
         },
         {
           "path": "tools/sha256.ts",
@@ -293,7 +293,7 @@
           "sha256": "1c1372e36f85700388b7950162062570387da6faf8a3d14b754917d007fcf2b4"
         }
       ],
-      "digest": "992a57b93375e7824b803b431064a931a56b579fad76cc67936a0093b4ae4b90"
+      "digest": "85c50b3a5e60232fb62e533ee619a3bd6ba80ba98ae52dd214c8e0b0d5b85f81"
     }
   ]
 }

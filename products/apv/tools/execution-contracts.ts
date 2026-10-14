@@ -110,9 +110,12 @@ export function validateTransitionOutput(output: any): string[] {
       if (action.kind === 'delivery.propose' && !DELIVERY_STATUSES.includes(action.status)) problems.push(`delivery status must be succeeded|partial`);
     }
   }
+  // State carries its own 256 KiB budget; the actions carry the same string/array/depth
+  // walks (the hub validates the full output tree — this mirrors it for local runs).
   const stateSerialized = JSON.stringify(output.state);
   if (byteLength(stateSerialized) > BUDGETS.stateBytes) problems.push(`state over ${BUDGETS.stateBytes} bytes`);
   budgetOk(output.state, 1, problems);
+  budgetOk(output.actions, 1, problems);
   return problems;
 }
 
@@ -122,11 +125,22 @@ export function validateTransitionOutput(output: any): string[] {
 // arguments,violations,...}]},evidence:[]}. present is computed from the checked
 // status — hit with no violations — never self-reported; the workbook projection's
 // command list is passed as the second tool argument.
-export function projectCommandTree(commands: string[], original?: Uint8Array) {
+export function projectCommandTree(commands: string[], original?: Uint8Array, expected?: any) {
   if (!(original instanceof Uint8Array)) throw new Error('command-check original bytes are required');
   let parsed: any;
   try { parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(original)); }
   catch { throw new Error('command-check original is not valid UTF-8 JSON'); }
+  // The check must belong to this run: the build the flow is bound to and the frozen
+  // command tree (sourceSha256) the gates rest on. A check from another build or another
+  // tree must not admit commands (design appendix: identity before presence).
+  if (expected && typeof expected === 'object') {
+    if (typeof expected.build === 'string' && parsed?.result?.build !== expected.build)
+      throw new Error(`command-check belongs to build ${String(parsed?.result?.build)}, the flow binds ${expected.build}`);
+    if (typeof expected.sourceSha256 === 'string' && parsed?.result?.sourceSha256 !== expected.sourceSha256)
+      throw new Error('command-check was computed against a different command tree');
+  }
+  if (!parsed?.result?.ruleVersion || typeof parsed.result.ruleVersion !== 'string')
+    throw new Error('command-check original carries no ruleVersion');
   const checked: any[] = parsed?.result?.commands ?? parsed?.commands ?? [];
   if (!Array.isArray(checked) || checked.some((entry: any) => typeof entry?.command !== 'string'))
     throw new Error('command-check original carries no usable command list');

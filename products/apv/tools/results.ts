@@ -13,8 +13,17 @@ import { environmentDevices, deviceAddress, type DeviceAttribution } from './env
 // SHA-256 of the frozen workbook original (computed with the sandbox-free
 // implementation below), never a client-supplied value.
 import { createHash } from './sha256.ts';
-export function executionResults(book: ExecutionBook, raw: any, attribution: DeviceAttribution = {}, workbookBytes?: Uint8Array) {
+export function executionResults(book: ExecutionBook, raw: any, attribution: DeviceAttribution = {}, workbookBytes?: Uint8Array, submission?: any) {
   const sourceSha256 = workbookBytes ? createHash(workbookBytes) : book.sha256;
+  // A reconciled result must belong to the original submission: task id and workbook
+  // digest from the submit receipt bind the result to this dispatch, so an unrelated
+  // remote result can never deliver as this workbook's outcome.
+  if (submission && typeof submission === 'object') {
+    if (typeof submission.task_id === 'string' && raw?.task_id !== undefined && raw.task_id !== submission.task_id)
+      throw new Error(`result task_id ${String(raw.task_id)} differs from the submitted ${submission.task_id}`);
+    if (typeof submission.xlsx_sha256 === 'string' && submission.xlsx_sha256 !== sourceSha256)
+      throw new Error('result belongs to a different workbook than the one submitted');
+  }
   const devices = environmentDevices(attribution);
   const unmapped: { path: string; reason: string }[] = [];
   const linesFor = (log: string) => log.split(/\r?\n/).map((line) => line.replace(/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\s?/, ''));
