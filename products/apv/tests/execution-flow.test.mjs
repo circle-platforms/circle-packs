@@ -105,6 +105,22 @@ test('workbook stage parses the frozen workbook before anything else (高2)', ()
   assert.equal(after.actions[0].resource, 'gateway');
 });
 
+test('an oversized workbook projection is re-projected slim through the real hub result slot', () => {
+  const oversized = obs('workbook', { result: { original: { reference: { kind: 'artifact', artifactId: 'art_book', sha256: 'a'.repeat(64), size: 10 }, slot: 'hub.result.abc' } } });
+  const reproject = transition(input({ stage: 'workbook' }, [oversized]));
+  assert.equal(reproject.state.stage, 'workbook');
+  assert.equal(reproject.actions[0].stepId, 'workbook-slim');
+  assert.equal(reproject.actions[0].export, 'projectWorkbookSlim');
+  assert.deepEqual(reproject.actions[0].byteSlots, ['hub.result.abc']); // the actual C slot, never a fabricated one
+  const slimBook = { sha256: 'f'.repeat(64), commands: [{ command: 'service inspect alpha' }], hostCommands: [], cases: [{ autoid: '301' }] };
+  const advanced = transition(input({ stage: 'workbook' }, [oversized, obs('workbook-slim', { result: slimBook })]));
+  assert.equal(advanced.state.stage, 'environment');
+  assert.equal(advanced.actions[0].tool, 'env_prepare');
+  const failedSlim = transition(input({ stage: 'workbook' }, [oversized, obs('workbook-slim', { status: 'failed', error: { code: 'INVALID_PAYLOAD' } })]));
+  assert.equal(failedSlim.state.stage, 'failed');
+  assert.equal(failedSlim.actions[0].code, 'INVALID_PAYLOAD');
+});
+
 test('environment → topology → device-map → tree, gates built from the book and the tree (高1/高2)', () => {
   const env = obs('environment', { result: { device_count: 1, conf: { device_ips: ['192.0.2.11'] }, ready: true, build_checked: true, checks: [{ check: 'device_build', ok: true, detail: 'device reports SYNTHETIC_BUILD_301, gateway bundle is SYNTHETIC_BUILD_301' }] } });
   const withConf = transition(input({ stage: 'environment' }, [env]));

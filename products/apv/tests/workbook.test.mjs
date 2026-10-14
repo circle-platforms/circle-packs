@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import ExcelJS from 'exceljs';
-import { readExecutionWorkbook, projectWorkbook } from '../tools/workbook.ts';
+import { readExecutionWorkbook, projectWorkbook, projectWorkbookSlim } from '../tools/workbook.ts';
 import { FunctionContract } from '../tools/function-contract.ts';
 
 const HEADERS = ['自动化ID', '优先级', '语句类型', '描述', '测试对象', '方法', '数据', '临时保存期望结果', '输入变量'];
@@ -94,6 +94,21 @@ test('projectWorkbook keeps description, commands and call on every step', async
   assert.equal(steps[1].description, 'host dig');
   assert.equal(steps[1].call.command, 'dig @192.0.2.70 autotest.com');
   assert.equal(steps[1].functionStatus, 'enabled');
+});
+
+test('projectWorkbookSlim drops descriptions and keeps the gating fields', async () => {
+  const bytes = await makeBook([
+    ['100000000000000001', 'P1', 2, 'device cfg', 'APV_0', 'cmd_config', 'sdns on', null, null],
+    [null, null, 3, 'check', 'check_point', 'found', 'sdns', null, null],
+  ]);
+  const full = await projectWorkbook(bytes, enc(CONTRACT));
+  const slim = projectWorkbookSlim(enc(JSON.stringify(full)));
+  assert.equal(slim.sha256, full.sha256);
+  assert.deepEqual(slim.commands, full.commands);
+  assert.equal(slim.cases[0].steps[0].description, undefined);
+  assert.deepEqual(slim.cases[0].steps[0].commands, ['sdns on']);
+  assert.throws(() => projectWorkbookSlim(enc('{oops')), /not valid UTF-8 JSON/);
+  assert.throws(() => projectWorkbookSlim(enc('{"foo":1}')), /not the projected book/);
 });
 
 test('rejects a case without a checkpoint', async () => {

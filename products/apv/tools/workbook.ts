@@ -116,6 +116,31 @@ export async function readExecutionWorkbook(bytes: Buffer, functions?: FunctionC
   }
 }
 
+// The slim re-projection for an oversized book: hub retains the full projection as
+// the step original and hands its bytes to the frame through the dynamic
+// hub.result.<stepKey> slot. This export reads those retained bytes and returns the
+// same shape minus the per-step description (the only field allowed to be big; the
+// full projection stays in the original). It never re-reads the workbook.
+export function projectWorkbookSlim(projectionBytes: Uint8Array) {
+  let parsed: any;
+  try { parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(projectionBytes)); }
+  catch { throw new ModuleError('INVALID_PAYLOAD', 'Workbook projection original is not valid UTF-8 JSON'); }
+  if (typeof parsed?.sha256 !== 'string' || !Array.isArray(parsed?.cases) || !Array.isArray(parsed?.commands) || !Array.isArray(parsed?.hostCommands))
+    throw new ModuleError('INVALID_PAYLOAD', 'Workbook projection original is not the projected book');
+  return {
+    sha256: parsed.sha256,
+    cases: parsed.cases.map((item: any) => ({
+      autoid: item.autoid,
+      steps: (Array.isArray(item?.steps) ? item.steps : []).map((step: any) => {
+        const slim = { ...step };
+        delete slim.description;
+        return slim;
+      }),
+    })),
+    commands: parsed.commands,
+    hostCommands: parsed.hostCommands,
+  };
+}
 // The small projection the transition gates on: commands, host dispatches and case
 // identities from the frozen workbook original. Byte-oriented so an oversized book
 // never enters the frame; the optional contract original enables status annotation

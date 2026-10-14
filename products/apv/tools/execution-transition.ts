@@ -19,6 +19,16 @@ import { refusalFacts } from './refusal.ts';
 const action = (kind: ActionKind, stepId: string, fields: Record<string, unknown> = {}, occurrence = 0) => ({ kind, stepId, occurrence, ...fields });
 const observation = (input: any, stepId: string) => input.observations?.find((row: any) => row?.facts?.stepId === stepId);
 
+// The book every stage reads: the slim re-projection once hub projected the full one
+// into a hub.result slot, otherwise the plain projection. A bare {original:{slot}}
+// pointer is never the book.
+const bookResult = (input: any) => {
+  const slim = observation(input, 'workbook-slim');
+  if (slim) return slim.facts?.result ?? {};
+  const full = observation(input, 'workbook')?.facts?.result;
+  return full && !full.original?.slot ? full : {};
+};
+
 const RESOURCE = 'gateway';
 
 // A tree head projected from the frozen command-tree original. The projection tool
@@ -52,14 +62,18 @@ export function transition(input: any) {
       ]);
     if (book.facts.status !== 'succeeded') return result('failed', [action('outcome.error', 'workbook-failed', { code: book.facts.error?.code ?? 'HOOK_FAILED', facts: { stage: 'workbook' } })]);
     // An oversized projection is hub-projected into {original:{slot}} pointing at the dynamic
-    // hub.result slot; the frame carries that slot's bytes in controlledBytes. The pointer is
-    // NOT the book — re-project from the actual slot bytes through a second occurrence of the
-    // same Tool (the small shape itself stays under the budget).
+    // hub.result slot; the frame carries that slot's retained bytes in controlledBytes. The
+    // pointer is NOT the book — re-project a slim copy from the actual slot bytes (a second
+    // Tool call that references the real hub slot, never a fabricated one).
     const projected = book.facts.result?.original?.slot;
-    if (projected)
-      return result('workbook', [
-        action('tool.call', 'workbook', { path: 'tools/workbook.ts', export: 'projectWorkbook', args: [], byteSlots: ['workbook', 'function-contract'] }, 1),
-      ]);
+    if (projected) {
+      const slim = observation(input, 'workbook-slim');
+      if (!slim)
+        return result('workbook', [
+          action('tool.call', 'workbook-slim', { path: 'tools/workbook.ts', export: 'projectWorkbookSlim', args: [], byteSlots: [projected] }),
+        ]);
+      if (slim.facts.status !== 'succeeded') return result('failed', [action('outcome.error', 'workbook-slim-failed', { code: slim.facts.error?.code ?? 'HOOK_FAILED', facts: { stage: 'workbook' } })]);
+    }
     return result('environment', [action('provider.call', 'environment', { resource: RESOURCE, tool: 'env_prepare', args: { device_build: build } })]);
   }
 
@@ -92,26 +106,18 @@ export function transition(input: any) {
     // present comes from the frozen command-check original (the sync tool's shape,
     // {result:{commands:[{command,status,violations}]}}), projected by a pure tool;
     // the workbook observation supplies the command list.
-    const commands = ((observation(input, 'workbook')?.facts?.result ?? {}).commands ?? []).map((row: any) => row.command);
+    const commands = (bookResult(input).commands ?? []).map((row: any) => row.command);
     return result('tree', [action('tool.call', 'tree', { path: 'tools/execution-contracts.ts', export: 'projectCommandTree', args: [commands], byteSlots: ['command-check'] })]);
   }
 
   if (state.stage === 'tree') {
     const tree = observation(input, 'tree');
-    if (!tree) {
-      // If the workbook projection itself was hub-projected (oversized), re-run it with the
-      // dynamic result slot before gating on its content.
-      const bookObserved = observation(input, 'workbook');
-      const projected = bookObserved?.facts?.result?.original?.slot;
-      if (projected && !input.controlledBytes?.some((entry: any) => entry.slot === 'workbook'))
-        return result('workbook', [action('tool.call', 'workbook', { path: 'tools/workbook.ts', export: 'projectWorkbook', args: [], byteSlots: ['workbook', 'function-contract'] })]);
-      return result('tree', []);
-    }
+    if (!tree) return result('tree', []);
     if (tree.facts.status !== 'succeeded') return result('failed', [action('outcome.error', 'tree-failed', { code: 'HOOK_FAILED', facts: { stage: 'tree' } })]);
     const heads = tree.facts.result.heads ?? [];
     // The workbook projection (from the earlier tool.call) and the tree heads drive
     // the verify gates; clients cannot widen or narrow either list.
-    const book = observation(input, 'workbook')?.facts?.result ?? {};
+    const book = bookResult(input);
     const actions = [
       ...(book.commands ?? []).map((row: any, index: number) => action('hook.verify', `verify-device-${index}`, {
         event: HOOK_EVENTS[0],
@@ -132,7 +138,7 @@ export function transition(input: any) {
 
   // verify: every gate succeeded; hub runs beforeDispatch at the write exit.
   if (state.stage === 'verify') {
-    const book = observation(input, 'workbook')?.facts?.result ?? {};
+    const book = bookResult(input);
     const expected = (book.commands?.length ?? 0) + (book.hostCommands?.length ?? 0) + new Set((book.hostCommands ?? []).map((row: any) => row.host)).size;
     const verifies = input.observations?.filter((row: any) => typeof row?.facts?.stepId === 'string' && row.facts.stepId.startsWith('verify-')) ?? [];
     if (verifies.length < Math.max(expected, 1)) return result('verify', []);
@@ -162,7 +168,7 @@ export function transition(input: any) {
     if (carried && typeof carried === 'object' && Array.isArray((carried as any).cases) === false && (carried as any).state !== undefined)
       return result('result', [action('provider.call', 'result', { resource: RESOURCE, tool: 'case_results', args: { task_id: carried.task_id ?? null } })]);
     const raw = submitted.facts.result;
-    const book = observation(input, 'workbook')?.facts?.result ?? { cases: [] };
+    const book = bookResult(input).cases ? bookResult(input) : { cases: [] };
     const attribution = { environment: observation(input, 'environment')?.facts?.result ?? null, topology: observation(input, 'topology')?.facts?.result ?? null };
     return result('parse', [
       action('tool.call', 'parse-results', { path: 'tools/results.ts', export: 'executionResults', args: [book, raw, attribution], byteSlots: ['workbook'] }),
@@ -174,7 +180,7 @@ export function transition(input: any) {
     if (!resultObserved) return result('result', []);
     if (resultObserved.facts.status !== 'succeeded') return refusalError('result-failed', 'result', resultObserved);
     const raw = resultObserved.facts.result;
-    const book = observation(input, 'workbook')?.facts?.result ?? { cases: [] };
+    const book = bookResult(input).cases ? bookResult(input) : { cases: [] };
     const attribution = { environment: observation(input, 'environment')?.facts?.result ?? null, topology: observation(input, 'topology')?.facts?.result ?? null };
     return result('parse', [
       action('tool.call', 'parse-results', { path: 'tools/results.ts', export: 'executionResults', args: [book, raw, attribution], byteSlots: ['workbook'] }),

@@ -18,7 +18,9 @@ export type HookEvent = (typeof HOOK_EVENTS)[number];
 export const DELIVERY_STATUSES = ['succeeded', 'partial'] as const;
 // Registered hub error codes this flow may emit (packages/contracts/src/index.ts);
 // product judgment codes that are not registered here must not appear in outcomes.
-export const OUTCOME_CODES = ['BUILD_MISMATCH', 'GATEWAY_REFUSED', 'LEASE_UNAVAILABLE', 'INVALID_EXECUTION_WORKBOOK', 'COMMAND_VALIDATION_FAILED', 'COMMAND_NOT_IN_TREE', 'HOOK_FAILED', 'EVIDENCE_INSUFFICIENT', 'SOURCE_UNREACHABLE', 'UPSTREAM_TIMEOUT', 'SOURCE_HASH_MISMATCH'] as const;
+// INVALID_PAYLOAD is the passthrough for a Tool-stage input failure (for example the
+// function-contract original not parsing); it is hub-registered, not a product code.
+export const OUTCOME_CODES = ['BUILD_MISMATCH', 'GATEWAY_REFUSED', 'LEASE_UNAVAILABLE', 'INVALID_EXECUTION_WORKBOOK', 'COMMAND_VALIDATION_FAILED', 'COMMAND_NOT_IN_TREE', 'HOOK_FAILED', 'EVIDENCE_INSUFFICIENT', 'INVALID_PAYLOAD', 'SOURCE_UNREACHABLE', 'UPSTREAM_TIMEOUT', 'SOURCE_HASH_MISMATCH'] as const;
 export type OutcomeCode = (typeof OUTCOME_CODES)[number];
 
 // The provider protocol tools this flow drives — the names the resource's
