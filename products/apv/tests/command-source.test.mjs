@@ -123,3 +123,80 @@ test('two signatures of the same head (overload) pick the matching arity', () =>
   assert.deepEqual(entry.violations, []);
   assert.ok(entry.matchedSignatures.length === 1);
 });
+
+test('an eight-word head matches; a nine-word tree head is refused (hub word limit)', () => {
+  const words8 = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+  const xml = new TextEncoder().encode(`<?xml version="1.0"?><tree><item name="${words8.join(' ')}"/></tree>`);
+  const { commands } = parseCommandTree(xml);
+  const checked = commandCheck(commands, [words8.join(' ')]);
+  assert.equal(checked.commands[0].status, 'hit');
+  assert.equal(checked.commands[0].head, words8.join(' '));
+  const nine = new TextEncoder().encode('<?xml version="1.0"?><tree><item name="a b c d e f g h i"/></tree>');
+  assert.throws(() => commandCheck(parseCommandTree(nine).commands, ['a b c d e f g h i']), /one to eight words/);
+});
+
+test('U16/U32 bounds and OUT_OF_RANGE deduplication match the hub', () => {
+  const xml = new TextEncoder().encode(`<?xml version="1.0"?><tree>
+    <item name="port"><arg type="U16"/><arg type="U32" min="5" max="10"/></item>
+  </tree>`);
+  const { commands } = parseCommandTree(xml);
+  const checked = commandCheck(commands, [
+    'port 65535 5',
+    'port 65536 65536',   // U16 out of its own range; U32 out of the declared min/max — one violation each
+    'port 99999 7',       // U16 beyond both its type range AND any declared range — deduped to one
+    'port 70000 4294967295',
+  ]);
+  const by = (input) => checked.commands.find((c) => c.command === input);
+  assert.deepEqual(by('port 65535 5').violations, []);
+  assert.deepEqual(by('port 65536 65536').violations, [
+    { code: 'OUT_OF_RANGE', position: 1, minimum: 0, maximum: 65535 },
+    { code: 'OUT_OF_RANGE', position: 2, minimum: 5, maximum: 10 },
+  ]);
+  assert.deepEqual(by('port 99999 7').violations, [{ code: 'OUT_OF_RANGE', position: 1, minimum: 0, maximum: 65535 }]);
+  assert.deepEqual(by('port 70000 4294967295').violations, [
+    { code: 'OUT_OF_RANGE', position: 1, minimum: 0, maximum: 65535 },
+    { code: 'OUT_OF_RANGE', position: 2, minimum: 5, maximum: 10 }, // beyond the declared range
+  ]);
+});
+
+test('an unsupported parameter type reports UNSUPPORTED_PARAMETER_TYPE without TYPE_MISMATCH', () => {
+  const xml = new TextEncoder().encode('<?xml version="1.0"?><tree><item name="flag"><arg type="BOOL"/></item></tree>');
+  const { commands } = parseCommandTree(xml);
+  const checked = commandCheck(commands, ['flag on']);
+  assert.deepEqual(checked.commands[0].violations, [{ code: 'UNSUPPORTED_PARAMETER_TYPE', position: 1, type: 'BOOL' }]);
+});
+
+test('an unterminated quote reports TOKENIZE_ERROR as missing', () => {
+  const { commands } = parseCommandTree(XML);
+  const checked = commandCheck(commands, ['sdns zone forward "oops']);
+  assert.equal(checked.commands[0].status, 'missing');
+  assert.deepEqual(checked.commands[0].violations, [{ code: 'TOKENIZE_ERROR' }]);
+});
+
+test('the IPv6 zone id rule matches node:net exactly', () => {
+  const xml = new TextEncoder().encode('<?xml version="1.0"?><tree><item name="addr"><arg type="IPADDR"/></item></tree>');
+  const { commands } = parseCommandTree(xml);
+  const checked = commandCheck(commands, ['addr fe80::1%eth0', 'addr fe80::1%eth_0', 'addr fe80::1%']);
+  const by = (input) => checked.commands.find((c) => c.command === input);
+  assert.deepEqual(by('addr fe80::1%eth0').violations, []);
+  assert.deepEqual(by('addr fe80::1%eth_0').violations, [{ code: 'TYPE_MISMATCH', position: 1, type: 'IPADDR' }]);
+  assert.deepEqual(by('addr fe80::1%').violations, [{ code: 'TYPE_MISMATCH', position: 1, type: 'IPADDR' }]);
+});
+
+test('a tree with no recognized items is refused like the hub tool packaging', () => {
+  const xml = new TextEncoder().encode('<?xml version="1.0"?><tree><menu name="empty"/></tree>');
+  assert.throws(() => checkCommands([], { build: 'B', buildId: 'B' }, xml), /no recognized items/);
+});
+
+test('overload signatures pick the closest exactly like the hub (canonical ids)', () => {
+  const xml = new TextEncoder().encode('<?xml version="1.0"?><tree><scope name="configuration"><item name="ip"><menu name="route"><item name="one"><arg type="IPADDR"/></item><item name="two"><arg type="U16"/></item></menu></item></scope></tree>');
+  // simpler flat overload set: same head, two signatures
+  const tree = [
+    { name: 'ip route', scope: 'configuration', arguments: [{ type: 'IPADDR' }] },
+    { name: 'ip route', scope: 'configuration', arguments: [{ type: 'U16' }] },
+  ];
+  const checked = commandCheck(tree, ['ip route foo']);
+  assert.equal(checked.commands[0].status, 'hit');
+  assert.deepEqual(checked.commands[0].violations, [{ code: 'TYPE_MISMATCH', position: 1, type: 'IPADDR' }]);
+  assert.ok(checked.commands[0].signatureChecks.every((s) => s.signatureId.startsWith('sig_') && s.signatureId.length === 68));
+});

@@ -168,6 +168,13 @@ export function transition(input: any) {
     if (tree.facts.status !== 'succeeded') return result('failed', [action('outcome.error', 'tree-failed', { code: 'HOOK_FAILED', facts: { stage: 'tree' } })]);
     // Both command-source shapes yield heads under one rule; a receipt without heads
     // (older shape) derives them with the shared presentHeads predicate.
+    // XML path binding, symmetric with the JSON path: the check receipt's sourceSha256
+    // is the SHA of the tree bytes the flow actually parsed; it must equal the frozen
+    // command-tree slot reference — otherwise the check ran against something else.
+    const receiptSha = tree.facts.result?.result?.sourceSha256;
+    const treeRef = input.controlledBytes?.find((entry: any) => entry.slot === 'command-tree')?.reference?.sha256;
+    if (receiptSha && treeRef && receiptSha !== treeRef)
+      return result('failed', [action('outcome.error', 'tree-failed', { code: 'SOURCE_HASH_MISMATCH', facts: { stage: 'tree', sourceSha256: receiptSha, expected: treeRef } })]);
     const rawHeads = tree.facts.result.heads;
     const heads = Array.isArray(rawHeads) ? rawHeads : presentHeads(tree.facts.result.commands ?? []);
     // Each device gate carries ONLY its own head: the hook reads present for its own

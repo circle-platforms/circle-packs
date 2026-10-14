@@ -375,3 +375,39 @@ test('every byteSlots Tool runs under the hub argument convention: literals firs
   const result = await fn(...[...toolCall.args, ...toolCall.byteSlots.map((slot) => slotBytes(slot))]);
   assert.ok(Array.isArray(result.heads));
 });
+
+test('the XML receipt must bind to the frozen command-tree sha (4: SOURCE_HASH_MISMATCH)', async () => {
+  const { checkCommands } = await import('../tools/command-check.ts');
+  const xml = new TextEncoder().encode('<?xml version="1.0"?><tree><scope name="configuration"><item name="service"><arg type="STRING"/></item></scope></tree>');
+  const checked = checkCommands(['service alpha'], { build: 'SYNTHETIC_BUILD_301', buildId: 'SYNTHETIC_BUILD_301' }, xml);
+  // the frozen slot reference disagrees with the parsed bytes
+  const frame = input({ stage: 'tree' }, [
+    obs('workbook', { result: BOOK }),
+    obs('tree', { status: 'succeeded', result: checked }),
+  ]);
+  frame.controlledBytes = [{ slot: 'command-tree', role: 'command-tree', reference: { kind: 'source', sourceRevisionId: 's', sha256: 'f'.repeat(64), size: xml.length }, contentBase64: Buffer.from(xml).toString('base64') }];
+  const out = transition(frame);
+  assert.equal(out.state.stage, 'failed');
+  assert.equal(out.actions[0].kind, 'outcome.error');
+  assert.equal(out.actions[0].code, 'SOURCE_HASH_MISMATCH');
+  // matching sha passes through to verify
+  const okFrame = input({ stage: 'tree' }, [
+    obs('workbook', { result: BOOK }),
+    obs('tree', { status: 'succeeded', result: checked }),
+  ]);
+  okFrame.controlledBytes = [{ slot: 'command-tree', role: 'command-tree', reference: { kind: 'source', sourceRevisionId: 's', sha256: checked.result.sourceSha256, size: xml.length }, contentBase64: Buffer.from(xml).toString('base64') }];
+  const ok = transition(okFrame);
+  assert.equal(ok.state.stage, 'verify');
+});
+
+test('the JSON check original must bind to the frozen command-tree sha (transition binding)', async () => {
+  const { projectCommandTree } = await import('../tools/execution-contracts.ts');
+  const checkBytes = new TextEncoder().encode(JSON.stringify({ result: { build: 'SYNTHETIC_BUILD_301', sourceSha256: 'a'.repeat(64), ruleVersion: 'command-tree/1.1.0', commands: [{ command: 'service alpha', status: 'hit', violations: [] }] } }));
+  // invoke under hub order with a tree slot whose sha disagrees → the Tool refuses
+  assert.throws(() => projectCommandTree(['service alpha'], { build: 'SYNTHETIC_BUILD_301', sourceSha256: 'b'.repeat(64) }, checkBytes), /different command tree/);
+  // and the transition maps the failed Tool observation to tree-failed
+  const frame = input({ stage: 'tree' }, [obs('workbook', { result: BOOK }), obs('tree', { status: 'failed', error: { code: 'HOOK_FAILED', message: 'command-check was computed against a different command tree' } })]);
+  const out = transition(frame);
+  assert.equal(out.state.stage, 'failed');
+  assert.equal(out.actions[0].stepId, 'tree-failed');
+});
