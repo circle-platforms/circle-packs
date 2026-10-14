@@ -120,8 +120,10 @@ export async function readExecutionWorkbook(bytes: Buffer, functions?: FunctionC
 // identities from the frozen workbook original. Byte-oriented so an oversized book
 // never enters the frame; the optional contract original enables status annotation
 // without blocking (the parser never enforces enablement — that is the Hook's job).
+// The driver appends byteSlots to the argument tail in their declared order:
+// byteSlots ['workbook', 'function-contract'] means (workbookBytes, contractBytes?).
 // imports: exceljs@4.4.0 (already declared for this module)
-export async function projectWorkbook(contractBytes: Uint8Array | undefined, workbookBytes?: Buffer) {
+export async function projectWorkbook(workbookBytes: Buffer, contractBytes?: Uint8Array) {
   const book = await readExecutionWorkbook(workbookBytes, contractBytes ? new (await import('./function-contract.ts')).FunctionContract(contractBytes) : undefined);
   return {
     sha256: book.sha256,
