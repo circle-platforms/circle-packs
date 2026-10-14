@@ -9,38 +9,71 @@
 export interface DeviceAttribution { environment?: any; topology?: any }
 export interface DeviceMap { addresses: string[][]; source: string }
 
-// IP 校验:IPv4 点分十进制(0–255 每段)与 IPv6(冒号十六进制,含 :: 压缩与
-// 可选末段 IPv4),语义与 node:net 的 isIP 一致——只判形状,不做 DNS。
+// IPv6 canonical form: expand ::, lowercase hex, fold a trailing IPv4 group into
+// two hex groups, strip a %zone (node:net rejects zones; matching must not depend
+// on them). Non-strings and malformed text return null.
+export function normalizeIpv6(value: string): string | null {
+  const [bare] = value.split('%');
+  if ((bare.match(/::/g) ?? []).length > 1) return null;
+  const doubleColon = bare.includes('::');
+  const [head, tail = ''] = bare.split('::');
+  const headGroups = head ? head.split(':') : [];
+  const tailGroups = tail ? tail.split(':') : [];
+  const textual = [...headGroups, ...tailGroups];
+  if (textual.some((g) => g === '')) return null; // stray empty group (e.g. ":::1")
+  const v4In6 = (group: string, isLast: boolean) => isLast && group.includes('.') && ipVersion(group) === 4;
+  let groups: number[] = [];
+  for (const [index, group] of textual.entries()) {
+    const isLast = index === textual.length - 1;
+    if (v4In6(group, isLast)) {
+      const parts = group.split('.').map(Number);
+      groups.push((parts[0] << 8) | parts[1], (parts[2] << 8) | parts[3]);
+      continue;
+    }
+    if (!/^[0-9a-fA-F]{1,4}$/.test(group)) return null;
+    groups.push(parseInt(group, 16));
+  }
+  if (doubleColon) {
+    if (groups.length >= 8) return null;
+    const fill = new Array(8 - groups.length).fill(0);
+    const at = headGroups.length;
+    groups = [...groups.slice(0, at), ...fill, ...groups.slice(at)];
+  }
+  if (groups.length !== 8) return null;
+  const hex = groups.map((g) => g.toString(16));
+  // compress the longest run (>=2) of zero groups
+  let best = hex.join(':');
+  let i = 0;
+  while (i < 8) {
+    if (hex[i] !== '0') { i++; continue; }
+    let j = i;
+    while (j < 8 && hex[j] === '0') j++;
+    if (j - i >= 2) {
+      const candidate = `${hex.slice(0, i).join(':')}::${hex.slice(j).join(':')}`;
+      if (candidate.length < best.length) best = candidate;
+    }
+    i = j;
+  }
+  return best;
+}
+
+// IP shape validation: IPv4 dotted-quad (no leading zeros) and IPv6 with ::,
+// optional trailing IPv4 and %zone — shapes node:net accepts, then normalized.
 export function ipVersion(value: string): 0 | 4 | 6 {
   if (typeof value !== 'string' || value.includes('/') || value.includes(' ')) return 0;
   const v4 = value.split('.');
   if (v4.length === 4 && v4.every((part) => /^\d{1,3}$/.test(part) && Number(part) <= 255 && (part.length === 1 || part[0] !== '0'))) return 4;
   if (!value.includes(':')) return 0;
-  if ((value.match(/::/g) ?? []).length > 1) return 0;
-  const [head, tail = ''] = value.split('::');
-  const groups = [...(head ? head.split(':') : []), ...(tail ? tail.split(':') : [])].filter((g) => g !== '');
-  if (value.includes('::')) {
-    if (head === '' && tail === '') return groups.length === 0 ? 6 : 0; // "::" itself
-    if (groups.length >= 8) return 0;
-  } else if (groups.length !== 8) return 0;
-  for (const group of groups) {
-    if (/^[0-9a-fA-F]{1,4}$/.test(group)) continue;
-    // trailing IPv4 form (only in the last group)
-    if (group === groups[groups.length - 1] && group.includes('.')) {
-      return ipVersion(group) === 4 ? 6 : 0;
-    }
-    return 0;
-  }
-  return 6;
+  return normalizeIpv6(value) === null ? 0 : 6;
 }
 
-// 地址规范化:IPv6 压缩为小写规范形(括号剥除),IPv4 原样;非 IP 返回 null。
+// 地址规范化:剥括号、去 %zone、IPv6 展开压缩为小写规范形;IPv4 原样;非 IP 为 null。
 export const deviceAddress = (value: unknown): string | null => {
   if (typeof value !== 'string') return null;
-  const bare = value.startsWith('[') && value.endsWith(']') ? value.slice(1, -1) : value;
+  const bare = value.startsWith('[') && value.endsWith(']') && value.includes(':') ? value.slice(1, -1) : value;
   const version = ipVersion(bare);
   if (version === 4) return bare;
-  if (version === 6) return bare.toLowerCase();
+  if (version === 6) return normalizeIpv6(bare);
   return null;
 };
 
