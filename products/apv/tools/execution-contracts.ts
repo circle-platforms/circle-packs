@@ -16,7 +16,9 @@ export const HOOK_EVENTS = ['verify.deviceCommand', 'verify.hostCommand', 'verif
 export type HookEvent = (typeof HOOK_EVENTS)[number];
 
 export const DELIVERY_STATUSES = ['succeeded', 'partial'] as const;
-export const OUTCOME_CODES = ['BUILD_MISMATCH', 'GATEWAY_REFUSED', 'INVALID_EXECUTION_WORKBOOK', 'LEASE_UNAVAILABLE', 'COMMAND_VALIDATION_FAILED', 'HOST_NOT_IN_BED', 'HOST_SET_UNDECLARED', 'COMMAND_NOT_LITERAL', 'HOST_COMMAND_OUTSIDE_POLICY', 'COMMAND_NOT_IN_TREE', 'DEVICE_MAP_UNAVAILABLE', 'CHECKPOINT_UNMAPPED', 'STEP_OUTCOME_NOT_PROVEN'] as const;
+// Registered hub error codes this flow may emit (packages/contracts/src/index.ts);
+// product judgment codes that are not registered here must not appear in outcomes.
+export const OUTCOME_CODES = ['BUILD_MISMATCH', 'GATEWAY_REFUSED', 'LEASE_UNAVAILABLE', 'INVALID_EXECUTION_WORKBOOK', 'COMMAND_VALIDATION_FAILED', 'HOST_NOT_IN_BED', 'HOST_SET_UNDECLARED', 'COMMAND_NOT_LITERAL', 'HOST_COMMAND_OUTSIDE_POLICY', 'COMMAND_NOT_IN_TREE', 'HOOK_FAILED', 'EVIDENCE_INSUFFICIENT', 'SOURCE_UNREACHABLE', 'UPSTREAM_TIMEOUT', 'SOURCE_HASH_MISMATCH'] as const;
 export type OutcomeCode = (typeof OUTCOME_CODES)[number];
 
 // The provider protocol tools this flow drives, as declared by the bound resource's
@@ -54,16 +56,15 @@ export function finiteJsonOk(value: unknown, seen = new Set<unknown>()): boolean
   if (type !== 'object') return false;
   const proto = Object.getPrototypeOf(value);
   if (proto !== Object.prototype && proto !== Array.prototype) return false;
-  if (seen.has(value)) return false;
+  if (seen.has(value)) return false; // a cycle on the current path
   seen.add(value);
-  if (Array.isArray(value)) {
-    if (Object.keys(value).length !== value.length) return false; // sparse
-    return value.every((item) => finiteJsonOk(item, seen));
-  }
-  return Object.values(value).every((item) => finiteJsonOk(item, seen));
+  const ok = Array.isArray(value)
+    ? Object.keys(value).length === value.length && value.every((item) => finiteJsonOk(item, seen))
+    : Object.values(value).every((item) => finiteJsonOk(item, seen));
+  seen.delete(value); // shared references on different paths are legitimate JSON
+  return ok;
 }
 
-// Budget walk: string/key UTF-8 sizes, array lengths, nesting depth.
 function budgetOk(value: unknown, depth: number, problems: string[]): boolean {
   if (typeof value === 'string') {
     if (byteLength(value) > BUDGETS.stringBytes) problems.push(`string over ${BUDGETS.stringBytes} bytes`);
@@ -106,8 +107,8 @@ export function validateTransitionOutput(output: any): string[] {
       if (action.kind === 'delivery.propose' && !DELIVERY_STATUSES.includes(action.status)) problems.push(`delivery status must be succeeded|partial`);
     }
   }
-  const serialized = JSON.stringify(output);
-  if (byteLength(serialized) > BUDGETS.stateBytes + BUDGETS.stringBytes) problems.push('output envelope over budget');
+  const stateSerialized = JSON.stringify(output.state);
+  if (byteLength(stateSerialized) > BUDGETS.stateBytes) problems.push(`state over ${BUDGETS.stateBytes} bytes`);
   budgetOk(output.state, 1, problems);
   return problems;
 }
