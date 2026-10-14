@@ -115,3 +115,52 @@ export async function readExecutionWorkbook(bytes: Buffer, functions?: FunctionC
     throw invalid('Workbook could not be read as the execution contract');
   }
 }
+
+// The slim re-projection for an oversized book: hub retains the full projection as
+// the step original and hands its bytes to the frame through the dynamic
+// hub.result.<stepKey> slot. This export reads those retained bytes and returns the
+// same shape minus the per-step description (the only field allowed to be big; the
+// full projection stays in the original). It never re-reads the workbook.
+export function projectWorkbookSlim(projectionBytes: Uint8Array) {
+  let parsed: any;
+  try { parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(projectionBytes)); }
+  catch { throw new ModuleError('INVALID_PAYLOAD', 'Workbook projection original is not valid UTF-8 JSON'); }
+  if (typeof parsed?.sha256 !== 'string' || !Array.isArray(parsed?.cases) || !Array.isArray(parsed?.commands) || !Array.isArray(parsed?.hostCommands))
+    throw new ModuleError('INVALID_PAYLOAD', 'Workbook projection original is not the projected book');
+  return {
+    sha256: parsed.sha256,
+    cases: parsed.cases.map((item: any) => ({
+      autoid: item.autoid,
+      steps: (Array.isArray(item?.steps) ? item.steps : []).map((step: any) => {
+        const slim = { ...step };
+        delete slim.description;
+        return slim;
+      }),
+    })),
+    commands: parsed.commands,
+    hostCommands: parsed.hostCommands,
+  };
+}
+// The small projection the transition gates on: commands, host dispatches and case
+// identities from the frozen workbook original. Byte-oriented so an oversized book
+// never enters the frame; the optional contract original enables status annotation
+// without blocking (the parser never enforces enablement — that is the Hook's job).
+// The driver appends byteSlots to the argument tail in their declared order:
+// byteSlots ['workbook', 'function-contract'] means (workbookBytes, contractBytes?).
+// imports: exceljs@4.4.0 (already declared for this module)
+export async function projectWorkbook(workbookBytes: Buffer, contractBytes?: Uint8Array) {
+  const book = await readExecutionWorkbook(workbookBytes, contractBytes ? new (await import('./function-contract.ts')).FunctionContract(contractBytes) : undefined);
+  const statusByRow = new Map([...book.initialization, ...book.cases.flatMap((item) => item.steps)].map((step) => [step.row, step.functionStatus ?? null]));
+  return {
+    sha256: book.sha256,
+    cases: book.cases.map((item) => ({
+      autoid: item.autoid,
+      steps: item.steps.map((step) => ({
+        row: step.row, description: step.description, object: step.object, method: step.method, data: step.data,
+        functionStatus: step.functionStatus ?? null, commands: step.commands, ...(step.call ? { call: step.call } : {}),
+      })),
+    })),
+    commands: book.commands.map((row) => ({ autoid: row.autoid, row: row.row, object: row.object, command: row.command })),
+    hostCommands: book.hostCommands.map((row) => ({ autoid: row.autoid, row: row.row, object: row.object, method: row.method, host: row.host, command: row.command, kwargs: row.kwargs, functionStatus: statusByRow.get(row.row) ?? null })),
+  };
+}

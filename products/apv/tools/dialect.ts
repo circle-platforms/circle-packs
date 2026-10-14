@@ -7,7 +7,7 @@ import { ModuleError } from './mindmap.ts';
 // host-policy Hook against the approved resource declaration, never by this parser; here a
 // name is a host token when it looks like one and is not a reserved workbook object.
 const RESERVED_OBJECTS = new Set(['check_point', 'time', 'test_env']);
-const DEVICE_OBJECT = /^APV_\d+$/;
+const DEVICE_OBJECT = /^(?:APV_\d+|Seg\d+_tmp)$/;
 const HOST_TOKEN = /^[A-Za-z][A-Za-z0-9_.-]{0,62}$/;
 export const isHostToken = (name: string): boolean =>
   typeof name === 'string' && HOST_TOKEN.test(name) && !RESERVED_OBJECTS.has(name) && !DEVICE_OBJECT.test(name);

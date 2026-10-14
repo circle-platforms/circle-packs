@@ -166,11 +166,15 @@
       "kind": "product-line",
       "root": "products/apv",
       "manifestPath": "products/apv/product-line.json",
-      "version": "1.2.2",
+      "version": "1.3.0",
       "files": [
         {
           "path": "README.md",
-          "sha256": "7c27107313ed75afbf81dc87b52398df8b7d2fb87710a8ee0d720aa10d0a7283"
+          "sha256": "2ec86ac0c6d25f4d4ecc0979948dca9c6554b9699be13a311f0c0f1e262f0762"
+        },
+        {
+          "path": "flows/apv-case-execute-v2.json",
+          "sha256": "ce6d256d051cf8896ce5565690ad4297af5b2e699cfe18c9f8f38677089dc645"
         },
         {
           "path": "flows/apv-case-execute.json",
@@ -194,11 +198,11 @@
         },
         {
           "path": "product-line.json",
-          "sha256": "25c672982913a7c957a64faba60a1ee33794fe2ca2ce3b0ccb6811619a8f7f01"
+          "sha256": "9c24c197e31f924ebd5224a2a9d2e0caa5c696e9802f5d06c1da4ca92cb0781e"
         },
         {
           "path": "resources/case-gateway.json",
-          "sha256": "9fcba1409c748b2721800f5d8cba65adfa7479f4e1145581b6b88a71e40eb315"
+          "sha256": "d708c5d943826679eaa354e70675dc0e9fe617cfd616194a1d863ffcf725413f"
         },
         {
           "path": "sources/command-tree.md",
@@ -211,6 +215,10 @@
         {
           "path": "tests/defect-claims.test.mjs",
           "sha256": "0beb3f1302804202256534263d9627296db234fd188015e07aa6c69e6c7d412f"
+        },
+        {
+          "path": "tests/execution-flow.test.mjs",
+          "sha256": "ce825d786526b7f07c77a96cf632da70518d26ac738b5a478ccad67618f80a27"
         },
         {
           "path": "tests/function-contract-dialect.test.mjs",
@@ -229,8 +237,12 @@
           "sha256": "b2f47f404437a83668e6fd5b3c957a2de93e788df414fc099a43994cf585a8a1"
         },
         {
+          "path": "tests/results.test.mjs",
+          "sha256": "91be71a8f929791f08915094872d24c34b2361e9c39dc0bcda5285175bcd8e39"
+        },
+        {
           "path": "tests/workbook.test.mjs",
-          "sha256": "6234ef66dc2fd68b3f0ed781f288247dc11e660b7509f27864b6cbb06b3b0d55"
+          "sha256": "cdc49d77c3977bf463eb4ab0a5e23d18a7ec37bfe1258cd316d79ee6c2c2c8a4"
         },
         {
           "path": "tools/contracts.ts",
@@ -242,7 +254,19 @@
         },
         {
           "path": "tools/dialect.ts",
-          "sha256": "3dc252ba0c7e36e9777e9671c3b6f8e9277ada101dd7b8955aa19f26fae1fb24"
+          "sha256": "01ef4272a3690170abe6e709c163e06b16c98545510683b5df3101f822551a8e"
+        },
+        {
+          "path": "tools/environment.ts",
+          "sha256": "56fe218b202791f1658d1612b9fe9c4b37e3b14132afa7c7b0bb9d4c92762db8"
+        },
+        {
+          "path": "tools/execution-contracts.ts",
+          "sha256": "ba2226b781a6e495a843da69a8cca6c816009e9c30ebef980740a9a6206331b8"
+        },
+        {
+          "path": "tools/execution-transition.ts",
+          "sha256": "bc1d9505ca6bf8ca822db47109742fad6b52d9e3df52d6ab9391a8909def13e2"
         },
         {
           "path": "tools/function-contract.ts",
@@ -253,11 +277,23 @@
           "sha256": "33b135290a43927ae3db2079c1e1f3e1db3eca658b1090c473ff68bfa29df8ac"
         },
         {
+          "path": "tools/refusal.ts",
+          "sha256": "8c057dbd6de08400650cab8f6a90bc1d851881012121ef16a86479ebd97b6e4f"
+        },
+        {
+          "path": "tools/results.ts",
+          "sha256": "8c3f7bc02a8bcdba06016f089f1d29a774addc16e1b5d1aa7843656b985ceee1"
+        },
+        {
+          "path": "tools/sha256.ts",
+          "sha256": "8b776b21605323bac1a3a080b18644123a8860139f241ebbd0e7546d824415b8"
+        },
+        {
           "path": "tools/workbook.ts",
-          "sha256": "5b799dcd94e5d4b353f0efd6f94b5e72b5bf7726c7c9703b9d3cf3a1e11f622b"
+          "sha256": "1c1372e36f85700388b7950162062570387da6faf8a3d14b754917d007fcf2b4"
         }
       ],
-      "digest": "faa9e79d03a97fa1e5142a2f169cecc2caef7f52f7d714f9aac53226164c347d"
+      "digest": "a3147276ed26c7636216cb913b5a40c43cb6e03e9d77a44892cc44206d110af3"
     }
   ]
 }

@@ -1,0 +1,13 @@
+{
+  "schema": "circle-packs/flow/1",
+  "id": "apv-case-execute-v2",
+  "version": "apv-case-execute/2",
+  "driver": "hub-execution-transition/1",
+  "transition": {
+    "path": "tools/execution-transition.ts",
+    "export": "transition"
+  },
+  "initialState": {
+    "stage": "workbook"
+  }
+}
