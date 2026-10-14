@@ -218,7 +218,7 @@
         },
         {
           "path": "tests/execution-flow.test.mjs",
-          "sha256": "619c9aff1edbce5e3047b61b68c6b56eb2c2b637c92bf54281f6dbd087cb83ca"
+          "sha256": "ce825d786526b7f07c77a96cf632da70518d26ac738b5a478ccad67618f80a27"
         },
         {
           "path": "tests/function-contract-dialect.test.mjs",
@@ -266,7 +266,7 @@
         },
         {
           "path": "tools/execution-transition.ts",
-          "sha256": "efdd1e5e45ff5f143893d6269bbf782aea25c2e90cc8ef5a70aa45c50c60bd17"
+          "sha256": "2c144df1a8655bdd61e5b22dc9f35e07db3d2f20ea6fdb9c86e53ba165af8f7b"
         },
         {
           "path": "tools/function-contract.ts",
@@ -293,7 +293,7 @@
           "sha256": "1c1372e36f85700388b7950162062570387da6faf8a3d14b754917d007fcf2b4"
         }
       ],
-      "digest": "e46f869c41b0d9496a731c55765a2cf74be37e49f014feb3321773bcdd1223fe"
+      "digest": "07a1384553723a4981724b4b9f5066abf8aa3d780ddbf4d1128801231823fb5c"
     }
   ]
 }

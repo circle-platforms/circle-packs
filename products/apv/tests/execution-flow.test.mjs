@@ -217,10 +217,10 @@ test('parse and delivery: results via byteSlots, projected or failed parses deli
   const done = transition(input({ stage: 'submit' }, [obs('submit', { result: { channel: 'ready', rc: 0, cases: [{ case_id: '301', result: 'PASS', log_stale: false, log: '' }] } }), obs('workbook', { result: BOOK })]));
   assert.equal(done.state.stage, 'parse');
   const parse = done.actions[0];
-  // args stay tiny (identifiers/attribution only); the book and the raw ride byte slots
+  // the slim book and the frame-sized raw ride literal args; workbook bytes ride the slot
   assert.deepEqual(parse.byteSlots, ['workbook']);
-  assert.equal(parse.args[0], null);
-  assert.equal(parse.args[1], null);
+  assert.equal(parse.args[0], BOOK); // slim book observation, small by design
+  assert.equal(parse.args[1].channel, 'ready'); // terminal facts result, already budgeted
   assert.equal(parse.args[2].environment, null); // no environment observation in this frame
   // when the raw was hub-projected, its dynamic slot joins the byte slots
   const withSlot = transition(input({ stage: 'submit' }, [obs('submit', { result: { original: { reference: { kind: 'artifact', artifactId: 'a', sha256: '0'.repeat(64), size: 9 }, slot: 'hub.result.op-submit' } } })]));

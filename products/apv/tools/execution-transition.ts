@@ -49,11 +49,17 @@ const RESOURCE = 'gateway';
 // observation was projected ({original:{slot}} — the frame carries those bytes); the
 // frozen workbook original rides its 'workbook' slot. Literal args stay tiny: only the
 // attribution facts. results.ts signature: (book, raw, attribution, workbookBytes?).
+// Builds the parse action. book is the slim projection observation (small by design —
+// descriptions live only in the retained original) and raw is the terminal observation's
+// facts result (already inside the frame budget); both ride literal args. The frozen
+// workbook bytes ride the 'workbook' byte slot as the trailing parameter, and a
+// hub-projected raw adds its dynamic result slot so results.ts reads real bytes.
 function parseAction(input: any, raw: any, stepIdOfResult: string) {
   void stepIdOfResult;
   const slot = raw && typeof raw === 'object' && raw.original?.slot ? raw.original.slot : null;
+  const book = bookResult(input).cases ? bookResult(input) : { cases: [] };
   const attribution = { environment: observation(input, 'environment')?.facts?.result ?? null, topology: observation(input, 'topology')?.facts?.result ?? null };
-  const args = [null, null, attribution];
+  const args = [book, raw ?? {}, attribution];
   const byteSlots = ['workbook'];
   if (slot) byteSlots.push(slot);
   return { schema: TRANSITION_SCHEMA, state: { ...(input.state ?? {}), stage: 'parse' }, actions: [action('tool.call', 'parse-results', { path: 'tools/results.ts', export: 'executionResults', args, byteSlots })] };
