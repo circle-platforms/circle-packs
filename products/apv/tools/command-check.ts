@@ -12,12 +12,14 @@ import type { TreeCommand, TreeArgument } from './command-tree.ts';
 export const COMMAND_RULES_VERSION = 'command-tree/1.1.0';
 type Command = { name: string; scope?: string | null; arguments: TreeArgument[] };
 
-// node:net accepts an IPv6 zone id only as %[0-9A-Za-z.:-]+ — validate before stripping,
-// so fe80::1%eth0 is an IPADDR but fe80::1%eth_0 and fe80::1% are TYPE_MISMATCH.
+// node:net accepts a zone id only on IPv6 and only as %[0-9A-Za-z.:-]+ — validate the
+// zone, require the base to be IPv6, then strip: fe80::1%eth0 is an IPADDR while
+// fe80::1%eth_0, fe80::1% and 1.2.3.4%eth0 are TYPE_MISMATCH.
 const isIP = (value: string): 0 | 4 | 6 => {
   const at = value.indexOf('%');
   if (at < 0) return ipVersion(value);
-  return /^[0-9A-Za-z.:-]+$/.test(value.slice(at + 1)) ? ipVersion(value.slice(0, at)) : 0;
+  if (!/^[0-9A-Za-z.:-]+$/.test(value.slice(at + 1))) return 0;
+  return ipVersion(value.slice(0, at)) === 6 ? 6 : 0;
 };
 
 class CheckError extends Error {
