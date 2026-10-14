@@ -1,0 +1,9 @@
+{
+  "schema": "circle-packs/flow/1",
+  "id": "apv-case-execute",
+  "version": "apv-case-execute/2",
+  "driver": "hub-execution-transition/1",
+  "transition": { "path": "tools/execution-transition.ts", "export": "transition" },
+  "initialState": { "stage": "lease" },
+  "notes": "旧 apv-case-execute/1 由 hub 原生 1.1.1 驱动,继续服务既有任务;本 v2 只经通用模块执行驱动运行,不接管旧操作。"
+}

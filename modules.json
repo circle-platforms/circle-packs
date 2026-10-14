@@ -166,11 +166,15 @@
       "kind": "product-line",
       "root": "products/apv",
       "manifestPath": "products/apv/product-line.json",
-      "version": "1.2.2",
+      "version": "1.3.0",
       "files": [
         {
           "path": "README.md",
           "sha256": "7c27107313ed75afbf81dc87b52398df8b7d2fb87710a8ee0d720aa10d0a7283"
+        },
+        {
+          "path": "flows/apv-case-execute-v2.json",
+          "sha256": "3f8134459e2e6f4ac2127ee899b1891ad6d6b7dd8ded6e3fdcc49f2f8a009af0"
         },
         {
           "path": "flows/apv-case-execute.json",
@@ -194,11 +198,11 @@
         },
         {
           "path": "product-line.json",
-          "sha256": "25c672982913a7c957a64faba60a1ee33794fe2ca2ce3b0ccb6811619a8f7f01"
+          "sha256": "9c24c197e31f924ebd5224a2a9d2e0caa5c696e9802f5d06c1da4ca92cb0781e"
         },
         {
           "path": "resources/case-gateway.json",
-          "sha256": "9fcba1409c748b2721800f5d8cba65adfa7479f4e1145581b6b88a71e40eb315"
+          "sha256": "0a1560b99deb50b32ed2ad0c87a80adc0145e928c69545d7503c775b3be1eeb5"
         },
         {
           "path": "sources/command-tree.md",
@@ -211,6 +215,10 @@
         {
           "path": "tests/defect-claims.test.mjs",
           "sha256": "0beb3f1302804202256534263d9627296db234fd188015e07aa6c69e6c7d412f"
+        },
+        {
+          "path": "tests/execution-flow.test.mjs",
+          "sha256": "e0b9039f8d6a51b7d939e414dd0c50a1d6e3e7fd92ffc7f8ec337aa5197a5ae8"
         },
         {
           "path": "tests/function-contract-dialect.test.mjs",
@@ -245,6 +253,18 @@
           "sha256": "3dc252ba0c7e36e9777e9671c3b6f8e9277ada101dd7b8955aa19f26fae1fb24"
         },
         {
+          "path": "tools/environment.ts",
+          "sha256": "d8834ce2b7ece2c045c4476ccbedeee296ce1f35e64091cc179f1d142862752b"
+        },
+        {
+          "path": "tools/execution-contracts.ts",
+          "sha256": "bd32b2201adcc11e5cefe2a33135bbc2366da79b7a68f3d40dc549ed5e02c461"
+        },
+        {
+          "path": "tools/execution-transition.ts",
+          "sha256": "79a2dea83a80d5973271e5a1a55a0911ba7a2b3b64d07175571694d961803f5d"
+        },
+        {
           "path": "tools/function-contract.ts",
           "sha256": "5997224a822e4dbf28a7957d2df33aa1b88450b02432bb7ee3d5577291488c34"
         },
@@ -253,11 +273,19 @@
           "sha256": "33b135290a43927ae3db2079c1e1f3e1db3eca658b1090c473ff68bfa29df8ac"
         },
         {
+          "path": "tools/refusal.ts",
+          "sha256": "8c057dbd6de08400650cab8f6a90bc1d851881012121ef16a86479ebd97b6e4f"
+        },
+        {
+          "path": "tools/results.ts",
+          "sha256": "08ceca07a35b4ba23896eec8dcc175a32cf42ec16ccd67d91c055986a1598c68"
+        },
+        {
           "path": "tools/workbook.ts",
           "sha256": "5b799dcd94e5d4b353f0efd6f94b5e72b5bf7726c7c9703b9d3cf3a1e11f622b"
         }
       ],
-      "digest": "faa9e79d03a97fa1e5142a2f169cecc2caef7f52f7d714f9aac53226164c347d"
+      "digest": "81a6e09ac7357318f5a93a0c6f762b0d17cad63caa1c84f096517e737fb00f8c"
     }
   ]
 }
