@@ -74,7 +74,7 @@ export function transition(input: any) {
         ]);
       if (slim.facts.status !== 'succeeded') return result('failed', [action('outcome.error', 'workbook-slim-failed', { code: slim.facts.error?.code ?? 'HOOK_FAILED', facts: { stage: 'workbook' } })]);
     }
-    return result('environment', [action('provider.call', 'environment', { resource: RESOURCE, tool: 'env_prepare', args: { device_build: build } })]);
+    return result('environment', [action('provider.call', 'environment', { resource: RESOURCE, tool: 'env_prepare', args: {} })]);
   }
 
   // environment: read-only env_prepare observation; conf mapping skips topology.
@@ -158,7 +158,9 @@ export function transition(input: any) {
       return result('failed', [action('outcome.error', 'verify-failed', { code: 'HOOK_FAILED', facts: { stage: 'verify', stepId: blocked.facts.stepId, code: ruleCode } })]);
     }
     return result('submit', [
-      action('provider.call', 'submit', { resource: RESOURCE, tool: 'case_submit', args: { ...(value.module ? { module: value.module } : {}) }, byteArgs: { xlsx_b64: 'workbook' } }),
+      // device_build / module 由资源批准的 toolArguments 映射注入（inputPath 指向冻结输入的
+      // value.build、literal 固定模块）；产品动作给同名参数会被 hub 拒绝，这里一律不写。
+      action('provider.call', 'submit', { resource: RESOURCE, tool: 'case_submit', args: {}, byteArgs: { xlsx_b64: 'workbook' } }),
     ]);
   }
 

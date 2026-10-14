@@ -103,6 +103,7 @@ test('workbook stage parses the frozen workbook before anything else (高2)', ()
   assert.equal(after.state.stage, 'environment');
   assert.equal(after.actions[0].tool, 'env_prepare');
   assert.equal(after.actions[0].resource, 'gateway');
+  assert.deepEqual(after.actions[0].args, {}); // device_build is injected by the approved toolArguments mapping, not the action
 });
 
 test('an oversized workbook projection is re-projected slim through the real hub result slot', () => {
@@ -180,7 +181,7 @@ test('submit: byte slot only, no inline base64; status-shaped receipts go throug
   const submit = out.actions[0];
   assert.equal(submit.tool, 'case_submit');
   assert.deepEqual(submit.byteArgs, { xlsx_b64: 'workbook' });
-  assert.ok(!Object.hasOwn(submit.args, 'xlsx_b64'));
+  assert.deepEqual(submit.args, {}); // module/device arguments come from the approved mapping, never from the action
   // a status-shaped receipt (reconcile) is not parsed directly: fetch the result first
   const statusShaped = obs('submit', { result: { state: 'done', task_id: 'synthetic_apv_task_301' } });
   const reconciled = transition(input({ stage: 'submit' }, [statusShaped]));

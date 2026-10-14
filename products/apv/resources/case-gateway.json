@@ -10,7 +10,7 @@
   "credentialMode": "static-secret",
   "runtimeProfileRef": "profiles/case-gateway.json",
   "executionIsChange": false,
-  "notes": "测试床网关;租约、提交、状态、结果由 hub 通用 worker 按 configuration.receiptPolicy 驱动(核对 sha256 与 case_ids);transition 只做只读 env_prepare/bed_topology 与解释。端点、CA、超时在库外 profile,凭据在保险箱,运行时由 worker 注入。",
+  "notes": "测试床网关;租约、提交、状态、结果由 hub 通用 worker 按 configuration.receiptPolicy 驱动(核对 sha256 与 case_ids);transition 只做只读 env_prepare/bed_topology 与解释。端点、CA、超时在库外 profile,凭据在保险箱,运行时由 worker 注入。租约字段按 lease.argumentsByTool 逐工具注入(env_prepare/bed_topology/case_submit/lease_heartbeat/lease_release 带 lease_id+token,case_status/case_results 显式不带,未列出的工具不注入);case_submit 的 module 与 env_prepare 的 device_build 由批准的 toolArguments 映射注入(literal / 冻结输入 value.build),产品动作里写同名参数会被拒绝;工作簿字节由动作 byteArgs 直接引用受控槽(xlsx_b64←workbook),不需要 byteArguments 映射。",
   "declaration": {
     "allowedTestHosts": "string[]: 主机闭集——本床允许下发 shell 命令的全部测试主机名;登记时由床管理员从床配置(网关 env_prepare/bed_topology 回报的主机清单)填入,不进 Git。缺失或为空视为未声明,verify.hostCommand 一律 HOST_SET_UNDECLARED。",
     "hostCommandPolicies": "Record<host, {allowPrefixes: string[]}>: 可选的单主机命令前缀策略,只能缩小 allowedTestHosts 内主机的可用命令,不能放行闭集外主机;登记时由床管理员按该主机承担的角色从床配置填写,不进 Git。"
@@ -23,6 +23,21 @@
     "credentialMode": "static-secret",
     "receiptPolicy": {
       "schema": "hub-provider-observation/1",
+      "toolArguments": {
+        "case_submit": {
+          "module": {
+            "literal": "sdns"
+          }
+        },
+        "env_prepare": {
+          "device_build": {
+            "inputPath": [
+              "value",
+              "build"
+            ]
+          }
+        }
+      },
       "submitTool": "case_submit",
       "statusTool": "case_status",
       "resultTool": "case_results",
@@ -66,7 +81,31 @@
         "fenceArgument": "token",
         "ttlSecondsPath": [
           "expires_in_s"
-        ]
+        ],
+        "argumentsByTool": {
+          "env_prepare": {
+            "idArgument": "lease_id",
+            "fenceArgument": "token"
+          },
+          "bed_topology": {
+            "idArgument": "lease_id",
+            "fenceArgument": "token"
+          },
+          "case_submit": {
+            "idArgument": "lease_id",
+            "fenceArgument": "token"
+          },
+          "lease_heartbeat": {
+            "idArgument": "lease_id",
+            "fenceArgument": "token"
+          },
+          "lease_release": {
+            "idArgument": "lease_id",
+            "fenceArgument": "token"
+          },
+          "case_status": {},
+          "case_results": {}
+        }
       },
       "refusal": {
         "stagePath": [
