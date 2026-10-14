@@ -5,12 +5,20 @@
 // present 判定只依赖 status/violations,不受影响)。
 // imports(hub 依赖集): 无
 import { ipVersion } from './environment.ts';
+import { createHash } from './sha256.ts';
+import { parseCommandTree } from './command-tree.ts';
 import type { TreeCommand, TreeArgument } from './command-tree.ts';
 
 export const COMMAND_RULES_VERSION = 'command-tree/1.1.0';
 type Command = { name: string; scope?: string | null; arguments: TreeArgument[] };
 
-const isIP = (value: string) => ipVersion(value);
+// node:net accepts an IPv6 zone id only as %[0-9A-Za-z.:-]+ — validate before stripping,
+// so fe80::1%eth0 is an IPADDR but fe80::1%eth_0 and fe80::1% are TYPE_MISMATCH.
+const isIP = (value: string): 0 | 4 | 6 => {
+  const at = value.indexOf('%');
+  if (at < 0) return ipVersion(value);
+  return /^[0-9A-Za-z.:-]+$/.test(value.slice(at + 1)) ? ipVersion(value.slice(0, at)) : 0;
+};
 
 class CheckError extends Error {
   readonly code: string;
@@ -18,16 +26,17 @@ class CheckError extends Error {
 }
 const requireCondition = (ok: unknown, code: string, message: string) => { if (!ok) throw new CheckError(code, message); };
 
-const stableHash = (value: unknown): string => {
-  const text = JSON.stringify(value);
-  let h1 = 0x811c9dc5, h2 = 0x01000193;
-  for (let i = 0; i < text.length; i++) {
-    h1 = (h1 ^ text.charCodeAt(i)) >>> 0;
-    h1 = Math.imul(h1, 16777619) >>> 0;
-    h2 = (h2 + text.charCodeAt(i) * (i + 7)) >>> 0;
-  }
-  return `sig_${h1.toString(16).padStart(8, '0')}${h2.toString(16).padStart(8, '0')}`;
-};
+// canonicalHash exactly as the hub computes it: sha256 over canonicalJson (sorted keys,
+// undefined dropped, no whitespace) — signature ids, overload ordering and closest-
+// signature selection therefore match the hub bit for bit.
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  const record = value as Record<string, unknown>;
+  return `{${Object.keys(record).sort().filter((key) => record[key] !== undefined)
+    .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key])}`).join(',')}}`;
+}
+const canonicalHash = (value: unknown): string => createHash(new TextEncoder().encode(canonicalJson(value)));
 
 export function shlex(input: string): string[] {
   const tokens: string[] = [];
@@ -94,7 +103,7 @@ function signatures(commands: Command[]): any[] {
   for (const command of commands) {
     const scope = command.scope ?? null;
     const params = parameters(command);
-    const signatureId = `sig_${stableHash({ scope, parameters: params })}`;
+    const signatureId = `sig_${canonicalHash({ scope, parameters: params })}`;
     unique.set(signatureId, { signatureId, scope, parameters: params });
   }
   return [...unique.values()].sort((a, b) => a.parameters.length - b.parameters.length || a.signatureId.localeCompare(b.signatureId));
@@ -164,12 +173,14 @@ export function commandCheck(commands: Command[], inputs: string[]): any {
 // tool), check the workbook's device commands against it, and wrap in the sync tool's
 // receipt shape — sourceSha256 is the SHA-256 of the XML original bytes, computed with
 // the dependency-free implementation.
-import { createHash } from './sha256.ts';
-import { parseCommandTree } from './command-tree.ts';
+
 // Argument order follows the module runtime convention: literal args first, the
 // byte-slot original appended last — (commands, identity, treeBytes).
 export function checkCommands(commands: string[], identity: { build: string; buildId: string }, treeBytes: Uint8Array) {
   const { commands: tree } = parseCommandTree(treeBytes);
+  // A tree with no recognized items is not a usable command source — refuse it the way
+  // the hub's tool packaging does, instead of reporting every command as missing.
+  if (tree.length === 0) throw new CheckError('INVALID_PAYLOAD', 'Selected command tree has no recognized items');
   const checked = commandCheck(tree as Command[], commands);
   // The verify-gate heads derive from the SAME rule both paths share: a command is
   // present when its check is hit with no violations. The receipt keeps only the
