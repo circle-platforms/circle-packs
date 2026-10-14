@@ -293,7 +293,7 @@ test('the XML path gates verify from one present rule: hit, missing head, argume
   const { transition } = await import('../tools/execution-transition.ts');
   const xml = new TextEncoder().encode('<?xml version="1.0"?><tree><scope name="configuration"><menu name="sdns"><item name="on"/><item name="listener"><arg type="IPADDR"/><arg type="U16" optional="true"/></item></menu></scope></tree>');
   const commands = ['sdns on', 'sdns listener 192.0.2.10', 'sdns listener', 'sdns fulldns on'];
-  const checked = checkCommands(xml, commands, { build: 'SYNTHETIC_BUILD_301', buildId: 'SYNTHETIC_BUILD_301' });
+  const checked = checkCommands(commands, { build: 'SYNTHETIC_BUILD_301', buildId: 'SYNTHETIC_BUILD_301' }, xml);
   // receipt carries heads under the shared rule and slim commands
   assert.deepEqual(checked.heads, [
     { command: 'sdns on', present: true },
@@ -326,4 +326,52 @@ test('a UTF-8 BOM before the XML declaration still selects the XML path (中3)',
   frame.controlledBytes = [{ slot: 'command-tree', role: 'command-tree', reference: { kind: 'source', sourceRevisionId: 'src_t', sha256: 'x'.repeat(64), size: xml.length }, contentBase64: xml.toString('base64') }];
   const out = transition(frame);
   assert.equal(out.actions[0].path, 'tools/command-check.ts');
+});
+
+// Hub-convention invocation for every Tool that declares byteSlots: the module runtime
+// appends the byte-slot originals AFTER the literal args, in slot order. Every new Tool
+// must appear in this table — the assertion runs the export exactly as the worker does.
+test('every byteSlots Tool runs under the hub argument convention: literals first, slot bytes appended', async () => {
+  const exports = {
+    'tools/workbook.ts': await import('../tools/workbook.ts'),
+    'tools/execution-contracts.ts': await import('../tools/execution-contracts.ts'),
+    'tools/command-check.ts': await import('../tools/command-check.ts'),
+  };
+  const xml = new TextEncoder().encode('<?xml version="1.0"?><tree><scope name="configuration"><item name="service"><arg type="STRING"/></item></scope></tree>');
+  const contractBytes = new TextEncoder().encode(JSON.stringify({ schema: 'ist.excel.function-contract', complete: true, entries: [{ e: 'APV_0', f: 'cmd_config', status: 'enabled' }] }));
+  const workbookBytes = await (await import('./fixtures-support/workbook-factory.mjs')).syntheticWorkbook();
+  const slotBytes = (name) => ({ workbook: workbookBytes, 'function-contract': contractBytes, 'command-tree': xml, 'command-check': new TextEncoder().encode(JSON.stringify({ result: { build: 'SYNTHETIC_BUILD_301', sourceSha256: 'x'.repeat(64), ruleVersion: 'command-tree/1.1.0', commands: [{ command: 'service alpha', status: 'hit', violations: [] }] } })) })[name];
+  const dispatches = [
+    // (stage, observations) → expected first byteSlots action
+    [['workbook', []], 'tools/workbook.ts'],
+    [['device-map', [obs('workbook', { result: BOOK }), obs('environment', { result: { device_count: 1, conf: { device_ips: ['192.0.2.11'] }, ready: true, build_checked: true, checks: [{ check: 'device_build', ok: true, detail: 'device reports SYNTHETIC_BUILD_301, gateway bundle is SYNTHETIC_BUILD_301' }] } }), obs('device-map', { result: { addresses: [['192.0.2.11']], source: 'gateway.env_prepare.conf.device_ips' } })]], 'tools/execution-contracts.ts'],
+  ];
+  for (const [[stage, observations], path] of dispatches) {
+    const frame = input({ stage }, observations);
+    if (path === 'tools/execution-contracts.ts') {
+      // JSON path: no command-tree slot contentBase64 → probe falls to command-check
+      frame.controlledBytes = [{ slot: 'command-tree', role: 'command-tree', reference: { kind: 'source', sourceRevisionId: 's', sha256: 'x'.repeat(64), size: 2 }, contentBase64: Buffer.from('[]').toString('base64') },
+        { slot: 'command-check', role: 'command-check', reference: { kind: 'source', sourceRevisionId: 's2', sha256: 'y'.repeat(64), size: 4 }, contentBase64: Buffer.from(JSON.stringify({ result: { build: 'SYNTHETIC_BUILD_301', sourceSha256: 'x'.repeat(64), ruleVersion: 'command-tree/1.1.0', commands: [{ command: 'service alpha', status: 'hit', violations: [] }] } })).toString('base64') }];
+    }
+    const out = transition(frame);
+    const toolCall = out.actions.find((a) => a.kind === 'tool.call' && a.path === path);
+    assert.ok(toolCall, `${stage} dispatches ${path}`);
+    const fn = exports[path][toolCall.export];
+    const args = [...toolCall.args, ...toolCall.byteSlots.map((slot) => slotBytes(slot))];
+    const result = await fn(...args);
+    assert.ok(result !== undefined, `${path}:${toolCall.export} returns a value under the hub order`);
+  }
+  // command-check via the XML slot (real bed shape)
+  const frame = input({ stage: 'device-map' }, [
+    obs('workbook', { result: BOOK }),
+    obs('environment', { result: { device_count: 1, conf: { device_ips: ['192.0.2.11'] }, ready: true, build_checked: true, checks: [{ check: 'device_build', ok: true, detail: 'device reports SYNTHETIC_BUILD_301, gateway bundle is SYNTHETIC_BUILD_301' }] } }),
+    obs('device-map', { result: { addresses: [['192.0.2.11']], source: 'gateway.env_prepare.conf.device_ips' } }),
+  ]);
+  frame.controlledBytes = [{ slot: 'command-tree', role: 'command-tree', reference: { kind: 'source', sourceRevisionId: 's', sha256: 'x'.repeat(64), size: xml.length }, contentBase64: Buffer.from(xml).toString('base64') }];
+  const out = transition(frame);
+  const toolCall = out.actions.find((a) => a.kind === 'tool.call' && a.path === 'tools/command-check.ts');
+  assert.ok(toolCall);
+  const fn = exports['tools/command-check.ts'][toolCall.export];
+  const result = await fn(...[...toolCall.args, ...toolCall.byteSlots.map((slot) => slotBytes(slot))]);
+  assert.ok(Array.isArray(result.heads));
 });

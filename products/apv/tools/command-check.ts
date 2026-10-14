@@ -166,7 +166,9 @@ export function commandCheck(commands: Command[], inputs: string[]): any {
 // the dependency-free implementation.
 import { createHash } from './sha256.ts';
 import { parseCommandTree } from './command-tree.ts';
-export function checkCommands(treeBytes: Uint8Array, commands: string[], identity: { build: string; buildId: string }) {
+// Argument order follows the module runtime convention: literal args first, the
+// byte-slot original appended last — (commands, identity, treeBytes).
+export function checkCommands(commands: string[], identity: { build: string; buildId: string }, treeBytes: Uint8Array) {
   const { commands: tree } = parseCommandTree(treeBytes);
   const checked = commandCheck(tree as Command[], commands);
   // The verify-gate heads derive from the SAME rule both paths share: a command is
