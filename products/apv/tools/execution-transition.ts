@@ -25,10 +25,52 @@ const action = (kind: ActionKind, stepId: string, fields: Record<string, unknown
 // occurrence present.
 const observation = (input: any, stepId: string) => {
   const rows = (input.observations ?? []).filter((row: any) => row?.facts?.stepId === stepId);
-  if (rows.length <= 1) return rows[0];
-  const expected = (input.expectedOccurrences ?? []).find((row: any) => row?.stepId === stepId);
-  const current = expected ? Number(expected.nextOccurrence) - 1 : Math.max(...rows.map((row: any) => Number(row.facts?.occurrence ?? 0)));
-  return rows.find((row: any) => Number(row.facts?.occurrence) === current) ?? rows[rows.length - 1];
+  if (rows.length <= 1 && rows[0]) return rows[0];
+  if (rows.length > 1) {
+    const expected = (input.expectedOccurrences ?? []).find((row: any) => row?.stepId === stepId);
+    const current = expected ? Number(expected.nextOccurrence) - 1 : Math.max(...rows.map((row: any) => Number(row.facts?.occurrence ?? 0)));
+    return rows.find((row: any) => Number(row.facts?.occurrence) === current) ?? rows[rows.length - 1];
+  }
+  // Not in window — the controlled history readback may already carry it: each read
+  // (stepId history-<stage>) returns {observations:{[stepId]:{facts,operationId}}} and
+  // the read itself is fresh, so it will not be evicted again.
+  for (const read of input.observations ?? []) {
+    const picked = read?.facts?.result?.observations?.[stepId];
+    if (picked) return picked;
+  }
+  return undefined;
+};
+
+// What each stage truly reads. A group is any-of (the book is workbook OR workbook-slim);
+// a missing group with an incomplete window triggers one controlled history readback.
+const STAGE_NEEDS: Record<string, string[][]> = {
+  workbook: [['workbook', 'workbook-slim']],
+  environment: [['environment']],
+  topology: [['topology'], ['environment']],
+  'device-map': [['device-map'], ['environment'], ['workbook', 'workbook-slim']],
+  tree: [['tree'], ['workbook', 'workbook-slim']],
+  verify: [['workbook', 'workbook-slim']],
+  submit: [['submit']],
+  wait: [['submit']],
+  result: [['result']],
+  parse: [['parse-results'], ['workbook', 'workbook-slim']],
+  afterResult: [['after-result'], ['parse-results']],
+};
+
+const historyReadback = (input: any, stage: string) => {
+  const window = input.observationWindow;
+  if (window?.complete !== false || !window?.archive?.slot) return null;
+  const groups = STAGE_NEEDS[stage] ?? [];
+  const missing = groups
+    .filter((group) => !group.some((stepId) => observation(input, stepId)))
+    .map((group) => group.filter((stepId) => stepId !== 'workbook-slim'));
+  // flatten keeping any-of semantics: ask for the primary ids (workbook-slim rides along
+  // in the same archive; pickObservations keeps whatever exists)
+  const wanted = [...new Set(missing.flat())];
+  if (!wanted.length) return null;
+  const readId = `history-${stage}`;
+  if ((input.observations ?? []).some((row: any) => row?.facts?.stepId === readId)) return null;
+  return { readId, wanted, slot: window.archive.slot };
 };
 
 // The book every stage reads: the slim re-projection once hub projected the full one
@@ -87,6 +129,13 @@ export function transition(input: any) {
     const facts = refusalFacts(observed?.facts?.result ?? null);
     return result('failed', [action('outcome.error', stepId, { code: facts.code, facts: { stage: stageKind, refusal: facts } })]);
   };
+
+  // Controlled history: when the window overflowed, evicted-but-needed observations are
+  // read back through the archive slot once, then the stage proceeds from fresh reads.
+  const readback = historyReadback(input, state.stage);
+  if (readback) return result(state.stage, [
+    action('tool.call', readback.readId, { path: 'tools/flow-history.ts', export: 'pickObservations', args: [readback.wanted], byteSlots: [readback.slot] }),
+  ]);
 
   // workbook: parse the frozen workbook original once; every gate and the parse feed
   // off this projection, never off client-supplied lists.
@@ -267,7 +316,7 @@ export function transition(input: any) {
     // {} for a failed Tool) the candidate carries parseFailed; on success it is the
     // parsed result. The SAME object goes to the afterResult Hook and to delivery —
     // the delivery gate compares candidate bytes with the Hook subject.
-    const operationId = input.observations?.find((row: any) => row?.facts?.stepId === 'submit')?.operationId ?? null;
+    const operationId = observation(input, 'submit')?.operationId ?? null;
     const candidate = parsed.facts.status === 'succeeded' ? parsed.facts.result : { parseFailed: true, error: parsed.facts.error ?? null };
     return result('afterResult', [
       action('hook.verify', 'after-result', { event: HOOK_EVENTS[4], subject: { result: candidate, operationId } }),

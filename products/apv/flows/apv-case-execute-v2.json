@@ -9,5 +9,6 @@
   },
   "initialState": {
     "stage": "workbook"
-  }
+  },
+  "historyMode": "controlled"
 }
