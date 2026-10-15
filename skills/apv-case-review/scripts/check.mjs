@@ -2,7 +2,7 @@
 // Step 2: deterministic command and contract checks.
 //   node check.mjs collect <batch>            print the deduped device commands (with their
 //                                             source autoids) and the client names, to pass
-//                                             verbatim to srv_buildsite_command_check
+//                                             verbatim to hub_tool_buildsite_command_check
 //   node check.mjs apply <batch> --build <id> --check <file> [--check <file>…] [--contract <Excel
 //                                             function contract>]   write review_commands.json
 // Each --check is either a hub-saved command_check return or a checks/<autoid>.json pointer

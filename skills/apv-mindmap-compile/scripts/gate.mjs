@@ -18,7 +18,7 @@ const CLAIMS = new Set(['Author', 'Manual', 'CapabilityXml', 'Spec', 'DefectSpec
 const STEP_OBJECTS = new Set(['APV_0', 'APV_1', 'check_point', 'time', 'test_env']);
 
 // The receipts the server returned for this case, projected from the raw command_check
-// result that the SERVER saved verbatim under .circle/server-returns/. checks/<autoid>.json
+// result that the SERVER saved verbatim under .circle/hub-returns/. checks/<autoid>.json
 // is only a pointer {"savedAs": "<path>"}: the model never transcribes a response, and this
 // gate loads the verbatim file, checks it is a check of this build that covers exactly the
 // case's device commands, and re-derives the receipts from it.
