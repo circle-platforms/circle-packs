@@ -1,10 +1,12 @@
 # Changelog
 
-All notable changes to circle-packs are listed here, newest first. Modules carry their own versions in their manifests; this file tracks the repository. Nothing is tagged yet, so everything is under Unreleased.
+All notable changes to circle-packs are listed here, newest first. Modules carry their own versions in their manifests; this file tracks the repository. Repository releases start at 0.1.0; module versions are independent of the repository version.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
+
+## 0.1.0 - 2026-10-15
 
 ### Changed
 
