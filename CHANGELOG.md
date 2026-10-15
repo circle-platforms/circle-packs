@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+## 0.2.0 - 2026-10-15
+
+### Changed
+
+- Follow Circle 1.7.0’s `hub` extension without old-name aliases: four skill packs use `/hub`, `hub_tool_*` and `.circle/hub-returns/`. Compile is 0.4.0; review, defect claims and product QA are each 0.2.0. Their declared remote tool identities are unchanged.
+- products/apv 1.4.1 updates the interface adaptation sheet to the new tool names. Execution Tools, flow logic, command rules and provider protocol are unchanged. New module bytes still require a recorded trial and independent approval; a release does not activate them.
+
 ## 0.1.0 - 2026-10-15
 
 ### Changed

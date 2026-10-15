@@ -5,16 +5,18 @@ description: Answer APV product questions from the manuals with verbatim citatio
 
 # APV 产品问答
 
+Circle binding: Circle 1.7.0 or newer uses the `hub` extension, `/hub login` and `hub_tool_*`. Other harnesses expose the declared remote tools through their own adapters. Former Circle extension, command and tool names are not aliases.
+
 Answer a product question only from what the manuals say, with every claim tied to a hub-saved section. No evidence, no answer.
 
 ## 输入
 
 - `question`(问题,任意措辞)、`product`(产品线,如 APV)、`versionLine`(如 10.5)。
-- circle-hub 工具:`srv_docs_list`、`srv_docs_section`。缺了就说明并停下:不凭记忆作答。
+- circle-hub 工具:`hub_tool_docs_list`、`hub_tool_docs_section`。缺了就说明并停下:不凭记忆作答。
 
 ## 0. 确定手册版本(工具 + 判断)
 
-`version` 参数要的是**手册的完整版本号**,不是版本线——文档源按目录存放(如 `rel_apv_10_5_0`),版本线 10.5 对应的目录不存在,报错还和「无权限」长得一样。先用 `srv_docs_list` 列出可用手册目录,选与绑定构建一致的那个完整版本(如 585 构建 → 10.5.0),把列表结果和选择交给第 4 步的脚本记进查询记录。列表里没有对应的版本就如实说,不猜、不退回版本线。
+`version` 参数要的是**手册的完整版本号**,不是版本线——文档源按目录存放(如 `rel_apv_10_5_0`),版本线 10.5 对应的目录不存在,报错还和「无权限」长得一样。先用 `hub_tool_docs_list` 列出可用手册目录,选与绑定构建一致的那个完整版本(如 585 构建 → 10.5.0),把列表结果和选择交给第 4 步的脚本记进查询记录。列表里没有对应的版本就如实说,不猜、不退回版本线。
 
 ## 1. 检索词(判断)
 
@@ -22,8 +24,8 @@ Answer a product question only from what the manuals say, with every claim tied 
 
 ## 2. 定位与取段(工具 + 判断)
 
-- `srv_docs_list` 列出选定手册目录(`cli/rel_apv_<版本>/`),定位到手册本体文件;这本手册是单文件(`cli_cn.md`),直接取段。**anchor 只能来自问题里的命令名或 catalog 条目,不许猜**——问题问哪条命令,anchor 就是那条命令的小节标题。
-- `srv_docs_section` 带 `file` 与 `anchor` 直取小节;hub 原样落盘每次返回(`savedAs` 指向路径),答案只引用落盘返回里的文字。`version` 一律传第 0 步选定的完整版本号。
+- `hub_tool_docs_list` 列出选定手册目录(`cli/rel_apv_<版本>/`),定位到手册本体文件;这本手册是单文件(`cli_cn.md`),直接取段。**anchor 只能来自问题里的命令名或 catalog 条目,不许猜**——问题问哪条命令,anchor 就是那条命令的小节标题。
+- `hub_tool_docs_section` 带 `file` 与 `anchor` 直取小节;hub 原样落盘每次返回(`savedAs` 指向路径),答案只引用落盘返回里的文字。`version` 一律传第 0 步选定的完整版本号。
 - 小节未命中也如实记录。**no_evidence 必须有一次真实的 section 未命中**,不能是没查:没查不是「手册里没有」。注意:本项目对不存在的 anchor 返回的是 `SOURCE_FORBIDDEN`(与「源不可用」同码,这是 hub 的合并语义),且非 200 返回目前不落盘——未命中的证据目前只能是试跑记录里的调用本身;hub 把非 200 返回也落盘后,lookup 才能渲染未命中行。
 - 多文件目录的窄范围搜索(docs.search)目前在 hub 侧超时,是 hub 的 bug;修复后再把窄搜加回本步骤。
 
