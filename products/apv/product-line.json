@@ -1,7 +1,7 @@
 {
   "schemaVersion": "product-line/1",
   "id": "apv",
-  "version": "1.3.4",
+  "version": "1.4.0",
   "connectorPackages": [
     "documents",
     "build-site",
@@ -101,6 +101,10 @@
     },
     {
       "manifest": "tools/command-check.ts",
+      "imports": {}
+    },
+    {
+      "manifest": "tools/flow-history.ts",
       "imports": {}
     }
   ],
