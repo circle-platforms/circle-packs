@@ -361,6 +361,18 @@ test('every byteSlots Tool runs under the hub argument convention: literals firs
     const result = await fn(...args);
     assert.ok(result !== undefined, `${path}:${toolCall.export} returns a value under the hub order`);
   }
+  // controlled history readback (1.4.0)
+  {
+    const frame = input({ stage: 'tree' }, [obs('tree', { result: { heads: [] } })]);
+    frame.observationWindow = { total: 9, returned: 1, complete: false, archive: { slot: 'hub.history.observations.zz', reference: { kind: 'source', sourceRevisionId: 's', sha256: 'z'.repeat(64), size: 4 } } };
+    const out = transition(frame);
+    const toolCall = out.actions.find((a) => a.kind === 'tool.call' && a.path === 'tools/flow-history.ts');
+    assert.ok(toolCall, 'tree dispatches the history readback');
+    const fn = (await import('../tools/flow-history.ts'))[toolCall.export];
+    const archive = new TextEncoder().encode(JSON.stringify({ schema: 'hub-flow-history/1', observations: [{ facts: { stepId: 'workbook', status: 'succeeded', occurrence: 0, result: BOOK } }] }));
+    const result = await fn(...[...toolCall.args, archive]);
+    assert.ok(result.observations.workbook);
+  }
   // command-check via the XML slot (real bed shape)
   const frame = input({ stage: 'device-map' }, [
     obs('workbook', { result: BOOK }),
@@ -410,4 +422,53 @@ test('the JSON check original must bind to the frozen command-tree sha (transiti
   const out = transition(frame);
   assert.equal(out.state.stage, 'failed');
   assert.equal(out.actions[0].stepId, 'tree-failed');
+});
+
+test('an evicted workbook observation triggers the controlled history readback (1.4.0)', async () => {
+  // tree stage, window overflowed: only the tree observation survived in-window
+  const frame = input({ stage: 'tree' }, [
+    obs('tree', { result: { heads: [{ command: 'service inspect alpha', present: true }] } }),
+  ]);
+  frame.observationWindow = { total: 253, returned: 1, complete: false, archive: { slot: 'hub.history.observations.abc', reference: { kind: 'source', sourceRevisionId: 'src_h', sha256: 'c'.repeat(64), size: 5 } } };
+  const out = transition(frame);
+  assert.equal(out.state.stage, 'tree'); // stays put
+  const read = out.actions[0];
+  assert.equal(read.kind, 'tool.call');
+  assert.equal(read.stepId, 'history-tree');
+  assert.equal(read.path, 'tools/flow-history.ts');
+  assert.equal(read.export, 'pickObservations');
+  assert.deepEqual(read.args, [['workbook']]); // only the evicted ids
+  assert.deepEqual(read.byteSlots, ['hub.history.observations.abc']);
+  // invoke under the hub convention: literals first, archive bytes last
+  const { pickObservations } = await import('../tools/flow-history.ts');
+  const history = new TextEncoder().encode(JSON.stringify({ schema: 'hub-flow-history/1', observations: [
+    { facts: { stepId: 'workbook', status: 'succeeded', occurrence: 0, result: { commands: [{ autoid: '301', row: 3, command: 'service inspect alpha', object: 'APV_0' }], hostCommands: [] } } },
+    { facts: { stepId: 'tree', status: 'succeeded', occurrence: 0, result: { heads: [{ command: 'service inspect alpha', present: true }] } } },
+  ] }));
+  const picked = pickObservations(read.args[0], history);
+  assert.deepEqual(picked.observations.workbook.facts.result.commands[0].command, 'service inspect alpha');
+});
+
+test('the readback observation restores the original path (gates proceed)', () => {
+  const readResult = { observations: {
+    workbook: { facts: { stepId: 'workbook', status: 'succeeded', occurrence: 0, result: BOOK } },
+    tree: { facts: { stepId: 'tree', status: 'succeeded', occurrence: 0, result: { heads: [{ command: 'service inspect alpha', present: true }] } } },
+  } };
+  const frame = input({ stage: 'tree' }, [
+    obs('history-tree', { result: readResult }),
+    obs('tree', { result: { heads: [{ command: 'service inspect alpha', present: true }] } }),
+  ]);
+  frame.observationWindow = { total: 253, returned: 2, complete: false, archive: { slot: 'hub.history.observations.abc', reference: { kind: 'source', sourceRevisionId: 'src_h', sha256: 'c'.repeat(64), size: 5 } } };
+  const out = transition(frame);
+  // the read already happened (history-tree present) → no second readback, gates run
+  assert.ok(out.actions.every((a) => a.stepId !== 'history-tree'));
+  assert.equal(out.state.stage, 'verify');
+  assert.ok(out.actions.some((a) => a.event === 'verify.deviceCommand'));
+});
+
+test('a complete window never reads history back', () => {
+  const frame = input({ stage: 'tree' }, [obs('tree', { result: { heads: [] } })]);
+  frame.observationWindow = { total: 12, returned: 12, complete: true };
+  const out = transition(frame);
+  assert.ok(out.actions.every((a) => a.stepId !== 'history-tree'));
 });
