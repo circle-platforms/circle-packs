@@ -1,12 +1,17 @@
 # Changelog
 
-All notable changes to circle-packs are listed here, newest first. Modules carry their own versions in their manifests; this file tracks the repository. Nothing is tagged yet, so everything is under Unreleased.
+All notable changes to circle-packs are listed here, newest first. Modules carry their own versions in their manifests; this file tracks the repository. Repository releases start at 0.1.0; module versions are independent of the repository version.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## Unreleased
 
+## 0.1.0 - 2026-10-15
+
 ### Changed
+
+- Follow Circle 1.7.0’s `hub` extension without old-name aliases: four skill packs use `/hub`, `hub_tool_*` and `.circle/hub-returns/`. Compile is 0.4.0; review, defect claims and product QA are each 0.2.0. Their declared remote tool identities are unchanged.
+- products/apv 1.4.1 updates the interface adaptation sheet to the new tool names. Execution Tools, flow logic, command rules and provider protocol are unchanged. New module bytes still require a recorded trial and independent approval; a release does not activate them.
 
 - **Licensed under the Apache License 2.0**, as Circle and circle-hub are. `LICENSE` carries the canonical text and `NOTICE` names the copyright holder, records that the repository was under the MIT License until 2026-10-13 and reserves the Circle and Circle Hub marks. `CONTRIBUTING.md` has Circle's contributor terms (a sign-off on every commit and a license to the project); `SECURITY.md`, the issue and pull request templates and `.gitattributes` follow Circle's, in English. The documentation is published at <https://circle-platforms.github.io/circle-packs/> with the same site setup as Circle's.
 

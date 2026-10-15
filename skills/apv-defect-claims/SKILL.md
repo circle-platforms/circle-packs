@@ -5,24 +5,26 @@ description: Turn ZenTao defect records into candidate knowledge claims with scr
 
 # APV 缺陷声明抽取
 
+Circle binding: Circle 1.7.0 or newer uses the `hub` extension, `/hub login` and `hub_tool_*`. Other harnesses expose the declared remote tools through their own adapters. Former Circle extension, command and tool names are not aliases.
+
 Read defect records and turn their deterministic fields into candidate claims. The script decides what becomes a claim — a field to a predicate, nothing invented; you decide which product, which bugs, and submit.
 
 ## 输入
 
 - `product`(产品线,如 APV)与 `defects`(修复清单里的 bug id,或检索关键词)。
-- circle-hub 工具:`srv_zentao_products`、`srv_zentao_bug_search`、`srv_zentao_bug_detail`、`srv_knowledge_claim_submit`。缺了就说明并停下。
+- circle-hub 工具:`hub_tool_zentao_products`、`hub_tool_zentao_bug_search`、`hub_tool_zentao_bug_detail`、`hub_tool_knowledge_claim_submit`。缺了就说明并停下。
 
 ## 1. 定位产品(判断 + 工具)
 
-照 apv-mindmap-compile 的规则:先用 `srv_zentao_products` 从产品列表解出产品 id,再用一次带状态筛选的 `srv_zentao_bug_search` 证实它确实返回缺陷(与产品线同名的产品可能是空的,缺陷可能在家族产品下);id 不许猜,`product` 传名字会被拒。
+照 apv-mindmap-compile 的规则:先用 `hub_tool_zentao_products` 从产品列表解出产品 id,再用一次带状态筛选的 `hub_tool_zentao_bug_search` 证实它确实返回缺陷(与产品线同名的产品可能是空的,缺陷可能在家族产品下);id 不许猜,`product` 传名字会被拒。
 
 ## 2. 检索缺陷(判断 + 工具)
 
-`srv_zentao_bug_search` 必带 product;修复清单给了 bug id 就直接取详情,关键词就按功能词检索挑相关缺陷。「没查到」不等于「不存在」:写明查了哪些、覆盖到哪。
+`hub_tool_zentao_bug_search` 必带 product;修复清单给了 bug id 就直接取详情,关键词就按功能词检索挑相关缺陷。「没查到」不等于「不存在」:写明查了哪些、覆盖到哪。
 
 ## 3. 读详情并抽取(工具 + 脚本)
 
-`srv_zentao_bug_detail` 读完整历史,hub 原样落盘每次返回;然后:
+`hub_tool_zentao_bug_detail` 读完整历史,hub 原样落盘每次返回;然后:
 
 ```
 node <skill>/scripts/extract.mjs <folder> --detail <hub 落盘的返回或 {savedAs} 指针> [--detail …]
@@ -32,4 +34,4 @@ node <skill>/scripts/extract.mjs <folder> --detail <hub 落盘的返回或 {save
 
 ## 4. 提交(工具)
 
-`defect_claims.json` 的每条**原样**交给 `srv_knowledge_claim_submit`(subject/predicate/value/evidenceIds 都不改);提交为候选,不自动提升为团队知识。提交后报告条数与任务 id;哪条被拒如实转述原因。
+`defect_claims.json` 的每条**原样**交给 `hub_tool_knowledge_claim_submit`(subject/predicate/value/evidenceIds 都不改);提交为候选,不自动提升为团队知识。提交后报告条数与任务 id;哪条被拒如实转述原因。

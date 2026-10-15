@@ -1,6 +1,6 @@
 {
   "id": "apv-defect-claims",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "title": "APV 缺陷声明抽取",
   "owner": "apv-product-line",
   "tools": [
