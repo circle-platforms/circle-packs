@@ -1,6 +1,6 @@
 {
   "id": "employee-onboarding",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "title": "Employee onboarding",
   "owner": "enterprise",
   "tools": [
@@ -21,5 +21,5 @@
     "out/access_requests.json",
     "out/policy_answer.md"
   ],
-  "model": "any capable model; the model extracts permit or forbid rules with verbatim quotes; the checklist and the access decision are scripts"
+  "model": "any capable model; the model extracts permit, forbid, tenure and downgrade rules with verbatim quotes; the checklist and the access decision are scripts"
 }

@@ -12,16 +12,16 @@ Judgement writes the clause contract. The gate checks quotes against the server-
 
 ## Inputs
 
-- `file`: the contract on the documents connector. Headings are `# Heading` or `1. Heading`.
+- `file`: the contract on the documents connector, or a user-provided UTF-8 file in the run folder. Headings are `# Heading`, `1. Heading`, `1、Heading`, or `第N条 标题`.
 - circle-hub tools: `hub_tool_docs_get`, `hub_tool_knowledge_claim_submit`. If one is missing, say so and stop.
 
 ## 1. Read the contract (tool)
 
-Call `hub_tool_docs_get`. Keep the `savedAs` pointer. Do not paste the return into the contract.
+Call `hub_tool_docs_get` when the contract is on the connector. Keep the `savedAs` pointer. A file the user placed in the run folder uses that relative path as `savedAs`. Do not paste the return into the contract.
 
 ## 2. Extract clauses (judgement)
 
-Write `<folder>/clauses.contract.json` in the shape of `references/contract.md`. Each clause is `permit` or `forbid`, with a `value` copied from its `quote`. Do not write a risk.
+Write `<folder>/clauses.contract.json` in the shape of `references/contract.md`. Extract every heading, including `第N条`. Each clause is `permit` or `forbid`. `cue` is a polarity span of the quote (`不得`, `禁止`, `不`, `可`, `应`, or the English `shall not` / `may` / `shall`). `value` is copied from the quote. Do not write a risk. Do not rewrite `references/risk-policy.json`; that table is approved once and SHA-pinned.
 
 ## 3. Gate (script)
 
@@ -29,12 +29,12 @@ Write `<folder>/clauses.contract.json` in the shape of `references/contract.md`.
 node <skill>/scripts/gate.mjs <folder> --contract <folder>/clauses.contract.json --policy <skill>/references/risk-policy.json
 ```
 
-The script refuses a transcribed return, a quote that is not in that heading's section, and a value that is not inside the quote. It scores each clause from the policy table and lists required headings the source does not contain.
+The script refuses a transcribed return, a quote that is not in that heading's section, a value that is not inside the quote, a cue whose polarity is not the effect, and a heading the contract skipped. It scores each clause from the pinned policy table. Ten days or fewer is high. Fifteen days or more is low. A forbid whose cue is `不` and whose value is a sharing ban scores low. It lists required topics the source does not contain.
 
 ## 4. Emit (script)
 
 ```
-node <skill>/scripts/emit.mjs <folder> --contract <folder>/clauses.contract.json
+node <skill>/scripts/emit.mjs <folder> --contract <folder>/clauses.contract.json --policy <skill>/references/risk-policy.json
 ```
 
 The script writes `out/clauses.json`, `out/review_report.md` and `out/review_claims.json`. Risk in those files is `origin: script`.

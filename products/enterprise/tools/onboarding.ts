@@ -16,21 +16,30 @@ export function checklistStatus(completed: unknown): { item: string; status: 'do
   return REQUIRED_ITEMS.map((item) => ({ item, status: done.has(item) ? 'done' as const : 'missing' as const }));
 }
 
-export function evaluateAccess(requests: unknown, rules: { role: string; effect: 'permit' | 'forbid' }[]): { person: string; role: string; system: string; needsApproval: boolean; decision: 'permit' | 'forbid' | 'uncovered'; origin: 'script' }[] {
+const ROLE = /^[\u3400-\u9fffA-Za-z0-9_-]{1,40}$/;
+
+export function evaluateAccess(requests: unknown, rules: { role: string; effect: 'permit' | 'forbid' | 'downgrade'; grant?: string; minTenureMonths?: number }[]): { person: string; role: string; system: string; tenureMonths?: number; needsApproval: boolean; decision: 'permit' | 'forbid' | 'downgrade' | 'tenure_short' | 'uncovered'; grant?: string; origin: 'script' }[] {
   if (!Array.isArray(requests)) invalid('Access requests must be an array');
   if (requests.length > 100) invalid('Access requests exceed their bound');
   return requests.map((request, index) => {
     if (!request || typeof request !== 'object') invalid(`Access request ${index} is not an object`);
     const row = request as Record<string, unknown>;
-    for (const key of ['person', 'role', 'system']) if (typeof row[key] !== 'string' || !/^[a-z0-9-]{1,40}$/.test(row[key] as string)) invalid(`Access request ${index} ${key} is malformed`);
+    for (const key of ['person', 'role', 'system']) if (typeof row[key] !== 'string' || !ROLE.test(row[key] as string)) invalid(`Access request ${index} ${key} is malformed`);
+    if (row.tenureMonths != null && (typeof row.tenureMonths !== 'number' || !Number.isFinite(row.tenureMonths))) invalid(`Access request ${index} tenure is malformed`);
     const matched = rules.filter((rule) => rule.role === row.role);
-    const decision = matched.some((rule) => rule.effect === 'forbid') ? 'forbid' as const : matched.some((rule) => rule.effect === 'permit') ? 'permit' as const : 'uncovered' as const;
+    const downgrade = matched.find((rule) => rule.effect === 'downgrade');
+    const forbid = matched.find((rule) => rule.effect === 'forbid');
+    const permit = matched.find((rule) => rule.effect === 'permit');
+    const tenureMonths = typeof row.tenureMonths === 'number' ? row.tenureMonths : undefined;
+    const decision = downgrade ? 'downgrade' as const : forbid ? 'forbid' as const : permit && permit.minTenureMonths != null && (tenureMonths ?? 0) < permit.minTenureMonths ? 'tenure_short' as const : permit ? 'permit' as const : 'uncovered' as const;
     return {
       person: row.person as string,
       role: row.role as string,
       system: row.system as string,
-      needsApproval: decision !== 'permit',
+      ...(tenureMonths != null ? { tenureMonths } : {}),
+      needsApproval: decision !== 'permit' && decision !== 'downgrade',
       decision,
+      ...(downgrade?.grant ? { grant: downgrade.grant } : {}),
       origin: 'script' as const,
     };
   });

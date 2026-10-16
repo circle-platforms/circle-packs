@@ -1,10 +1,17 @@
 {
   "schema": "enterprise/sla-policy/1",
-  "intents": {
-    "outage": { "queue": "contract-desk", "responseMinutes": 15 },
-    "howto": { "queue": "knowledge", "responseMinutes": 480 },
-    "access": { "queue": "access-desk", "responseMinutes": 240 }
+  "severities": {
+    "critical": { "priority": "P1", "responseMinutes": 15 },
+    "high": { "priority": "P2", "responseMinutes": 60 },
+    "medium": { "priority": "P3", "responseMinutes": 240 },
+    "low": { "priority": "P4", "responseMinutes": 1440 }
   },
-  "default": { "queue": "general", "responseMinutes": 1440 },
+  "intents": {
+    "outage": { "queue": "contract-desk" },
+    "account-takeover": { "queue": "security-desk" },
+    "howto": { "queue": "knowledge" },
+    "access": { "queue": "access-desk" }
+  },
+  "default": { "queue": "general", "severity": "low" },
   "credential": { "queue": "credential-hold", "responseMinutes": 60 }
 }

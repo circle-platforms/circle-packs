@@ -1,6 +1,6 @@
 {
   "id": "monthly-business-report",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "title": "Monthly business report",
   "owner": "enterprise",
   "tools": [
@@ -12,12 +12,12 @@
     "schedule"
   ],
   "inputs": {
-    "metrics": "human-approved metrics.yaml; the sample shape is references/metrics.sample.yaml",
-    "directory": "documents directory that holds the source extracts"
+    "metrics": "human-approved metrics.yaml, SHA-pinned; the sample shape is references/metrics.sample.yaml",
+    "directory": "documents directory or local folder that holds the raw CSV files"
   },
   "outputs": [
     "out/report.json",
     "out/report.xlsx"
   ],
-  "model": "any capable model; the model points at source files; the approved metrics.yaml and the totals are not model judgement"
+  "model": "any capable model; the model maps CSV headers only; the approved metrics.yaml and the totals are not model judgement"
 }

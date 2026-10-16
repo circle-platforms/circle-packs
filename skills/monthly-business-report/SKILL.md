@@ -8,7 +8,7 @@ titleZh: 月度经营报告
 
 Circle binding: Circle 1.7.0 or newer uses the `hub` extension, `/hub login` and `hub_tool_*`. Other harnesses expose the declared remote tools through their own adapters. Former Circle extension, command and tool names are not aliases.
 
-The human approves `metrics.yaml`. The model only points at the extracts. The script aggregates. This skill was built from `templates/judgement-gate`.
+The human approves `metrics.yaml` once and the run pins its SHA. The model maps CSV headers only. The script reads every data row. This skill was built from `templates/judgement-gate`.
 
 ## Inputs
 
@@ -18,13 +18,13 @@ The human approves `metrics.yaml`. The model only points at the extracts. The sc
 
 ## 1. Choose the sources (tool + judgement)
 
-Call `hub_tool_docs_list` on `directory`. Pick the extract files for the period named in `metrics.yaml`. Call `hub_tool_docs_get` once per file. Keep every `savedAs` pointer. Do not retype the rows.
+Call `hub_tool_docs_list` on `directory`. Pick the CSV files for the period named in `metrics.yaml`. Call `hub_tool_docs_get` once per file, or point `savedAs` at a user-provided CSV in the run folder. Keep every pointer. Do not retype a row.
 
-Each file is UTF-8 JSON `{name, rows:[{account, kind, amount}]}`.
+Each file is raw UTF-8 CSV. The first row is the header.
 
-## 2. Point at the files (judgement)
+## 2. Map the headers (judgement)
 
-Write `<folder>/sources.contract.json` as in `references/contract.md`. `sources` is a list of `{"savedAs":"<path>"}`.
+Write `<folder>/sources.contract.json` as in `references/contract.md`. `columns` names the header cells for account, kind and amount. Do not put cell values in the contract. Do not edit `metrics.yaml` to make a total come out.
 
 ## 3. Gate (script)
 
@@ -32,7 +32,7 @@ Write `<folder>/sources.contract.json` as in `references/contract.md`. `sources`
 node <skill>/scripts/gate.mjs <folder> --contract <folder>/sources.contract.json --metrics <approved metrics.yaml>
 ```
 
-The script checks the metrics schema, loads each pointer, and sums only approved kinds.
+The script checks the metrics schema, checks each mapped name is a header cell, parses every data row, and sums only approved kinds. `收入` matches `revenue` when the pinned metrics say so.
 
 ## 4. Emit (script)
 

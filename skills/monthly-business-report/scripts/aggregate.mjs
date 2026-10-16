@@ -2,7 +2,7 @@
 // Aggregate approved metrics from server-saved extracts. The zip is stored, method 0.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { assertExactKeys, assertOriginModel, assertPointer, loadPointedReturn, readJson, sha256, utf8FromBase64 } from './pointers.mjs';
+import { assertExactKeys, assertOriginModel, loadOriginal, readJson, sha256 } from './pointers.mjs';
 
 export const FORMULAS = {
   revenue: 'SUMIF(Lines!C:C,"revenue",Lines!D:D)',
@@ -80,7 +80,7 @@ function sheetXml(rows) {
 }
 
 const label = (value, field) => {
-  if (typeof value !== 'string' || !/^[A-Za-z0-9 ._-]{1,80}$/.test(value)) throw new Error(`${field} is malformed`);
+  if (typeof value !== 'string' || !/^[\u3400-\u9fffA-Za-z0-9 ._-]{1,80}$/.test(value)) throw new Error(`${field} is malformed`);
   return value;
 };
 const scalar = (raw) => {
@@ -125,7 +125,8 @@ export function planMetrics(metrics) {
     if (item.aggregate === 'sumif') {
       if (typeof item.id !== 'string' || typeof item.kind !== 'string') throw new Error('schema_invalid: sumif');
       if (sumif.some((row) => row.id === item.id || row.kind === item.kind)) throw new Error('schema_invalid: duplicate metric');
-      sumif.push(item);
+      const accept = String(item.match ?? item.kind).split('|').filter(Boolean);
+      sumif.push({ ...item, accept });
     } else if (item.aggregate === 'difference') {
       if (difference) throw new Error('schema_invalid: one difference');
       difference = item;
@@ -134,6 +135,57 @@ export function planMetrics(metrics) {
   if (!sumif.length || !difference) throw new Error('schema_invalid: metrics need a sum and a difference');
   if (!sumif.some((row) => row.id === difference.left) || !sumif.some((row) => row.id === difference.right)) throw new Error('schema_invalid: difference names');
   return { period: metrics.period, sumif, difference };
+}
+
+export function parseCsv(text) {
+  const rows = [];
+  let row = [];
+  let cell = '';
+  let quoted = false;
+  const pushCell = () => { row.push(cell); cell = ''; };
+  const pushRow = () => { if (row.some((value) => value.trim())) rows.push(row); row = []; };
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (quoted) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { cell += '"'; i++; }
+        else quoted = false;
+      } else cell += ch;
+    } else if (ch === '"') quoted = true;
+    else if (ch === ',') pushCell();
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      pushCell();
+      pushRow();
+    } else cell += ch;
+  }
+  if (cell.length || row.length) { pushCell(); pushRow(); }
+  return rows;
+}
+
+export function rowsFromCsv(name, text, columns, plan) {
+  const table = parseCsv(text);
+  if (table.length < 2) throw new Error('schema_invalid: csv has no data row');
+  const headers = table[0];
+  const index = (header) => {
+    const at = headers.indexOf(header);
+    if (at < 0) throw new Error(`header_not_in_source: ${header}`);
+    return at;
+  };
+  const accountAt = index(columns.account);
+  const kindAt = index(columns.kind);
+  const amountAt = index(columns.amount);
+  return table.slice(1).map((line) => {
+    const account = line[accountAt] ?? '';
+    const rawKind = (line[kindAt] ?? '').trim();
+    const amount = Number((line[amountAt] ?? '').trim());
+    label(name, 'source name');
+    label(account, 'account');
+    const metric = plan.sumif.find((item) => item.accept.includes(rawKind));
+    if (!metric) throw new Error('kind is not an approved metric');
+    if (!Number.isFinite(amount)) throw new Error('amount must be a finite number');
+    return { source: name, account, kind: metric.kind, amount };
+  });
 }
 
 export function summarise(plan, sources) {
@@ -192,13 +244,15 @@ export function gateReport(folder, contractPath, metricsPath) {
   const contract = readJson(contractPath);
   assertExactKeys(contract, ['origin', 'schema', 'sources'], 'sources contract');
   assertOriginModel(contract, 'sources contract');
-  if (contract.schema !== 'enterprise/sources/1' || !Array.isArray(contract.sources) || !contract.sources.length) throw new Error('schema_invalid: sources');
+  if (contract.schema !== 'enterprise/sources/2' || !Array.isArray(contract.sources) || !contract.sources.length) throw new Error('schema_invalid: sources');
   const plan = planMetrics(parseMetricsYaml(metricsBytes.toString('utf8')));
-  const sources = contract.sources.map((source, index) => {
-    assertPointer(source, `source ${index}`);
-    const saved = loadPointedReturn(folder, source, `source ${index}`);
-    const parsed = JSON.parse(utf8FromBase64(saved.result));
-    return { name: parsed.name, rows: parsed.rows, evidenceId: saved.evidenceId };
+  const sources = contract.sources.map((entry, index) => {
+    assertExactKeys(entry, ['columns', 'name', 'source'], `source ${index}`);
+    assertExactKeys(entry.columns, ['account', 'amount', 'kind'], `source ${index} columns`);
+    label(entry.name, 'source name');
+    const saved = loadOriginal(folder, entry.source, `source ${index}`);
+    const parsed = rowsFromCsv(entry.name, saved.text, entry.columns, plan);
+    return { name: entry.name, rows: parsed.map(({ account, kind, amount }) => ({ account, kind, amount })), evidenceId: saved.evidenceId };
   });
   const summary = summarise(plan, sources);
   const gate = { ok: true, origin: 'script', contractSha256: sha256(contractBytes), metricsSha256: sha256(metricsBytes), summary };

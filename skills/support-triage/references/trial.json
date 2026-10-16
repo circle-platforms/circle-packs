@@ -1,0 +1,28 @@
+{
+  "toolCalls": [
+    {
+      "name": "docs.get",
+      "argsSha256": "0d5fe23235285254f05f79cabe12ec7ddce6145210d73a8c0e5196fddc420431",
+      "ok": true
+    },
+    {
+      "name": "knowledge.claim_submit",
+      "argsSha256": "d535fd2b39d2667a1fdb65f6c574417e151d50f530f0afb4df80e8b8697ab296",
+      "ok": true
+    }
+  ],
+  "outputs": [
+    {
+      "path": "out/triage.json",
+      "sha256": "5afee6fa82185704c97b55d11399327db04743be31f173a2bb2cddc9114b6f80"
+    },
+    {
+      "path": "out/replies.md",
+      "sha256": "c70e918ef756967dc8552e89255c26b759730e2aef879c0b7003c87f1f20c172"
+    },
+    {
+      "path": "out/kb_gaps.json",
+      "sha256": "b42bf94dc8df31252f0a491ca9fecd6ea44ff343ebcf5aaaca01335e81ce7650"
+    }
+  ]
+}

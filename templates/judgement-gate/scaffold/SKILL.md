@@ -17,7 +17,7 @@ This skill was generated from `templates/judgement-gate`. Replace the generic co
 
 ## 1. Read the source (tool)
 
-Call `__TOOL_HUB__`. Keep the `savedAs` pointer. Do not paste the return into the contract.
+Call `__TOOL_HUB__` for a document already on the connector. Keep the `savedAs` pointer. A user-provided local file is also a valid pointer target: put the UTF-8 file in the run folder and set `savedAs` to that relative path. Do not paste the bytes into the contract.
 
 ## 2. Judgement
 
@@ -29,7 +29,7 @@ Write `<folder>/contract.json`. The shape is in `references/contract.md`. Every 
 node <skill>/scripts/gate.mjs <folder> --contract <folder>/contract.json
 ```
 
-The script checks the schema, refuses a transcribed return, checks each quote against the file the pointer names, and records that file's evidence id. It writes `<folder>/gate.json`.
+The script checks the schema, refuses a transcribed return, checks each quote against the file the pointer names, records that file's evidence id, and refuses the run when any input item is not covered. It writes `<folder>/gate.json` only when the gate passes.
 
 ## 4. Emit (script)
 

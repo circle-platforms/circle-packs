@@ -116,9 +116,64 @@ export interface ReportSummary {
 }
 
 const label = (value: string, field: string) => {
-  if (!/^[A-Za-z0-9 ._-]{1,80}$/.test(value)) invalid(`${field} is malformed`);
+  if (!/^[\u3400-\u9fffA-Za-z0-9 ._-]{1,80}$/.test(value)) invalid(`${field} is malformed`);
   return value;
 };
+
+export function parseCsv(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = '';
+  let quoted = false;
+  const pushCell = () => { row.push(cell); cell = ''; };
+  const pushRow = () => { if (row.some((value) => value.trim())) rows.push(row); row = []; };
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (quoted) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { cell += '"'; i++; }
+        else quoted = false;
+      } else cell += ch;
+    } else if (ch === '"') quoted = true;
+    else if (ch === ',') pushCell();
+    else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+      pushCell();
+      pushRow();
+    } else cell += ch;
+  }
+  if (cell.length || row.length) { pushCell(); pushRow(); }
+  return rows;
+}
+
+export function rowsFromCsv(
+  name: string,
+  text: string,
+  columns: { account: string; kind: string; amount: string },
+  metrics: { kind: string; match?: string }[],
+): ReportSource['rows'] {
+  const table = parseCsv(text);
+  if (table.length < 2) invalid('CSV has no data row');
+  const headers = table[0];
+  const at = (header: string) => {
+    const index = headers.indexOf(header);
+    if (index < 0) invalid(`Header ${header} is not in the source`);
+    return index;
+  };
+  const accountAt = at(columns.account);
+  const kindAt = at(columns.kind);
+  const amountAt = at(columns.amount);
+  return table.slice(1).map((line) => {
+    const account = line[accountAt] ?? '';
+    const rawKind = (line[kindAt] ?? '').trim();
+    const amount = Number((line[amountAt] ?? '').trim());
+    label(account, 'Account');
+    const metric = metrics.find((item) => (item.match ?? item.kind).split('|').includes(rawKind));
+    if (!metric || (metric.kind !== 'revenue' && metric.kind !== 'expense')) invalid('Kind is not an approved metric');
+    if (!Number.isFinite(amount)) invalid('Amount must be a finite number');
+    return { account, kind: metric.kind, amount };
+  });
+}
 
 export function summariseReport(period: string, sources: ReportSource[]): ReportSummary {
   if (!/^[A-Za-z0-9 ._-]{1,40}$/.test(period)) invalid('Period is malformed');

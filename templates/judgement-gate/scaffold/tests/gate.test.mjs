@@ -48,6 +48,23 @@ test('a transcribed return and a quote that is not in the original are refused',
   assert.throws(() => gateContract(folder, contract), /quote_not_verbatim/);
 });
 
+test('a local file is read, and a line the contract skips is refused', () => {
+  const folder = mkdtempSync(join(tmpdir(), 'scaffold-local-'));
+  writeFileSync(join(folder, 'note.txt'), '第一条 已覆盖\n第二条 未覆盖\n');
+  const contract = join(folder, 'contract.json');
+  const body = (quotes) => JSON.stringify({
+    schema: 'circle-packs/judgement-contract/1',
+    origin: 'model',
+    items: quotes.map((quote, index) => ({ id: `i${index + 1}`, quote, source: { savedAs: 'note.txt' } })),
+  });
+  writeFileSync(contract, body(['第一条 已覆盖']));
+  assert.throws(() => gateContract(folder, contract), /input_not_covered/);
+  writeFileSync(contract, body(['第一条 已覆盖', '第二条 未覆盖']));
+  const gate = gateContract(folder, contract);
+  assert.equal(gate.ok, true);
+  assert.equal(gate.items[0].evidenceId, null);
+});
+
 test('emit refuses a contract edited after the gate', () => {
   const { folder, saved } = fixture();
   const contract = join(folder, 'contract.json');

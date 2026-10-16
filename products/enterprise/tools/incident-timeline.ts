@@ -86,6 +86,70 @@ export function buildTimeline(text: string): {
   return { events, durations, incomplete, missing, unparsed, mttrMinutes, origin: 'script' };
 }
 
+const ZONES: Record<string, number> = { UTC: 0, GMT: 0, JST: 540, CST: 480 };
+
+export function parseClock(text: string, zones: Record<string, number> = ZONES): number {
+  const match = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:\s*(Z|UTC|GMT|JST|CST|[+-]\d{2}:\d{2}))?$/.exec(text.trim());
+  if (!match) invalid(`Bad timestamp ${text}`);
+  const local = unixMs(`${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6] ?? '00'}Z`);
+  const zone = match[7];
+  let offset = 0;
+  if (zone && zone !== 'Z') {
+    if (Object.prototype.hasOwnProperty.call(zones, zone)) offset = zones[zone];
+    else if (/^[+-]\d{2}:\d{2}$/.test(zone)) offset = (zone[0] === '-' ? -1 : 1) * (Number(zone.slice(1, 3)) * 60 + Number(zone.slice(4, 6)));
+    else invalid(`Bad timestamp ${text}`);
+  }
+  return local - offset * 60000;
+}
+
+export function timelineFromLabels(
+  text: string,
+  labels: { quote: string; incident: string; event: string; at: string }[],
+  policy: { startEvent: string; endEvent: string; events?: string[]; timezones?: Record<string, number> },
+): { events: { at: string; incident: string; event: string }[]; durations: { incident: string; minutes: number }[]; mttrMinutes: number; origin: 'script' } {
+  if (typeof text !== 'string') invalid('Incident log must be a string');
+  const lines = text.split(/\r?\n/).filter((line) => line.trim());
+  const allowed = new Set(policy.events ?? [policy.startEvent, policy.endEvent]);
+  const labeled = labels.map((label) => {
+    if (!lines.includes(label.quote)) invalid('Label quote is not a whole log line');
+    if (!label.quote.includes(label.incident) || !label.quote.includes(label.at)) invalid('Label incident or timestamp is not in the quote');
+    if (!allowed.has(label.event)) invalid(`Event ${label.event} is not in the policy`);
+    return { ...label, atMs: parseClock(label.at, policy.timezones ?? ZONES) };
+  });
+  const covered = new Set(labeled.map((label) => label.quote));
+  const missingLines = lines.filter((line) => !covered.has(line));
+  if (missingLines.length) invalid(`Line is not covered: ${missingLines[0]}`);
+  const marks = new Map<string, Record<string, { atMs: number }>>();
+  for (const label of labeled) {
+    const row = marks.get(label.incident) ?? {};
+    row[label.event] = label;
+    marks.set(label.incident, row);
+  }
+  const missing: string[] = [];
+  const durations: { incident: string; minutes: number }[] = [];
+  for (const incident of [...marks.keys()].sort()) {
+    const row = marks.get(incident)!;
+    const missingFields: string[] = [];
+    if (!row[policy.startEvent]) missingFields.push(policy.startEvent);
+    if (!row[policy.endEvent]) missingFields.push(policy.endEvent);
+    if (missingFields.length) {
+      missing.push(`${incident} missing ${missingFields.join(', ')}`);
+      continue;
+    }
+    const minutes = (row[policy.endEvent].atMs - row[policy.startEvent].atMs) / 60000;
+    if (!Number.isFinite(minutes) || minutes < 0) invalid(`Incident ${incident} resolved before it opened`);
+    durations.push({ incident, minutes });
+  }
+  if (missing.length) invalid(`Required metrics are missing: ${missing.join('; ')}`);
+  const mttrMinutes = durations.reduce((sum, row) => sum + row.minutes, 0) / durations.length;
+  return {
+    events: [...labeled].sort((a, b) => a.atMs - b.atMs).map((label) => ({ at: label.at, incident: label.incident, event: label.event })),
+    durations,
+    mttrMinutes,
+    origin: 'script',
+  };
+}
+
 export function buildTimelineFromBytes(bytes: Uint8Array): ReturnType<typeof buildTimeline> {
   return buildTimeline(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
 }

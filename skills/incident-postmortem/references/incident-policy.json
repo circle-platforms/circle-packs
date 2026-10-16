@@ -1,0 +1,7 @@
+{
+  "schema": "enterprise/incident-policy/1",
+  "startEvent": "opened",
+  "endEvent": "resolved",
+  "events": ["opened", "acknowledged", "mitigated", "resolved"],
+  "timezones": { "UTC": 0, "GMT": 0, "JST": 540, "CST": 480 }
+}

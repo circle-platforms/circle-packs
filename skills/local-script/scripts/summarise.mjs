@@ -13,17 +13,30 @@ export function readJson(path) {
   }
 }
 
+function resultFromBytes(bytes, path) {
+  return { path, contentBase64: Buffer.from(bytes).toString('base64') };
+}
+
+// A docs.get return, a {savedAs} pointer, or a user-provided UTF-8 file.
 export function loadSaved(folder, arg) {
-  let parsed = readJson(arg);
-  if (parsed && typeof parsed.savedAs === 'string' && parsed.savedAs.trim()) {
+  const bytes = readFileSync(arg);
+  let parsed = null;
+  try {
+    parsed = JSON.parse(bytes.toString('utf8'));
+  } catch {
+    parsed = null;
+  }
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && typeof parsed.savedAs === 'string' && parsed.savedAs.trim() && Object.keys(parsed).length === 1) {
     const candidates = [parsed.savedAs, resolve(dirname(arg), '..', '..', parsed.savedAs), resolve(folder, parsed.savedAs)];
     const path = candidates.find((candidate) => existsSync(candidate));
     if (!path) throw new Error(`${arg}: pointer target ${parsed.savedAs} not found`);
-    parsed = readJson(path);
+    return loadSaved(folder, path);
   }
-  const raw = parsed.response ?? parsed;
-  if (!raw?.result) throw new Error(`${arg}: not a hub tool return`);
-  return raw.result;
+  const raw = parsed && typeof parsed === 'object' ? (parsed.response ?? parsed) : null;
+  if (raw?.result?.contentBase64 || Array.isArray(raw?.result?.lines)) return raw.result;
+  const text = bytes.toString('utf8');
+  if (!Buffer.from(text).equals(bytes)) throw new Error(`${arg}: document is not UTF-8`);
+  return resultFromBytes(bytes, arg);
 }
 
 export function documentText(result) {

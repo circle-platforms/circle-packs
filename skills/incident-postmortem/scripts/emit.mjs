@@ -2,10 +2,10 @@
 import { emitPostmortem } from './timeline.mjs';
 
 const [folder, ...rest] = process.argv.slice(2);
-let labels;
-for (let i = 0; i < rest.length; i++) if (rest[i] === '--labels') labels = rest[++i];
-if (!folder || !labels) {
-  console.error('usage: node emit.mjs <folder> --labels <labels.json>');
+const args = {};
+for (let i = 0; i < rest.length; i++) if (rest[i].startsWith('--')) args[rest[i].slice(2)] = rest[++i];
+if (!folder || !args.labels || !args.policy) {
+  console.error('usage: node emit.mjs <folder> --labels <labels.json> --policy <incident-policy.json>');
   process.exit(2);
 }
-emitPostmortem(folder, labels);
+emitPostmortem(folder, args.labels, args.policy);

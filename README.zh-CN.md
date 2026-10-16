@@ -28,12 +28,12 @@
 | [skills/apv-defect-claims](skills/apv-defect-claims/SKILL.md) | 把禅道缺陷记录抽成候选知识声明（origin script）：定位产品、挑缺陷是模型判断，字段到谓词的抽取是脚本、零推断，evidenceId 透传。版本 0.2.1 | 已在 main |
 | [skills/apv-product-qa](skills/apv-product-qa/SKILL.md) | 只凭手册回答 APV 产品问题：先用 docs.list 钉住手册版本、按 anchor 直取小节，作答是模型判断、每段带证据标记，引文由脚本对 hub 落盘的章节逐字校验，no_evidence 必须有一次真实的小节未命中。版本 0.2.1 | 已在 main |
 | [skills/apv-case-review](skills/apv-case-review/SKILL.md) | 对编译批次按绑定构建做评审：结构、命令树、函数契约核对是脚本，覆盖与风险是模型判断；报告带 evidenceId，发现以候选声明提交。版本 0.2.1 | 已在 main |
-| [products/enterprise](products/enterprise/README.md) | 通用产品线：策略表风险分、已批准指标的工作簿、工单路由、访问判定、以及写明缺失字段的事故时间线。版本 1.1.0 | 草案 |
-| [skills/contract-review](skills/contract-review/SKILL.md) | 模型抽取允许或禁止条款并附逐字引文。脚本按策略表给风险分。版本 1.1.0 | 草案 |
-| [skills/monthly-business-report](skills/monthly-business-report/SKILL.md) | 按指针汇总摘录，生成带公式的 `report.xlsx`。指标清单是人工批准的 `metrics.yaml`。版本 1.1.0 | 草案 |
-| [skills/support-triage](skills/support-triage/SKILL.md) | 模型给出意图并引用工单。脚本确定 SLA、队列并过滤凭据。版本 1.1.0 | 草案 |
-| [skills/employee-onboarding](skills/employee-onboarding/SKILL.md) | 模型抽取允许或禁止的制度规则。脚本评估清单和访问申请。版本 1.1.0 | 草案 |
-| [skills/incident-postmortem](skills/incident-postmortem/SKILL.md) | 模型给日志行打标签。脚本重算 MTTR 并点名缺失字段。版本 1.1.0 | 草案 |
+| [products/enterprise](products/enterprise/README.md) | 通用产品线：钉死的策略表、原始 CSV 汇总、模型判定的工单严重度、司龄与降权规则、以及按标签计算的 MTTR。版本 1.2.0 | 草案 |
+| [skills/contract-review](skills/contract-review/SKILL.md) | 模型抽取允许或禁止条款（含「第N条」）并给出极性片段。脚本按钉死的策略表给风险分。版本 1.2.0 | 草案 |
+| [skills/monthly-business-report](skills/monthly-business-report/SKILL.md) | 读取原始 CSV。模型只映射表头。合计来自人工批准的 `metrics.yaml`。版本 1.2.0 | 草案 |
+| [skills/support-triage](skills/support-triage/SKILL.md) | 模型给出意图、严重度并覆盖每一张工单。脚本按钉死的策略表映射 SLA 和队列。版本 1.2.0 | 草案 |
+| [skills/employee-onboarding](skills/employee-onboarding/SKILL.md) | 模型抽取允许、禁止、司龄和降权规则。脚本评估申请。版本 1.2.0 | 草案 |
+| [skills/incident-postmortem](skills/incident-postmortem/SKILL.md) | 模型给日志行打标签，含混合时区。脚本按标签计算 MTTR，缺了均值则门禁失败。版本 1.2.0 | 草案 |
 | [skills/local-script](skills/local-script/SKILL.md) | 用本地脚本统计行数和词数。说明清单、声明的工具、输出路径和一份试跑记录样本。版本 1.0.0 | 草案 |
 
 ## 不放什么

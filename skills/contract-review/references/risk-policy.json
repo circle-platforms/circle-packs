@@ -1,18 +1,25 @@
 {
   "schema": "enterprise/risk-policy/1",
-  "required": ["Payment terms", "Termination", "Liability", "Data protection"],
+  "required": [
+    { "id": "payment", "headings": ["Payment terms", "付款", "付款期限", "付款条件"] },
+    { "id": "termination", "headings": ["Termination", "终止", "合同终止"] },
+    { "id": "liability", "headings": ["Liability", "责任", "责任限制"] },
+    { "id": "data", "headings": ["Data protection", "数据保护", "个人信息"] }
+  ],
   "defaultRisk": "review",
   "rules": [
-    { "id": "payment-forbid", "heading": "Payment terms", "effect": "forbid", "risk": "high" },
-    { "id": "payment-days", "heading": "Payment terms", "effect": "permit", "valuePattern": "^[0-9]{1,3} days$", "risk": "low" },
-    { "id": "payment-other", "heading": "Payment terms", "effect": "permit", "risk": "medium" },
-    { "id": "termination-forbid", "heading": "Termination", "effect": "forbid", "risk": "high" },
-    { "id": "termination-permit", "heading": "Termination", "effect": "permit", "risk": "low" },
-    { "id": "liability-forbid", "heading": "Liability", "effect": "forbid", "risk": "high" },
-    { "id": "liability-capped", "heading": "Liability", "effect": "permit", "valuePattern": "capped", "risk": "low" },
-    { "id": "liability-other", "heading": "Liability", "effect": "permit", "risk": "high" },
-    { "id": "data-forbid", "heading": "Data protection", "effect": "forbid", "risk": "high" },
-    { "id": "data-permit", "heading": "Data protection", "effect": "permit", "risk": "low" },
-    { "id": "required-missing", "heading": "*", "effect": "missing", "risk": "high" }
+    { "id": "payment-short", "topic": "payment", "effect": "permit", "maxDays": 14, "risk": "high" },
+    { "id": "payment-standard", "topic": "payment", "effect": "permit", "minDays": 15, "risk": "low" },
+    { "id": "payment-forbid", "topic": "payment", "effect": "forbid", "risk": "high" },
+    { "id": "termination-forbid", "topic": "termination", "effect": "forbid", "risk": "high" },
+    { "id": "termination-permit", "topic": "termination", "effect": "permit", "risk": "low" },
+    { "id": "liability-cap", "topic": "liability", "effect": "forbid", "valuePattern": "为限|capped|exceed|超出", "risk": "low" },
+    { "id": "liability-forbid", "topic": "liability", "effect": "forbid", "risk": "high" },
+    { "id": "liability-permit", "topic": "liability", "effect": "permit", "risk": "medium" },
+    { "id": "data-forbid-share", "topic": "data", "effect": "forbid", "valuePattern": "共享|share", "risk": "low" },
+    { "id": "data-permit-share", "topic": "data", "effect": "permit", "valuePattern": "共享|share", "risk": "high" },
+    { "id": "data-forbid", "topic": "data", "effect": "forbid", "risk": "low" },
+    { "id": "data-permit", "topic": "data", "effect": "permit", "risk": "medium" },
+    { "id": "required-missing", "topic": "*", "effect": "missing", "risk": "high" }
   ]
 }

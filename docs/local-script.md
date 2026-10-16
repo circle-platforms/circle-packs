@@ -44,7 +44,7 @@ The skill calls one tool, `docs.get`, and then:
 node skills/local-script/scripts/summarise.mjs <folder> --get <hub-saved return or {savedAs} pointer>
 ```
 
-The script reads the saved return, decodes `contentBase64`, and writes `<folder>/out/summary.json`. It does not choose a different filename. For the fixture text `alpha beta\ngamma\n` the file is:
+The script reads a hub `docs.get` return, a `{"savedAs"}` pointer, or a user-provided UTF-8 file at that path. It decodes `contentBase64` when the file is a hub return, and writes `<folder>/out/summary.json`. It does not choose a different filename. For the fixture text `alpha beta\ngamma\n` the file is:
 
 ```json
 {

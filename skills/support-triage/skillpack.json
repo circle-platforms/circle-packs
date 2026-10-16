@@ -1,6 +1,6 @@
 {
   "id": "support-triage",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "title": "Support ticket triage",
   "owner": "enterprise",
   "tools": [
@@ -18,5 +18,5 @@
     "out/replies.md",
     "out/kb_gaps.json"
   ],
-  "model": "any capable model; the model names an intent and quotes the ticket; SLA, routing and the credential filter are a script"
+  "model": "any capable model; the model names an intent and a severity and quotes the ticket; SLA, routing and the credential filter are a script"
 }

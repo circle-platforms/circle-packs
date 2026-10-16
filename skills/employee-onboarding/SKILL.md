@@ -22,7 +22,7 @@ Call `hub_tool_docs_section` with `file` and `anchor`. Keep `savedAs`. Use `hub_
 
 ## 2. Extract rules (judgement)
 
-Write `<folder>/policy_rules.json` as in `references/contract.md`. Each rule is `permit` or `forbid`. The role appears inside the quote. Do not decide the request yourself.
+Write `<folder>/policy_rules.json` as in `references/contract.md`. Each rule is `permit`, `forbid`, or `downgrade`. A permit may set `minTenureMonths` when the quote states a tenure floor. A downgrade sets `grant` to the role the quote names as the replacement. `cue` is a polarity span of the quote. Do not decide the request yourself. After a person approves this file, later runs reuse it by SHA instead of extracting it again.
 
 ## 3. Gate (script)
 
@@ -30,7 +30,7 @@ Write `<folder>/policy_rules.json` as in `references/contract.md`. Each rule is 
 node <skill>/scripts/gate.mjs <folder> --rules <folder>/policy_rules.json
 ```
 
-The script refuses a quote that is not in the saved section, and a role that is not inside its quote.
+The script refuses a quote that is not in the saved section, a role or tenure or grant that is not inside its quote, and a cue whose polarity is not the effect. The source may be a hub `docs.section` return or a user-provided UTF-8 file.
 
 ## 4. Emit (script)
 
@@ -38,4 +38,4 @@ The script refuses a quote that is not in the saved section, and a role that is 
 node <skill>/scripts/emit.mjs <folder> --rules <folder>/policy_rules.json --checklist <folder>/checklist.json --requests <folder>/requests.json
 ```
 
-The script writes `out/checklist.json`, `out/access_requests.json` and `out/policy_answer.md`. A role with a permit and no forbid is `permit`. A forbid, or no matching rule, needs approval.
+The script writes `out/checklist.json`, `out/access_requests.json` and `out/policy_answer.md`. A downgrade grants the rule's `grant`. A permit whose `minTenureMonths` is above the request's `tenureMonths` is `tenure_short`. A forbid, or no matching rule, needs approval.

@@ -1,15 +1,19 @@
-# Source pointers and approved metrics
+# Source contract
 
-The human writes `metrics.yaml` and approves it before the run. The sample shape is `references/metrics.sample.yaml`. The model does not add a metric and does not type a total.
-
-The model writes `sources.contract.json`. Each source is only a pointer:
+The model maps headers. It does not copy cells. The metric list is the human-approved `metrics.yaml`, pinned by SHA. Do not re-extract it.
 
 ```json
 {
-  "schema": "enterprise/sources/1",
+  "schema": "enterprise/sources/2",
   "origin": "model",
-  "sources": [{ "savedAs": ".circle/hub-returns/sales.json" }]
+  "sources": [
+    {
+      "name": "sales",
+      "columns": { "account": "账户", "kind": "类型", "amount": "金额" },
+      "source": { "savedAs": "sales.csv" }
+    }
+  ]
 }
 ```
 
-A transcribed row in that file is `pointer_not_transcribe`. The gate loads each return, keeps the rows from those bytes, and sums only kinds named by the approved metrics. A kind the metrics file does not name stops the script.
+`source` is only `{"savedAs"}`. The file is raw CSV, either a user-provided local file or a hub return whose `contentBase64` is that CSV. `columns` names header cells. A value that is not a header, including a data cell such as `120`, fails with `header_not_in_source`. The script parses every data row and maps the kind cell through the approved `match` list (`收入` → `revenue`).
