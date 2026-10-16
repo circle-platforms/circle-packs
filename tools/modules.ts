@@ -1,4 +1,4 @@
-// The module list a circle-server installer reads: for each module its root, the manifest it
+// The module list a circle-hub installer reads: for each module its root, the manifest it
 // declares itself with, its version, and the SHA-256 of every file it ships. The installer
 // freezes exactly these bytes and submits them through the platform's own registration and
 // independent approval; nothing here approves anything.
