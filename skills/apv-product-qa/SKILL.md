@@ -1,6 +1,7 @@
 ---
 name: apv-product-qa
 description: Answer APV product questions from the manuals with verbatim citations, using the circle-hub document tools. Use when asked about APV product behavior, commands or configuration.
+titleZh: APV 产品问答
 ---
 
 # APV 产品问答

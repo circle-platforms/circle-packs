@@ -6,11 +6,11 @@
       "kind": "skill-pack",
       "root": "skills/apv-case-review",
       "manifestPath": "skills/apv-case-review/skillpack.json",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "85cd2a50d0665bdbc28f1b27c9d115292a978a3e1c9df8cce0dde3486b7ab9c7"
+          "sha256": "017ea11633206699881c107fb357a6659b7aef5097818c06e75d9dba6245d14f"
         },
         {
           "path": "scripts/check.mjs",
@@ -26,25 +26,25 @@
         },
         {
           "path": "skillpack.json",
-          "sha256": "47667a324180b34955c62fc58a87e993442c5e46f61b1e1c94ef4697e2fc3275"
+          "sha256": "816acdd636b32663dcab11e2f3c6083eff8056b7c12d364b1e07d033faa55ff0"
         },
         {
           "path": "tests/review.test.mjs",
           "sha256": "9eb80246caea94cf9451cad2aa86fa73a7d2157e9a5482aa1ad1986550813587"
         }
       ],
-      "digest": "de43fd4dd8cdd9994338f8cb031d268a9dd8f072449d3c7fa4910b77e7e39ef0"
+      "digest": "90c84a7748ad42052aea04385a94200d91f9bab66e9f6841edc5338e297afeaa"
     },
     {
       "id": "apv-defect-claims",
       "kind": "skill-pack",
       "root": "skills/apv-defect-claims",
       "manifestPath": "skills/apv-defect-claims/skillpack.json",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "4ac9f436ba0e4b36b295d6a2ac04dfd9cd3729b9ffd73a6a2b8f118b86472b43"
+          "sha256": "97190e84cd7bb656f127e669ead435f143b7d67a0c7c51a6cf2bfcc29af4fa07"
         },
         {
           "path": "scripts/extract.mjs",
@@ -52,25 +52,25 @@
         },
         {
           "path": "skillpack.json",
-          "sha256": "82daae92a70309e3fd71682614a6e5557bb4492c696ac6a1213dd67796ad8e6c"
+          "sha256": "e08133b9327146711fd82a0b93b492fdc5a9299309f33767941624d21e73b4af"
         },
         {
           "path": "tests/extract.test.mjs",
           "sha256": "aec537c4209b09471dee25c589a01743b5d581bf8e2b11bfe17828d3ed0c68b9"
         }
       ],
-      "digest": "f4704fb6654d3964d99cd5dc9bb9f3b2942d35fadcbe33f4635fae2d103fed5a"
+      "digest": "9c2faf19dd50fc057c897f655876f2c52a4e61870f64d31aa05e48154841870e"
     },
     {
       "id": "apv-mindmap-compile",
       "kind": "skill-pack",
       "root": "skills/apv-mindmap-compile",
       "manifestPath": "skills/apv-mindmap-compile/skillpack.json",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "b7ac4e0469ebcbaf7263ab33534a59a3358967d24d94c3a85f568cc2b7e4ffc6"
+          "sha256": "f626b6fafced62a1e0804a6fd95ae0d748d0140b419ea57420adc300288eafb5"
         },
         {
           "path": "references/contract.md",
@@ -110,7 +110,7 @@
         },
         {
           "path": "skillpack.json",
-          "sha256": "a7b0525828b43f42558137005264141b37cae79880c4cff12257ed1e1445294c"
+          "sha256": "17a0abeb7a2887ccd140093139c02885db4a83715820a2bc7e4f325aafbc1398"
         },
         {
           "path": "tests/bed-facts.test.mjs",
@@ -133,18 +133,18 @@
           "sha256": "6c1d0a530e901ff9686594b37b947cae760f53223711efe7f8d1868e0f1521d7"
         }
       ],
-      "digest": "7c4639528cec7995410ae41d9ae71a96683ccb516d7c19a287e2d0f4d4b8b9d7"
+      "digest": "6585aa62255a7d2f12cbed3e7386f86480318024a5931c6ba44130a2ab583bda"
     },
     {
       "id": "apv-product-qa",
       "kind": "skill-pack",
       "root": "skills/apv-product-qa",
       "manifestPath": "skills/apv-product-qa/skillpack.json",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "d4a4b043197c9eb1fd8e1f56eb0bb51781ef93a390545976e81f4ba7008dc624"
+          "sha256": "88090935544f4b1160c58382ea8ed50fbe739f9c7aab5cb439c25dbedb5253be"
         },
         {
           "path": "scripts/cite.mjs",
@@ -152,21 +152,357 @@
         },
         {
           "path": "skillpack.json",
-          "sha256": "28520c096405d524a2c123f87434832fd4a9deec99c753a5e83f3a21287e41b8"
+          "sha256": "28ca0c4f54d8f6990432403f92dd235fafd6fda824fb787a04fa2e686726fa17"
         },
         {
           "path": "tests/cite.test.mjs",
           "sha256": "bb458c84d500b136c66f9d199e5208919f7f1b3ab81ed8442c2444c5d770f36f"
         }
       ],
-      "digest": "181c974ab6ecddd569d8922d154d9400283b942d181c134fa834b61455c763b1"
+      "digest": "22bf2ece43d3e49a61963d731e26b95cfa79608673224912238161129887d601"
+    },
+    {
+      "id": "contract-review",
+      "kind": "skill-pack",
+      "root": "skills/contract-review",
+      "manifestPath": "skills/contract-review/skillpack.json",
+      "version": "1.3.0",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "69d8c4718d4c56505e0b8df3153a4812184e22d11e5480c78bf3fd637db53b8c"
+        },
+        {
+          "path": "references/contract.md",
+          "sha256": "231d72e7fcb9539b35f284460d369fa066285db233f3d4cf9e1cbccb0318e51b"
+        },
+        {
+          "path": "references/risk-policy.json",
+          "sha256": "23b59280cdbbae0471261a5951b3be2813197a3e816d153d183ee5014941a927"
+        },
+        {
+          "path": "references/risk-policy.pin.json",
+          "sha256": "d29db7c733cc9981e12f006bbb5e63cb4488b7957989af6162385fc8ce2ecea0"
+        },
+        {
+          "path": "references/trial.json",
+          "sha256": "739a165beeed1ee3148a52f29682cffb910d29ebfe3ed0f5ea95e1e5c0a659f0"
+        },
+        {
+          "path": "scripts/emit.mjs",
+          "sha256": "12f17630b82eb2a3cda8f5714ce442149fbad28b4eefcab5ceb3f5d5214787bf"
+        },
+        {
+          "path": "scripts/gate.mjs",
+          "sha256": "ebed537e325bd1bb0cc3902bd447424016d85e746d6ccf27fd86fbc79bdd7aad"
+        },
+        {
+          "path": "scripts/pointers.mjs",
+          "sha256": "a4d8d4e86a9d71511621403dd7c3ae72f9be27a523a2104f7f4b406729e242ce"
+        },
+        {
+          "path": "skillpack.json",
+          "sha256": "c3bab1e4f28310aa3d327d3e0c08cb0d69b1a14ce38d1836e05b0a2cab71f149"
+        },
+        {
+          "path": "tests/clauses.test.mjs",
+          "sha256": "101461e2887a69a37e9e79c15f232c5ab346bd1d9cf6937c410f5dc9c5c07f04"
+        },
+        {
+          "path": "tests/fixtures/contract-cue.zh.txt",
+          "sha256": "3c92598def2913c145239222119fbaf04506b52027542253e03993d8a320168a"
+        },
+        {
+          "path": "tests/fixtures/contract-days.zh.txt",
+          "sha256": "73caf6703e2e33f16d3c280f36eb49bdf3730aa99c5a28c32f3b08e2514f19f1"
+        },
+        {
+          "path": "tests/fixtures/contract.zh.txt",
+          "sha256": "60af40ab7504c17da70978003a8d56b2765b1e33c2cdff74829536a6cd692c29"
+        }
+      ],
+      "digest": "1691372a80664fd87620e9e791d61a16055630848d08bf5f39262dd92bef1faf"
+    },
+    {
+      "id": "employee-onboarding",
+      "kind": "skill-pack",
+      "root": "skills/employee-onboarding",
+      "manifestPath": "skills/employee-onboarding/skillpack.json",
+      "version": "1.3.0",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "62f5bf10f966bbcc71823648acd9719a0788f00bf3eeaa540f63ea7fd83aa919"
+        },
+        {
+          "path": "references/approved-rules.json",
+          "sha256": "9bac23d9eccbf7b97bb2def13fe2667ed7f239f4a7305d91ecbf67676814949e"
+        },
+        {
+          "path": "references/approved-rules.pin.json",
+          "sha256": "07f9e0cd5c7c941907dafa3657323d6674e658af15f8377703080ca4cfbaa242"
+        },
+        {
+          "path": "references/contract.md",
+          "sha256": "9078ec76fa1748db45eac38ded7b6b0900cd149c9f9bdb6dc50ba4ff4eaa7de7"
+        },
+        {
+          "path": "references/trial.json",
+          "sha256": "17aa6917c2f1b620a4a20a9838c774c507d9edc6707bea4cb448e1c401be438a"
+        },
+        {
+          "path": "scripts/emit.mjs",
+          "sha256": "7ca7532407d0385bc5686fbf30c50fdbca477e7343d8eac2169a180418b8333b"
+        },
+        {
+          "path": "scripts/gate.mjs",
+          "sha256": "97de509cda8662c9234c08eb2eac131dbc33f8a03ae8c833e8e4a339d267a7a2"
+        },
+        {
+          "path": "scripts/onboard.mjs",
+          "sha256": "8ce7d2f61af47239ac9e2a9f6d93d42cee3138d5ca022b2429c8ab7d09d11cca"
+        },
+        {
+          "path": "scripts/pointers.mjs",
+          "sha256": "a4d8d4e86a9d71511621403dd7c3ae72f9be27a523a2104f7f4b406729e242ce"
+        },
+        {
+          "path": "skillpack.json",
+          "sha256": "f3f2b26ad0554b2010011a090dddb7fea583d5148075ccb6da8b07beb55a8223"
+        },
+        {
+          "path": "tests/fixtures/policy.zh.txt",
+          "sha256": "5201e693e46c2976d4784b2bb6f26df1dd71a35ca693b2e9dba4bc1fdfa917a0"
+        },
+        {
+          "path": "tests/onboard.test.mjs",
+          "sha256": "4d23229f2d2937e7f2e023385565fe938e3d25fe168736d084230ab1d380de49"
+        }
+      ],
+      "digest": "4b8f5290be02886e1e9d7469db756a5e9c4309a1f514d6a46caf48c705a30e0a"
+    },
+    {
+      "id": "incident-postmortem",
+      "kind": "skill-pack",
+      "root": "skills/incident-postmortem",
+      "manifestPath": "skills/incident-postmortem/skillpack.json",
+      "version": "1.3.0",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "48b7e153f6edaede83cb85a1f0d42a95ee2e8b6526fac2fe4ce1ac4a2233294d"
+        },
+        {
+          "path": "references/contract.md",
+          "sha256": "b022db33f71e690779d7eec22ad2eb2f08adf819a83f7dbfccfb511bff612471"
+        },
+        {
+          "path": "references/incident-policy.json",
+          "sha256": "a7e5899b50524953fb2de7daa4d24637c052ab9805025fe4ff9f88e19d35ec67"
+        },
+        {
+          "path": "references/incident-policy.pin.json",
+          "sha256": "9fe24e1ef10419cef21c95052c1ee6195619bfcd6687987b5cc86c4caf740155"
+        },
+        {
+          "path": "references/trial.json",
+          "sha256": "34b125409fdafe8f235ce26f656f59f63d1d803855d6b1c3e6bd6883813fc695"
+        },
+        {
+          "path": "scripts/emit.mjs",
+          "sha256": "dba3478724b0d1d133758a97aa7d1c142c2539a46744be081d8a5cc032119e20"
+        },
+        {
+          "path": "scripts/gate.mjs",
+          "sha256": "f9eb18f0a19dc472a6c3dbcf8029a80e1f0427bde1f009361e59563a531c9ebd"
+        },
+        {
+          "path": "scripts/pointers.mjs",
+          "sha256": "a4d8d4e86a9d71511621403dd7c3ae72f9be27a523a2104f7f4b406729e242ce"
+        },
+        {
+          "path": "scripts/timeline.mjs",
+          "sha256": "5a91f042a45fc5c0d3735973dd5c4ec29b6ffaf90ad6aaba11c93df4eb870fcd"
+        },
+        {
+          "path": "skillpack.json",
+          "sha256": "64277ccd22855e2585d915e833a717b1be8f04317438450e5fe5eabd42b58808"
+        },
+        {
+          "path": "tests/fixtures/log.zh.txt",
+          "sha256": "616533d8a2bff6a25349aa3612cce17572b7a35a96f8579a5806432c61403e85"
+        },
+        {
+          "path": "tests/timeline.test.mjs",
+          "sha256": "490b42110d54eddc12587e99b5f563993278eb6ff6ca37135ff911590208140f"
+        }
+      ],
+      "digest": "a414e87e917c9d3825687b878fff664e81a1d73fc45ae0912ce1687ee6f4cd84"
+    },
+    {
+      "id": "local-script",
+      "kind": "skill-pack",
+      "root": "skills/local-script",
+      "manifestPath": "skills/local-script/skillpack.json",
+      "version": "1.0.0",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "c96f04db7b117a61263647eec1bac42f5379a8f05d34fc796a6ffa590b3bde80"
+        },
+        {
+          "path": "references/trial.json",
+          "sha256": "0b37eb90dfdc789f54abb4aa5872191be4911139c48f6d4d2e94efc138a72cd3"
+        },
+        {
+          "path": "scripts/summarise.mjs",
+          "sha256": "bb7d63c43018b7e9bb79dde336fd71477e6c330c2d2a2f8fb51eee59d584d343"
+        },
+        {
+          "path": "skillpack.json",
+          "sha256": "38262ad7aee99866846952c13c0adcc73bd252756c74890be9ea8d34b098c59c"
+        },
+        {
+          "path": "tests/summarise.test.mjs",
+          "sha256": "bae7bd920a28a63af75879d3a1b460e1728e0e0b26b51f5acad2877b0cdc4f39"
+        }
+      ],
+      "digest": "3c6fb7bab92aa4add6f73746539db9ab9dbf586121b5421696f9889f694d4060"
+    },
+    {
+      "id": "monthly-business-report",
+      "kind": "skill-pack",
+      "root": "skills/monthly-business-report",
+      "manifestPath": "skills/monthly-business-report/skillpack.json",
+      "version": "1.3.0",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "336cf61d15a32d6d6d9a092b3c6ea7699c35ae16a424c6486b5749f31eaec1da"
+        },
+        {
+          "path": "references/contract.md",
+          "sha256": "ed451502e2361847b893eea830df41e79945cac47daa9c43b0a8ff19af29bb41"
+        },
+        {
+          "path": "references/metrics.sample.pin.json",
+          "sha256": "9a772bf984b5f432930a308267e692f4b759787741f1b4d793c9824ab8863bad"
+        },
+        {
+          "path": "references/metrics.sample.yaml",
+          "sha256": "a79c59a8f1a8554e5128b05736914e821979f6d4284ce199b1e5153751fb9fb5"
+        },
+        {
+          "path": "references/trial.json",
+          "sha256": "a8955008e75e9f492399d8c537895c9caccfb4cb4eb497ecd2b99008cfea975d"
+        },
+        {
+          "path": "scripts/aggregate.mjs",
+          "sha256": "605b19b797878d613b8c4dd4e9c6ec9ec53eb83702d05757bf445538c96628b3"
+        },
+        {
+          "path": "scripts/emit.mjs",
+          "sha256": "307ec6b97614212486d0b755a91801cecd18309530043f7009459608d2d37d10"
+        },
+        {
+          "path": "scripts/gate.mjs",
+          "sha256": "4206f88803c5ef0734c49091599d0dddd19c5a65afff72f575c59e9bae264ab8"
+        },
+        {
+          "path": "scripts/pointers.mjs",
+          "sha256": "a4d8d4e86a9d71511621403dd7c3ae72f9be27a523a2104f7f4b406729e242ce"
+        },
+        {
+          "path": "skillpack.json",
+          "sha256": "a245003ba35d62d6694822244128b0648528d79451a0a6e525c6f04a793d92c5"
+        },
+        {
+          "path": "tests/aggregate.test.mjs",
+          "sha256": "9977294b8852f1e8d500099a1625ec1ea35a2d73cd65673ce8983f9ba67a51de"
+        },
+        {
+          "path": "tests/fixtures/expenses.zh.csv",
+          "sha256": "38f543b7f0e932ab09ac28f3ac85fa32a52a1baf55f0007d82854cf4af92fbda"
+        },
+        {
+          "path": "tests/fixtures/ledger.zh.csv",
+          "sha256": "433be5f67f73805c4366b22d9b80593aa6bc6aae376f800d36547a6d35cd2f64"
+        },
+        {
+          "path": "tests/fixtures/sales.zh.csv",
+          "sha256": "3902fb6c95cedbcd1b0b89ac05b33f6da2880ad27856491a4f8f459c625a868d"
+        }
+      ],
+      "digest": "b47ecff687450815ddb0050018b40075e0a1f47728c11ed1cb137789c587f007"
+    },
+    {
+      "id": "support-triage",
+      "kind": "skill-pack",
+      "root": "skills/support-triage",
+      "manifestPath": "skills/support-triage/skillpack.json",
+      "version": "1.3.0",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "55721caf9ffe5872cefd8911e20a81139c78f08d84ad4cc860cf32c5d03b0b82"
+        },
+        {
+          "path": "references/contract.md",
+          "sha256": "c821baf3ce80a714f5910ce538d301b175ddbab88547c566975709c2f693877e"
+        },
+        {
+          "path": "references/sla-policy.json",
+          "sha256": "7671263b56539473f431757b3f45c65df8764a2270d9065646b65811681a6514"
+        },
+        {
+          "path": "references/sla-policy.pin.json",
+          "sha256": "ce02cf374655b53762dab3d5deff9adce34ad2484a40bc75eccdd59bbe203049"
+        },
+        {
+          "path": "references/trial.json",
+          "sha256": "89a3793caad11ed19e5b62f292bbd7df4d451cb4e6a43c2a0386cd7f3ae8cdf6"
+        },
+        {
+          "path": "scripts/emit.mjs",
+          "sha256": "22683c22aafea5757735d39812e0f94fb4ec865681f9654b3a6648b6be50aed5"
+        },
+        {
+          "path": "scripts/gate.mjs",
+          "sha256": "43fd9c019393fd374fd6ca97828958f165716a251c667b3550aa5cc465cfa78f"
+        },
+        {
+          "path": "scripts/pointers.mjs",
+          "sha256": "a4d8d4e86a9d71511621403dd7c3ae72f9be27a523a2104f7f4b406729e242ce"
+        },
+        {
+          "path": "scripts/triage.mjs",
+          "sha256": "fb1219db16751ba025bc1069fc382c3261c214a3788b6f6c32bb56796dbd0c6e"
+        },
+        {
+          "path": "skillpack.json",
+          "sha256": "696ab536938a685abc0a30cdefa74ed80bb23a1917d3c0262ce7198df3a8924f"
+        },
+        {
+          "path": "tests/fixtures/ticket-text.zh.json",
+          "sha256": "358ae8ec3635a2b0993cab330dea3f392ab86add91eb2eb7c2a489613d2588b0"
+        },
+        {
+          "path": "tests/fixtures/tickets.zh.json",
+          "sha256": "5329a4458b385eace56ba56ab1a96e2a96b983471291b53ed4e81fe875c0c313"
+        },
+        {
+          "path": "tests/triage.test.mjs",
+          "sha256": "9e3fa9358afc507a974d8bb77a738f2a869f6616d2da3318780b7adde909140b"
+        }
+      ],
+      "digest": "43f39486bd2046a7a39197c9a317a5465dd0dae56054656fe9c5a0499d997af5"
     },
     {
       "id": "apv",
       "kind": "product-line",
       "root": "products/apv",
       "manifestPath": "products/apv/product-line.json",
-      "version": "1.4.1",
+      "version": "1.4.2",
       "files": [
         {
           "path": "README.md",
@@ -178,7 +514,7 @@
         },
         {
           "path": "flows/apv-case-execute.json",
-          "sha256": "97098bb9b045c560baf1c93c71cca0444eaf2aad172deda1a575cef2ba75817e"
+          "sha256": "f04bd4474f58f27cac27a1a34557de9119259095b73aaea4f3bbf4ec4adb14f5"
         },
         {
           "path": "hooks/device-command-tree.ts",
@@ -198,7 +534,7 @@
         },
         {
           "path": "product-line.json",
-          "sha256": "e03965f8bb8520fc8c7405ef4f19b5bdcd657d3343af5b364b5acb62aa0219d8"
+          "sha256": "89cc2a9e16d347d97d3ab4bd5506b8c8c5d938c714b6351066fbb71ed769e584"
         },
         {
           "path": "resources/case-gateway.json",
@@ -262,7 +598,7 @@
         },
         {
           "path": "tools/contracts.ts",
-          "sha256": "a0596c871915098b9f21bad1d7ec6e0a2c628394ed27b499ce8d9835d548a491"
+          "sha256": "aeb4e6c6527aced977c0780ee49578ce6db4ee9a72d9ea92c991835b547e0a0c"
         },
         {
           "path": "tools/defect-claims.ts",
@@ -313,7 +649,101 @@
           "sha256": "1c1372e36f85700388b7950162062570387da6faf8a3d14b754917d007fcf2b4"
         }
       ],
-      "digest": "a954baaa3fd530c790368ff547f74bc2b478fcc8f5f9987ff309699f33185589"
+      "digest": "43ce8700002e53d78ef23cdb68163da02c120f876c70bde69b6cd6df15e37f6c"
+    },
+    {
+      "id": "enterprise",
+      "kind": "product-line",
+      "root": "products/enterprise",
+      "manifestPath": "products/enterprise/product-line.json",
+      "version": "1.3.0",
+      "files": [
+        {
+          "path": "README.md",
+          "sha256": "864008aa4a126f80912fbcbe9b88febf58676684daed9a93309b2967111207b5"
+        },
+        {
+          "path": "connectors/documents.json",
+          "sha256": "6d99c941eb073b34b35fec5fc5421075f02e16d06225e90742d197c5f98d6c57"
+        },
+        {
+          "path": "flows/employee-onboarding.json",
+          "sha256": "163e6cace1bb3e929b0421d7e00e519fb385f68bc77f680018aa8986323a696b"
+        },
+        {
+          "path": "flows/incident-postmortem.json",
+          "sha256": "d614d7fa95ba07dd4c865832dcd2417e456e9ca907ceeba1242860dc80b46546"
+        },
+        {
+          "path": "flows/monthly-report.json",
+          "sha256": "6473b27b8d5d14b67465c226580ae24826de746960a22ddef574778ef43e7635"
+        },
+        {
+          "path": "flows/supplier-review.json",
+          "sha256": "4f963c077d3eedc37ca997cbd71dfb9cfb1627a78b8ace299dc68cf64102518b"
+        },
+        {
+          "path": "flows/ticket-triage.json",
+          "sha256": "712b7e417528dcf0775941bebde11e4bdaf53fa26570e4c275d6daacd5da0c0b"
+        },
+        {
+          "path": "hooks/access-approval.ts",
+          "sha256": "18837e949071d2fe3cdc4cd0cb6da8082c5972f88307c76c6dd80e8a7544efd9"
+        },
+        {
+          "path": "product-line.json",
+          "sha256": "4870f86b6b29bc4ca9ef82bcfaccf5152847ab33a349f816dcf8a8565560c82c"
+        },
+        {
+          "path": "resources/access-desk.json",
+          "sha256": "ae92f8dad973c911fd566f33435223f308540ebe1974ab7e7dea4d0786ed4abd"
+        },
+        {
+          "path": "sources/business-extract.md",
+          "sha256": "a8587bd8c7123e5008cc75bfe6325ae403ac3c504e5d3ef49db571ea7ae76a8a"
+        },
+        {
+          "path": "sources/contract.md",
+          "sha256": "80a7188596802f8e5a0bd2e56c8c1f75c8e46af8646477fb7e1300ebba7df89b"
+        },
+        {
+          "path": "sources/incident-log.md",
+          "sha256": "fdca6cc63da872ae8d4b4b917c261aa39614f698ad02855f08ff38363b865b10"
+        },
+        {
+          "path": "sources/policy.md",
+          "sha256": "b6336fea5f60350c77b75a2e38492424574a5709a06ebd257ac57174922dd07f"
+        },
+        {
+          "path": "sources/ticket.md",
+          "sha256": "9ac7f938f391c32ec217171889273b5e401cf4b6c3531099af1b6ec7326c122d"
+        },
+        {
+          "path": "tests/enterprise.test.mjs",
+          "sha256": "6d00b8a4a173e01d0c86bf98bc7ff40ab3da3e13ac7225fcf9c14ad30539e4c0"
+        },
+        {
+          "path": "tools/contract-clauses.ts",
+          "sha256": "ad531e258367d1530cbac925fff5215bcfd796d2a61fc67d23df2d19f7a2f94b"
+        },
+        {
+          "path": "tools/incident-timeline.ts",
+          "sha256": "bc368664de67d6e3b992514b2f2736effd29b3f07d0145deff56c409af5ff983"
+        },
+        {
+          "path": "tools/onboarding.ts",
+          "sha256": "0268bec8435321f45698dad529d1246ce9346821fa8742beadbad70c718ac8ec"
+        },
+        {
+          "path": "tools/report-workbook.ts",
+          "sha256": "eb81e81f39217744df38cb380a5c8aebff83a18be7a13331b439c29b63591fa9"
+        },
+        {
+          "path": "tools/ticket-triage.ts",
+          "sha256": "3304c2e0699b932f80480842f7e484f036159982322328bbe1d27b7061b6d510"
+        }
+      ],
+      "digest": "f9f6d88d807c163a8aaee8de6acb4746a17224a841a2e701ad476a1b25fccbdc"
     }
   ]
 }

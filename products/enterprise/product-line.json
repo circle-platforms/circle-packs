@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "product-line/1",
+  "id": "enterprise",
+  "version": "1.3.0",
+  "connectorPackages": [
+    "documents"
+  ],
+  "toolAliases": {
+    "documents": "docs",
+    "knowledge": "knowledge"
+  },
+  "skills": [],
+  "tools": [
+    {
+      "manifest": "tools/contract-clauses.ts",
+      "imports": {}
+    },
+    {
+      "manifest": "tools/report-workbook.ts",
+      "imports": {}
+    },
+    {
+      "manifest": "tools/ticket-triage.ts",
+      "imports": {}
+    },
+    {
+      "manifest": "tools/onboarding.ts",
+      "imports": {}
+    },
+    {
+      "manifest": "tools/incident-timeline.ts",
+      "imports": {}
+    }
+  ],
+  "hooks": [
+    {
+      "manifest": "hooks/access-approval.ts",
+      "event": "beforeDispatch",
+      "order": 10
+    }
+  ],
+  "flows": [
+    "flows/supplier-review.json",
+    "flows/monthly-report.json",
+    "flows/ticket-triage.json",
+    "flows/employee-onboarding.json",
+    "flows/incident-postmortem.json"
+  ],
+  "resources": [
+    "resources/access-desk.json"
+  ],
+  "configuration": "Source addresses and credential references are supplied at runtime",
+  "knowledgeMappings": {
+    "contractClause": "A heading present in the uploaded contract text",
+    "missingClause": "A required heading the script did not find",
+    "reportPeriod": "The period named on the aggregated workbook",
+    "ticketPriority": "The script priority of one synthetic ticket",
+    "onboardingItem": "A required checklist item and whether it was marked done",
+    "incidentMttr": "Alert duration and customer-impact duration from the pinned metric definitions, after label quotes are checked"
+  }
+}

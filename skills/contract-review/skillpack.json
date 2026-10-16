@@ -1,0 +1,22 @@
+{
+  "id": "contract-review",
+  "version": "1.3.0",
+  "title": "Contract and supplier review",
+  "owner": "enterprise",
+  "tools": [
+    "docs.get",
+    "knowledge.claim_submit"
+  ],
+  "triggers": [
+    "manual"
+  ],
+  "inputs": {
+    "file": "path of the contract text on the documents connector"
+  },
+  "outputs": [
+    "out/clauses.json",
+    "out/review_report.md",
+    "out/review_claims.json"
+  ],
+  "model": "any capable model; two independent extracts name a kind and quote each clause at an offset; risk is a script over the pinned policy only where those extracts agree"
+}

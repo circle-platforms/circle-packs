@@ -1,0 +1,15 @@
+{
+  "schema": "enterprise/risk-policy/2",
+  "topics": [
+    { "id": "payment", "headings": ["Payment terms", "付款", "付款期限", "付款条件"] },
+    { "id": "termination", "headings": ["Termination", "终止", "合同终止"] },
+    { "id": "liability", "headings": ["Liability", "责任限制", "责任"] },
+    { "id": "data", "headings": ["Data protection", "数据保护", "个人信息", "数据"] },
+    { "id": "confidentiality", "headings": ["保密", "Confidentiality"] },
+    { "id": "sla", "headings": ["SLA", "服务水平"] },
+    { "id": "term", "headings": ["期限", "Term", "合同期限"] }
+  ],
+  "rules": [
+    { "id": "payment-days", "topic": "payment", "kind": "term", "unit": "day", "minDays": 30, "belowRisk": "high", "metRisk": "low" }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "toolCalls": [
+    {
+      "name": "docs.get",
+      "argsSha256": "461b00ffa2180184e21ffbf6e947f79b285294a47a728cd45c3e7578d39145b7",
+      "ok": true
+    },
+    {
+      "name": "knowledge.claim_submit",
+      "argsSha256": "1b9e6b282474a29f2e8a7bdda95ca25bb1b8a0096196cfe714fca44c183814c7",
+      "ok": true
+    }
+  ],
+  "outputs": [
+    {
+      "path": "out/timeline.json",
+      "sha256": "76fb1f3c2497716da880c37cba2404c532c0718fe5cb5f5af68cc0e5fa2ac12e"
+    },
+    {
+      "path": "out/postmortem.md",
+      "sha256": "3c77bda418afa9cefea74cf61140c1ba08dd26b484abbdadc5e6a1a65bfa6095"
+    }
+  ]
+}

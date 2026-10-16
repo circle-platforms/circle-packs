@@ -1,0 +1,15 @@
+{
+  "toolCalls": [
+    {
+      "name": "docs.get",
+      "argsSha256": "8575af288156d885107a88909deb44452170034b25d95b9a0c052b3dd6b59275",
+      "ok": true
+    }
+  ],
+  "outputs": [
+    {
+      "path": "out/summary.json",
+      "sha256": "825827ec477151e9bb9ae6fb5b85b9be885011b66cbd9993520d617871841d76"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "id": "employee-onboarding",
+  "version": "1.3.0",
+  "title": "Employee onboarding",
+  "owner": "enterprise",
+  "tools": [
+    "docs.get",
+    "docs.section"
+  ],
+  "triggers": [
+    "manual"
+  ],
+  "inputs": {
+    "checklist": "completed item ids: identity, equipment, accounts, policies, manager",
+    "requests": "access requests {person, role, system}",
+    "file": "policy manual path",
+    "anchor": "section anchor, the text inside **anchor**"
+  },
+  "outputs": [
+    "out/checklist.json",
+    "out/access_requests.json",
+    "out/policy_answer.md"
+  ],
+  "model": "any capable model; the first run extracts rules twice for a person to approve and pin; later runs use that pin and the script evaluates each request"
+}

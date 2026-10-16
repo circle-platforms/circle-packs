@@ -1,0 +1,13 @@
+{
+  "schema": "circle-packs/connector/1",
+  "packageId": "documents",
+  "alias": "docs",
+  "declaration": {
+    "reads": ["documents"],
+    "writes": [],
+    "credentials": []
+  },
+  "configuration": {
+    "note": "Origin, root and credentials are supplied when an administrator registers the connector. They are not in this file."
+  }
+}

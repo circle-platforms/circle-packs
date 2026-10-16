@@ -1,0 +1,11 @@
+{
+  "schema": "circle-packs/flow/1",
+  "id": "employee-onboarding",
+  "version": "employee-onboarding/1",
+  "title": "Employee onboarding",
+  "titleZh": "员工入职",
+  "stages": ["received", "running", "waiting-review", "delivered", "failed", "cancelled"],
+  "waitingReasons": ["ACCESS_APPROVAL"],
+  "deliverables": ["out/checklist.json", "out/access_requests.json", "out/policy_answer.md"],
+  "unknown": "An access grant whose role is not on the declared list stops for ACCESS_APPROVAL. It is not granted."
+}

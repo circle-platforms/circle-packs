@@ -1,0 +1,11 @@
+{
+  "schema": "circle-packs/flow/1",
+  "id": "monthly-report",
+  "version": "monthly-report/1",
+  "title": "Monthly business report",
+  "titleZh": "月度经营报告",
+  "stages": ["received", "running", "delivered", "failed", "cancelled"],
+  "waitingReasons": [],
+  "deliverables": ["out/report.json", "out/report.xlsx"],
+  "unknown": "When a source row is not revenue or expense, stop that source. Do not drop it silently."
+}

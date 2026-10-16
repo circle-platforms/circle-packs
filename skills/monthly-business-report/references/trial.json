@@ -1,0 +1,24 @@
+{
+  "toolCalls": [
+    {
+      "name": "docs.list",
+      "argsSha256": "9f771dbd0dd6b201f0468a5e1ccd146184d07f163397a55eb0d9419ab379ca50",
+      "ok": true
+    },
+    {
+      "name": "docs.get",
+      "argsSha256": "1c37fab74e0a497c8ed568672774e72e953c0afd88c95d62750fed9350e618ee",
+      "ok": true
+    }
+  ],
+  "outputs": [
+    {
+      "path": "out/report.json",
+      "sha256": "1c78726bbe599d7d93ac54ca0ec723100ca04b1eccd127ec5a008159b5b456c1"
+    },
+    {
+      "path": "out/report.xlsx",
+      "sha256": "014a3cf4a62fa118385ac171a50fc28b4b6df7cc24fa7c6d905748cee1b018a7"
+    }
+  ]
+}

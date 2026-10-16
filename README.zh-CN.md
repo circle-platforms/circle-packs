@@ -6,6 +6,7 @@
   <a href="https://circle-platforms.github.io/circle-packs/">文档</a> ·
   <a href="modules.json">模块清单</a> ·
   <a href="docs/product-line-pack.md">APV 状态</a> ·
+  <a href="docs/enterprise-packs.md">企业通用包</a> ·
   <a href="CHANGELOG.md">更新日志</a> ·
   <a href="README.md">English</a>
 </p>
@@ -14,17 +15,26 @@
 
 装在 [circle-hub](https://github.com/circle-platforms/circle-hub) 上的技能包和产品线包。circle-hub 是 [Circle](https://github.com/circle-platforms/circle) 的团队 hub。这里的每个模块单独版本、单独发布，通过 circle-hub 自己的机制装入：技能包走推送、试跑记录和独立审批人批准。包不随 circle-hub 一起发布。
 
-每个包要遵守的目录布局和适配单见 [产品线包典范](https://github.com/circle-platforms/circle-hub/blob/main/docs/design/product-line-pack.md)（[英文](https://github.com/circle-platforms/circle-hub/blob/main/docs/design/en/product-line-pack.md)）。本仓库里 APV 的状态见 [docs/product-line-pack.md](docs/product-line-pack.md)。
+每个包要遵守的目录布局和适配单见 [产品线包典范](https://github.com/circle-platforms/circle-hub/blob/main/docs/design/product-line-pack.md)（[英文](https://github.com/circle-platforms/circle-hub/blob/main/docs/design/en/product-line-pack.md)）。本仓库里 APV 的状态见 [docs/product-line-pack.md](docs/product-line-pack.md)。企业通用包和 dev:stack 安装见 [docs/enterprise-packs.md](docs/enterprise-packs.md)。
+
+技能清单是英文。中文标题写在 `SKILL.md` 文首的 `titleZh`。circle-hub 的 `SkillManifest` 是严格对象，多出来的键会被拒绝，所以 `titleZh` 不放进 `skillpack.json`，也不放进 `product-line.json`。流程文件可以同时有 `title` 和 `titleZh`。
 
 ## 里面有什么
 
 | 目录 | 内容 | 状态 |
 |---|---|---|
-| [skills/apv-mindmap-compile](skills/apv-mindmap-compile/SKILL.md) | 把 APV 脑图编译成可运行的执行工作簿：重组意图、按绑定构建核对每条设备命令、出九列单表。版本 0.2.7 | 已在 main |
-| [products/apv](products/apv/README.md) | APV 产品线包：`product-line.json`、`tools/`、`hooks/`、`resources/`、`sources/`、`flows/`、README 里的适配单、18 个合成测试。版本 1.0.0 | 已在 main |
-| [skills/apv-defect-claims](skills/apv-defect-claims/SKILL.md) | 把禅道缺陷记录抽成候选知识声明（origin script）：定位产品、挑缺陷是模型判断，字段到谓词的抽取是脚本、零推断，evidenceId 透传。版本 0.1.0 | 已在 main |
-| [skills/apv-product-qa](skills/apv-product-qa/SKILL.md) | 只凭手册回答 APV 产品问题：先用 docs.list 钉住手册版本、按 anchor 直取小节，作答是模型判断、每段带证据标记，引文由脚本对 hub 落盘的章节逐字校验，no_evidence 必须有一次真实的小节未命中。版本 0.1.3 | 已在 main |
-| [skills/apv-case-review](skills/apv-case-review/SKILL.md) | 对编译批次按绑定构建做评审：结构、命令树、函数契约核对是脚本，覆盖与风险是模型判断；报告带 evidenceId，发现以候选声明提交。版本 0.1.3 | 已在 main |
+| [skills/apv-mindmap-compile](skills/apv-mindmap-compile/SKILL.md) | 把 APV 脑图编译成可运行的执行工作簿：重组意图、按绑定构建核对每条设备命令、出九列单表。版本 0.4.1 | 已在 main |
+| [products/apv](products/apv/README.md) | APV 产品线包：`product-line.json`、`tools/`、`hooks/`、`resources/`、`sources/`、`flows/`、README 里的适配单、合成测试。版本 1.4.2 | 已在 main |
+| [skills/apv-defect-claims](skills/apv-defect-claims/SKILL.md) | 把禅道缺陷记录抽成候选知识声明（origin script）：定位产品、挑缺陷是模型判断，字段到谓词的抽取是脚本、零推断，evidenceId 透传。版本 0.2.1 | 已在 main |
+| [skills/apv-product-qa](skills/apv-product-qa/SKILL.md) | 只凭手册回答 APV 产品问题：先用 docs.list 钉住手册版本、按 anchor 直取小节，作答是模型判断、每段带证据标记，引文由脚本对 hub 落盘的章节逐字校验，no_evidence 必须有一次真实的小节未命中。版本 0.2.1 | 已在 main |
+| [skills/apv-case-review](skills/apv-case-review/SKILL.md) | 对编译批次按绑定构建做评审：结构、命令树、函数契约核对是脚本，覆盖与风险是模型判断；报告带 evidenceId，发现以候选声明提交。版本 0.2.1 | 已在 main |
+| [products/enterprise](products/enterprise/README.md) | 通用产品线：钉死的策略表、可对账的 CSV 合计、严重度下限、按天或按月的司龄，以及分开的告警时长和客户影响时长。版本 1.3.0 | 草案 |
+| [skills/contract-review](skills/contract-review/SKILL.md) | 两次抽取各自给条款种类，并在偏移处引用原文。脚本只在两次一致时按钉死的天数下限给风险分。版本 1.3.0 | 草案 |
+| [skills/monthly-business-report](skills/monthly-business-report/SKILL.md) | 两次抽取映射任意 CSV 表头。脚本按期间过滤，并把合计与剔除行对账。版本 1.3.0 | 草案 |
+| [skills/support-triage](skills/support-triage/SKILL.md) | 两次抽取给出意图和严重度。未知意图交给人。安全类意图的下限来自钉死的策略。版本 1.3.0 | 草案 |
+| [skills/employee-onboarding](skills/employee-onboarding/SKILL.md) | 后续运行使用钉死的规则。天和月不混用，授权写明批准人和日期。版本 1.3.0 | 草案 |
+| [skills/incident-postmortem](skills/incident-postmortem/SKILL.md) | 两次抽取给日志行打标签。脚本分别给出告警时长和客户影响，没有时区的时间戳会被拒绝。版本 1.3.0 | 草案 |
+| [skills/local-script](skills/local-script/SKILL.md) | 用本地脚本统计行数和词数。说明清单、声明的工具、输出路径和一份试跑记录样本。版本 1.0.0 | 草案 |
 
 ## 不放什么
 
@@ -51,15 +61,20 @@
 
 ```sh
 node tools/modules.ts check
-node --test tools/*.test.ts skills/*/tests/*.test.mjs
+node --test tools/*.test.ts skills/*/tests/*.test.mjs templates/judgement-gate/scaffold/tests/*.test.mjs
 ```
 
 产品线包测试使用 circle-hub 提交 `dc93c69826f73f16d2f20f7520ba4c6663d014ac` 的依赖集，与 `.github/workflows/checks.yml` 固定的提交一致。先检出该提交并在其中运行 `npm ci --ignore-scripts`，再把它的 `node_modules` 软链到本仓库后运行。这只固定测试环境，不代表已支持该 hub 的生产版本：
 
 ```sh
 ln -s <circle-hub-checkout>/node_modules node_modules
-node --experimental-strip-types --test 'products/apv/tests/*.test.mjs'
+node --experimental-strip-types --test 'products/*/tests/*.test.mjs'
+HUB_ROOT=<circle-hub-checkout> node --experimental-strip-types tools/validate-with-hub.mjs
 ```
+
+`tools/validate-with-hub.mjs` 用 circle-hub 的 `SkillManifest` 解析每个 `skillpack.json`，并用 `ProductLineManifest` 与 `verifyProductLine` 解析每个 `product-line.json`。未设置 `HUB_ROOT` 且不存在 `../circle-hub` 时跳过并退出 0。`HUB_ROOT` 要指向含 `packages/methods/src/product-modules.ts` 的检出。上面的依赖提交只提供测试库；那份较旧的产品线 schema 不接受 `tools` 或 `hooks`。
+
+冻结的产品线 Tool 只在 circle-hub 有进程隔离适配器的主机上执行。目前该适配器只有 macOS。Linux 主机会报 `SANDBOX_UNAVAILABLE`（`This execution host has no supported process isolation adapter`）。Linux 上的 dev:stack 仍可检查并安装模块。Linux 适配器计划在 circle-hub，不在本仓库。见 [docs/sandbox.md](docs/sandbox.md)。
 
 测试只用合成样本，证明脚本行为，不证明真实产品或设备上的结果。
 

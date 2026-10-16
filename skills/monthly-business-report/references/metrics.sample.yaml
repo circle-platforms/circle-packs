@@ -1,0 +1,15 @@
+schema: enterprise/metrics/1
+period: "2026-09"
+metrics:
+  - id: revenue
+    kind: revenue
+    aggregate: sumif
+    match: "revenue|收入"
+  - id: expense
+    kind: expense
+    aggregate: sumif
+    match: "expense|支出"
+  - id: margin
+    left: revenue
+    right: expense
+    aggregate: difference

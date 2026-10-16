@@ -1,6 +1,7 @@
 ---
 name: apv-case-review
 description: Review a compiled APV test batch (out/) for one build, using the circle-hub tools for the build's command tree, the function contract and ZenTao. Use when asked to 评审, review or audit APV test cases.
+titleZh: APV 用例评审
 ---
 
 # APV 用例评审

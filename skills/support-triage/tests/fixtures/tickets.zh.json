@@ -1,0 +1,25 @@
+{
+  "tickets": [
+    {
+      "id": "t-1",
+      "subject": "结算页打不开",
+      "severity": 4,
+      "tier": "standard",
+      "body": "页面一直转圈。"
+    },
+    {
+      "id": "t-2",
+      "subject": "账号被盗",
+      "severity": 4,
+      "tier": "standard",
+      "body": "有人在东京登录了我的账号，请马上冻结。"
+    },
+    {
+      "id": "t-3",
+      "subject": "密码重置",
+      "severity": 3,
+      "tier": "standard",
+      "body": "password=hunter2 帮我改一下"
+    }
+  ]
+}

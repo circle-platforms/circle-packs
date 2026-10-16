@@ -1,0 +1,9 @@
+{
+  "schema": "enterprise/incident-policy/2",
+  "events": ["opened", "resolved", "impact-start", "impact-end", "acknowledged", "mitigated", "other"],
+  "timezones": { "UTC": 0, "GMT": 0, "JST": 540, "CST": 480 },
+  "metrics": [
+    { "id": "alert", "start": "opened", "end": "resolved" },
+    { "id": "customerImpact", "start": "impact-start", "end": "impact-end" }
+  ]
+}

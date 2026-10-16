@@ -1,0 +1,43 @@
+{
+  "schema": "enterprise/policy-rules/2",
+  "origin": "approved",
+  "source": {
+    "savedAs": "policy.zh.txt"
+  },
+  "rules": [
+    {
+      "id": "r1",
+      "effect": "permit",
+      "kind": "obligation",
+      "role": "账本:只读",
+      "quote": "需入职满30天可以申请账本:只读，由直属经理批准。",
+      "offset": 0,
+      "minTenure": {
+        "value": 30,
+        "unit": "day"
+      },
+      "approver": "直属经理"
+    },
+    {
+      "id": "r2",
+      "effect": "downgrade",
+      "role": "账本:管理员",
+      "grant": "账本:只读",
+      "quote": "账本:管理员权限满90天后降为账本:只读，由安全官批准。",
+      "offset": 26,
+      "after": {
+        "value": 90,
+        "unit": "day"
+      },
+      "approver": "安全官"
+    },
+    {
+      "id": "r3",
+      "effect": "permit",
+      "role": "员工邮箱",
+      "quote": "新员工可以开通员工邮箱，由直属经理批准。",
+      "offset": 55,
+      "approver": "直属经理"
+    }
+  ]
+}

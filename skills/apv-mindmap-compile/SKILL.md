@@ -1,6 +1,7 @@
 ---
 name: apv-mindmap-compile
 description: Compile an APV test mindmap (the JSON export, cases with an 18-digit autoid) into the execution workbook case.xlsx for one build, using the circle-hub tools for the build's command tree, the manuals and ZenTao. Use when asked to compile, 编译 or turn a mindmap into test cases for APV.
+titleZh: APV 脑图用例编译
 ---
 
 # APV 脑图用例编译

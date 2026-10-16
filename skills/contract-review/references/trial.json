@@ -1,0 +1,28 @@
+{
+  "toolCalls": [
+    {
+      "name": "docs.get",
+      "argsSha256": "b619bdbfcfc8534626a0788023aca9c5c259946d906ac26126f89d0f223876fd",
+      "ok": true
+    },
+    {
+      "name": "knowledge.claim_submit",
+      "argsSha256": "07f3a539cb647c48433d10809389ea7fa3ab24858d252ca23d15aa36a7df83cc",
+      "ok": true
+    }
+  ],
+  "outputs": [
+    {
+      "path": "out/clauses.json",
+      "sha256": "7bf6306533947b7942545aa9ca4219479f9335bac42895e199d01eee1fba6e95"
+    },
+    {
+      "path": "out/review_report.md",
+      "sha256": "a9c553ff93c8fa07f0826dfde32f3976edd1c6d7cf4198eb12edfa5f52d02e44"
+    },
+    {
+      "path": "out/review_claims.json",
+      "sha256": "ced4999e255f7910963075062ddb94eb9c4e4ef2379e8514e6bbaebe3670bf36"
+    }
+  ]
+}

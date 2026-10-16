@@ -1,6 +1,7 @@
 ---
 name: apv-defect-claims
 description: Turn ZenTao defect records into candidate knowledge claims with script origin, using the circle-hub PLM tools. Use when asked to extract, 抽取 or 沉淀 defect facts as claims.
+titleZh: APV 缺陷声明抽取
 ---
 
 # APV 缺陷声明抽取

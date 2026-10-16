@@ -1,7 +1,7 @@
 {
   "id": "apv-product-qa",
-  "version": "0.2.0",
-  "title": "APV 产品问答",
+  "version": "0.2.1",
+  "title": "APV product questions",
   "owner": "apv-product-line",
   "tools": [
     "docs.list",
