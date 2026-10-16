@@ -1,71 +1,95 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { assertExactKeys, assertOriginModel, assertVerbatim, loadPointedReturn, readJson, sha256, utf8FromBase64 } from './pointers.mjs';
 
-function readJson(path) {
-  try { return JSON.parse(readFileSync(path, 'utf8')); }
-  catch { throw new Error(`${path}: unreadable`); }
-}
-function loadSaved(folder, arg) {
-  let parsed = readJson(arg);
-  if (parsed && typeof parsed.savedAs === 'string' && parsed.savedAs.trim()) {
-    const path = [parsed.savedAs, resolve(dirname(arg), '..', '..', parsed.savedAs), resolve(folder, parsed.savedAs)].find((candidate) => existsSync(candidate));
-    if (!path) throw new Error(`${arg}: pointer target ${parsed.savedAs} not found`);
-    parsed = readJson(path);
-  }
-  const raw = parsed.response ?? parsed;
-  if (!raw?.result) throw new Error(`${arg}: not a hub tool return`);
-  return { result: raw.result, evidenceId: raw.evidence?.[0]?.evidenceId ?? null };
-}
-function documentJson(result) {
-  const bytes = Buffer.from(result.contentBase64, 'base64');
-  const text = bytes.toString('utf8');
-  if (!Buffer.from(text).equals(bytes)) throw new Error('document is not UTF-8');
-  return JSON.parse(text);
-}
+const CREDENTIAL = /(?:password|api[_-]?key|secret|token)\s*[:=]\s*\S+|Bearer\s+\S+|\bsk-[A-Za-z0-9]{8,}/gi;
+const ITEM_KEYS = ['id', 'intent', 'quote'];
+
 export function priorityOf(ticket) {
   if (ticket.severity === 1 || (ticket.severity === 2 && ticket.tier === 'contract')) return 'P1';
   if (ticket.severity === 2 || ticket.tier === 'priority') return 'P2';
   if (ticket.severity === 3) return 'P3';
   return 'P4';
 }
-export function sectionText(result) {
-  if (!Array.isArray(result?.lines)) throw new Error('docs.section result has no lines');
-  return result.lines.map((line) => line.text).join('\n');
+
+export function redact(text) {
+  return text.replace(CREDENTIAL, '[redacted]');
 }
 
-export function triage(folder, ticketsSaved, sectionSaved, replies) {
-  if (!Array.isArray(replies?.replies)) throw new Error('replies.json needs replies[]');
-  const payload = documentJson(ticketsSaved.result);
+export function routeOne(ticket, intent, policy) {
+  const blob = `${ticket.subject ?? ''}\n${ticket.body ?? ''}`;
+  const credential = CREDENTIAL.test(blob);
+  CREDENTIAL.lastIndex = 0;
+  if (credential) return { queue: policy.credential.queue, responseMinutes: policy.credential.responseMinutes, credential: true, intentUnlisted: false };
+  const row = policy.intents[intent];
+  if (!row) return { queue: policy.default.queue, responseMinutes: policy.default.responseMinutes, credential: false, intentUnlisted: true };
+  return { queue: row.queue, responseMinutes: row.responseMinutes, credential: false, intentUnlisted: false };
+}
+
+export function gateTriage(folder, contractPath, policyPath) {
+  const bytes = readFileSync(contractPath);
+  const contract = readJson(contractPath);
+  const policy = readJson(policyPath);
+  assertExactKeys(contract, ['items', 'origin', 'schema', 'source'], 'triage contract');
+  assertOriginModel(contract, 'triage contract');
+  if (contract.schema !== 'enterprise/triage-contract/1' || !Array.isArray(contract.items)) throw new Error('schema_invalid: items');
+  if (policy.schema !== 'enterprise/sla-policy/1') throw new Error('schema_invalid: policy');
+  const saved = loadPointedReturn(folder, contract.source, 'ticket source');
+  const payload = JSON.parse(utf8FromBase64(saved.result));
   const tickets = Array.isArray(payload.tickets) ? payload.tickets : payload;
-  const ranked = tickets.map((ticket) => ({ id: ticket.id, subject: ticket.subject, severity: ticket.severity, tier: ticket.tier, priority: priorityOf(ticket), origin: 'script' }));
-  const text = sectionText(sectionSaved.result);
-  const rendered = [];
-  const gaps = [];
-  for (const reply of replies.replies) {
-    if (reply.origin !== 'model') throw new Error(`reply ${reply.ticketId} must be model judgement`);
-    const quoted = typeof reply.quote === 'string' && reply.quote.length > 0 && text.includes(reply.quote);
-    rendered.push(`## ${reply.ticketId}\n\n${reply.body}\n\n${quoted ? `Quoted (script-checked): ${reply.quote}` : 'No knowledge-base quote.'}`);
-    if (!quoted) gaps.push({ subject: `ticket:${reply.ticketId}`, predicate: 'kb_gap', value: reply.ticketId, origin: 'script', evidenceIds: sectionSaved.evidenceId ? [sectionSaved.evidenceId] : [] });
-  }
+  const ranked = contract.items.map((item, index) => {
+    assertExactKeys(item, ITEM_KEYS, `item ${index}`);
+    const ticket = tickets.find((row) => row.id === item.id);
+    if (!ticket) throw new Error(`schema_invalid: ${item.id} is not in the saved tickets`);
+    const blob = `${ticket.subject ?? ''}\n${ticket.body ?? ''}`;
+    assertVerbatim(item.quote, blob, item.id);
+    const route = routeOne(ticket, item.intent, policy);
+    return {
+      id: item.id,
+      intent: item.intent,
+      quote: redact(item.quote),
+      subject: redact(String(ticket.subject ?? '')),
+      priority: priorityOf(ticket),
+      ...route,
+      evidenceId: saved.evidenceId,
+      origin: 'script',
+    };
+  });
+  const gate = { ok: true, origin: 'script', contractSha256: sha256(bytes), ranked };
+  writeFileSync(join(folder, 'gate.json'), `${JSON.stringify(gate, null, 2)}\n`);
+  return gate;
+}
+
+export function emitTriage(folder, contractPath) {
+  const gate = readJson(join(folder, 'gate.json'));
+  if (gate?.ok !== true) throw new Error('gate_not_passed');
+  if (sha256(readFileSync(contractPath)) !== gate.contractSha256) throw new Error('contract_changed_after_gate');
+  const gaps = gate.ranked.filter((row) => row.credential || row.intentUnlisted).map((row) => ({
+    subject: `ticket:${row.id}`,
+    predicate: row.credential ? 'credential_filtered' : 'intent_unlisted',
+    value: row.id,
+    origin: 'script',
+    evidenceIds: row.evidenceId ? [row.evidenceId] : [],
+  }));
+  const lines = [
+    '# Ticket routing',
+    '',
+    'Intent is model judgement. Queue, SLA, priority and the credential filter are a script.',
+    '',
+    ...gate.ranked.map((row) => `## ${row.id}\n\nintent ${row.intent} → ${row.queue} in ${row.responseMinutes} minutes (${row.priority})${row.credential ? '\n\nCredential filtered.' : ''}`),
+    '',
+  ];
   mkdirSync(join(folder, 'out'), { recursive: true });
-  writeFileSync(join(folder, 'out', 'triage.json'), `${JSON.stringify(ranked, null, 2)}\n`);
-  writeFileSync(join(folder, 'out', 'replies.md'), `# Reply drafts\n\nPriority is a script. Reply text is model judgement.\n\n${rendered.join('\n\n')}\n`);
+  writeFileSync(join(folder, 'out', 'triage.json'), `${JSON.stringify(gate.ranked, null, 2)}\n`);
+  writeFileSync(join(folder, 'out', 'replies.md'), lines.join('\n'));
   writeFileSync(join(folder, 'out', 'kb_gaps.json'), `${JSON.stringify(gaps, null, 2)}\n`);
-  return { ranked, gaps };
+  return { ranked: gate.ranked, gaps };
 }
 
 if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
   const [folder, ...rest] = process.argv.slice(2);
-  let get, section, replies;
-  for (let i = 0; i < rest.length; i++) {
-    if (rest[i] === '--get') get = rest[++i];
-    else if (rest[i] === '--section') section = rest[++i];
-    else if (rest[i] === '--replies') replies = rest[++i];
-  }
-  if (!folder || !get || !section || !replies) {
-    console.error('usage: node triage.mjs <folder> --get <tickets> --section <section> --replies <replies.json>');
-    process.exit(2);
-  }
-  triage(folder, loadSaved(folder, get), loadSaved(folder, section), readJson(replies));
+  const args = {};
+  for (let i = 0; i < rest.length; i++) if (rest[i].startsWith('--')) args[rest[i].slice(2)] = rest[++i];
+  if (process.argv[1].endsWith('triage.mjs') && args.contract && args.policy && !args.emit) gateTriage(folder, args.contract, args.policy);
 }

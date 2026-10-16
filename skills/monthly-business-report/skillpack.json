@@ -1,6 +1,6 @@
 {
   "id": "monthly-business-report",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": "Monthly business report",
   "owner": "enterprise",
   "tools": [
@@ -12,12 +12,12 @@
     "schedule"
   ],
   "inputs": {
-    "period": "report period, such as 2026-09",
+    "metrics": "human-approved metrics.yaml; the sample shape is references/metrics.sample.yaml",
     "directory": "documents directory that holds the source extracts"
   },
   "outputs": [
     "out/report.json",
     "out/report.xlsx"
   ],
-  "model": "any capable model; choosing the period and the source files is judgement; the totals and the workbook formulas are a script"
+  "model": "any capable model; the model points at source files; the approved metrics.yaml and the totals are not model judgement"
 }

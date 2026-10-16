@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `templates/judgement-gate`: a scaffold and `generate.mjs` for a skill that follows the mind-map compile split. The model writes a schema'd contract of verbatim quotes and `savedAs` pointers. `scripts/pointers.mjs` checks the schema, refuses a transcribed return, checks quotes against the server-saved original, and emit recomputes from that original. `node templates/judgement-gate/generate.mjs <id> --title "..." --title-zh "..."` writes a new skill.
 - `products/enterprise` 1.0.0 and six skill packs at 1.0.0: contract and supplier review, a monthly workbook aggregated from several sources with `SUMIF` and a margin formula, support-ticket triage with reply drafts and knowledge-base gaps, employee onboarding (checklist, access-request approval, policy answer), incident postmortem (log timeline and MTTR), and `skills/local-script` as the worked example of a local script.
 - `skills/local-script/references/trial.json`, a synthetic trial record, and [docs/local-script.md](docs/local-script.md): manifest keys, the declared tool `docs.get`, the output `out/summary.json`, and the three checks that reject a skill (unknown manifest keys or a hidden path, a trial tool that is not declared, output paths that are not exactly `manifest.outputs`).
 - [docs/enterprise-packs.md](docs/enterprise-packs.md): what the enterprise modules contain and how to check and install them on a `dev:stack` hub. Installing a product line registers a draft asset; `CIRCLE_HUB_PRODUCT_LINES` is what selects the tools at runtime.
@@ -16,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- The five enterprise skills at 1.1.0, and `products/enterprise` 1.1.0, use the judgement-gate split. Contract review scores permit/forbid clauses from a policy table. The monthly report aggregates a human-approved `metrics.yaml`. Ticket triage routes from the model's intent and filters credentials. Onboarding evaluates access against extracted policy rules. The postmortem recomputes MTTR from labeled lines and names missing fields.
 - Skill manifest titles are English. Chinese titles are `titleZh` in `SKILL.md` frontmatter. Flow files may carry `title` and `titleZh`. `skillpack.json` and `product-line.json` stay inside the hub's strict schemas, which have no `titleZh` field.
 - APV module versions that changed with the English titles: `skills/apv-mindmap-compile` 0.4.1, `skills/apv-case-review`, `skills/apv-defect-claims` and `skills/apv-product-qa` 0.2.1, `products/apv` 1.4.2. The README tables now cite these manifests.
 - Packs do not ship a path under a hidden harness directory. The hub may prefix `.claude/skills/<id>/` only while deriving a view from bytes it has already accepted.

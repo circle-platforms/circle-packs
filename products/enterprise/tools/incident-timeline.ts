@@ -31,16 +31,30 @@ export function buildTimeline(text: string): {
   events: TimelineEvent[];
   durations: { incident: string; minutes: number }[];
   incomplete: string[];
+  missing: { incident: string; missingFields: string[] }[];
+  unparsed: { line: string; missingFields: string[] }[];
   mttrMinutes: number | null;
   origin: 'script';
 } {
   if (typeof text !== 'string') invalid('Incident log must be a string');
   if (text.length > 1_000_000) invalid('Incident log exceeds its bound');
   const events: TimelineEvent[] = [];
+  const unparsed: { line: string; missingFields: string[] }[] = [];
   for (const line of text.split('\n')) {
     if (!line.trim()) continue;
     const match = LINE.exec(line);
-    if (!match) invalid(`Unreadable log line: ${line.slice(0, 120)}`);
+    if (!match) {
+      const missingFields: string[] = [];
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z(?:\s|$)/.test(line)) missingFields.push('timestamp');
+      else {
+        const parts = line.slice(21).trim().split(/\s+/);
+        if (!/^[a-z0-9-]+$/.test(parts[0] ?? '')) missingFields.push('incident');
+        if (!['opened', 'acknowledged', 'mitigated', 'resolved'].includes(parts[1] ?? '')) missingFields.push('event');
+      }
+      if (!missingFields.length) missingFields.push('line');
+      unparsed.push({ line, missingFields });
+      continue;
+    }
     events.push({ at: match[1], incident: match[2], event: match[3], note: match[4] ?? '' });
   }
   if (events.length > 5000) invalid('Incident log exceeds its event bound');
@@ -53,10 +67,15 @@ export function buildTimeline(text: string): {
   }
   const durations: { incident: string; minutes: number }[] = [];
   const incomplete: string[] = [];
+  const missing: { incident: string; missingFields: string[] }[] = [];
   for (const incident of [...marks.keys()].sort()) {
     const row = marks.get(incident)!;
-    if (!row.opened || !row.resolved) {
+    const missingFields: string[] = [];
+    if (!row.opened) missingFields.push('opened');
+    if (!row.resolved) missingFields.push('resolved');
+    if (missingFields.length) {
       incomplete.push(incident);
+      missing.push({ incident, missingFields });
       continue;
     }
     const minutes = (unixMs(row.resolved) - unixMs(row.opened)) / 60000;
@@ -64,7 +83,7 @@ export function buildTimeline(text: string): {
     durations.push({ incident, minutes });
   }
   const mttrMinutes = durations.length ? durations.reduce((sum, row) => sum + row.minutes, 0) / durations.length : null;
-  return { events, durations, incomplete, mttrMinutes, origin: 'script' };
+  return { events, durations, incomplete, missing, unparsed, mttrMinutes, origin: 'script' };
 }
 
 export function buildTimelineFromBytes(bytes: Uint8Array): ReturnType<typeof buildTimeline> {

@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractClauses } from '../tools/contract-clauses.ts';
+import { extractClauses, scoreClauses } from '../tools/contract-clauses.ts';
 import { buildReportWorkbook, REPORT_FORMULAS } from '../tools/report-workbook.ts';
-import { triageTickets } from '../tools/ticket-triage.ts';
+import { routeTickets, triageTickets } from '../tools/ticket-triage.ts';
 import { checklistStatus, accessRequests } from '../tools/onboarding.ts';
 import { buildTimeline, unixMs } from '../tools/incident-timeline.ts';
 import accessApproval from '../hooks/access-approval.ts';
@@ -33,6 +33,13 @@ test('contract clauses keep heading text and name the missing required headings'
   assert.deepEqual(found.clauses.map((clause) => clause.heading), ['Parties', 'Payment terms', 'Termination']);
   assert.equal(found.clauses[1].text, 'Net 30.');
   assert.deepEqual(found.gaps, ['Liability', 'Data protection']);
+  const scored = scoreClauses(text, [{ id: 'c1', heading: 'Payment terms', effect: 'permit', value: 'Net 30', quote: 'Net 30.' }], {
+    required: ['Payment terms', 'Termination', 'Liability', 'Data protection'],
+    defaultRisk: 'review',
+    rules: [{ id: 'payment-permit', heading: 'Payment terms', effect: 'permit', risk: 'low' }, { id: 'missing', heading: '*', effect: 'missing', risk: 'high' }],
+  });
+  assert.equal(scored.scored[0].risk, 'low');
+  assert.equal(scored.scored[0].origin, 'script');
 });
 
 test('the monthly workbook stores SUMIF formulas and the margin difference', () => {
@@ -63,6 +70,13 @@ test('ticket priority is a script of severity and tier', () => {
   ]);
   assert.deepEqual(rows.map((row) => row.priority), ['P1', 'P1', 'P2', 'P4']);
   assert.equal(rows[0].origin, 'script');
+  const routed = routeTickets(
+    [{ id: 't-1', subject: 'Checkout down', severity: 1, tier: 'standard', body: 'password=hunter2' }],
+    [{ id: 't-1', intent: 'outage', quote: 'Checkout down' }],
+    { intents: { outage: { queue: 'contract-desk', responseMinutes: 15 } }, default: { queue: 'general', responseMinutes: 1440 }, credential: { queue: 'credential-hold', responseMinutes: 60 } },
+  );
+  assert.equal(routed[0].queue, 'credential-hold');
+  assert.equal(routed[0].priority, 'P1');
 });
 
 test('onboarding marks missing checklist items and starter roles', () => {
@@ -95,6 +109,10 @@ test('incident MTTR uses opened and resolved marks and skips an incomplete incid
   assert.deepEqual(timeline.durations, [{ incident: 'inc-1', minutes: 40 }, { incident: 'inc-2', minutes: 20 }]);
   assert.equal(timeline.mttrMinutes, 30);
   assert.deepEqual(timeline.incomplete, ['inc-3']);
+  assert.deepEqual(timeline.missing.find((row) => row.incident === 'inc-3').missingFields, ['opened', 'resolved']);
+  const withGap = buildTimeline(`${log}\ninc-4 resolved without a clock`);
+  assert.deepEqual(withGap.unparsed[0].missingFields, ['timestamp']);
+  assert.equal(withGap.mttrMinutes, 30);
 });
 
 test('access approval blocks only an undeclared or unlisted grant', () => {

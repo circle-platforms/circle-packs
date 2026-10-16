@@ -1,22 +1,50 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { priorityOf, triage } from '../scripts/triage.mjs';
+import { fileURLToPath } from 'node:url';
+import { emitTriage, gateTriage, priorityOf } from '../scripts/triage.mjs';
 
-test('priority is scripted and a reply that does not quote the section is a gap', () => {
+const policy = fileURLToPath(new URL('../references/sla-policy.json', import.meta.url));
+
+test('priority stays a script and a credential in the original is filtered', () => {
   assert.equal(priorityOf({ severity: 2, tier: 'contract' }), 'P1');
   assert.equal(priorityOf({ severity: 4, tier: 'standard' }), 'P4');
   const folder = mkdtempSync(join(tmpdir(), 'triage-'));
-  const tickets = { result: { contentBase64: Buffer.from(JSON.stringify({ tickets: [{ id: 't-1', subject: 'Export', severity: 4, tier: 'standard' }] })).toString('base64') } };
-  const section = { result: { lines: [{ line: 1, text: '**export**' }, { line: 2, text: 'Use the export button.' }] }, evidenceId: 'evd_cccccccccccccccccccccccccccccccc' };
-  const replies = { replies: [
-    { ticketId: 't-1', body: 'Use the export button.', origin: 'model', quote: 'Use the export button.', evidenceId: 'evd_cccccccccccccccccccccccccccccccc' },
-    { ticketId: 't-2', body: 'I think it is fine.', origin: 'model', quote: '', evidenceId: '' },
-  ] };
-  const result = triage(folder, tickets, section, replies);
-  assert.equal(result.ranked[0].priority, 'P4');
-  assert.equal(result.gaps.length, 1);
-  assert.match(readFileSync(join(folder, 'out', 'replies.md'), 'utf8'), /Quoted \(script-checked\)/);
+  const tickets = {
+    tickets: [
+      { id: 't-1', subject: 'Checkout down', severity: 1, tier: 'standard', body: 'The page times out.' },
+      { id: 't-2', subject: 'Reset', severity: 3, tier: 'standard', body: 'password=hunter2 please' },
+    ],
+  };
+  writeFileSync(join(folder, 'return.json'), JSON.stringify({
+    response: { result: { contentBase64: Buffer.from(JSON.stringify(tickets)).toString('base64') }, evidence: [{ evidenceId: 'evd_cccccccccccccccccccccccccccccccc' }] },
+  }));
+  const contract = join(folder, 'triage.contract.json');
+  writeFileSync(contract, JSON.stringify({
+    schema: 'enterprise/triage-contract/1',
+    origin: 'model',
+    source: { savedAs: 'return.json' },
+    items: [
+      { id: 't-1', intent: 'outage', quote: 'Checkout down' },
+      { id: 't-2', intent: 'access', quote: 'password=hunter2 please' },
+    ],
+  }));
+  const gate = gateTriage(folder, contract, policy);
+  assert.equal(gate.ranked[0].queue, 'contract-desk');
+  assert.equal(gate.ranked[0].responseMinutes, 15);
+  assert.equal(gate.ranked[0].priority, 'P1');
+  assert.equal(gate.ranked[1].credential, true);
+  assert.equal(gate.ranked[1].queue, 'credential-hold');
+  assert.equal(gate.ranked[1].quote.includes('hunter2'), false);
+  const emitted = emitTriage(folder, contract);
+  assert.equal(emitted.gaps[0].predicate, 'credential_filtered');
+  writeFileSync(contract, JSON.stringify({
+    schema: 'enterprise/triage-contract/1',
+    origin: 'model',
+    source: { savedAs: 'return.json' },
+    items: [{ id: 't-1', intent: 'outage', quote: 'not in the ticket' }],
+  }));
+  assert.throws(() => gateTriage(folder, contract, policy), /quote_not_verbatim/);
 });

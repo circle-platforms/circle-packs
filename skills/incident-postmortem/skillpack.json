@@ -1,6 +1,6 @@
 {
   "id": "incident-postmortem",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": "Incident postmortem",
   "owner": "enterprise",
   "tools": [
@@ -17,5 +17,5 @@
     "out/timeline.json",
     "out/postmortem.md"
   ],
-  "model": "any capable model; the timeline and MTTR are a script; the narrative paragraph is model judgement"
+  "model": "any capable model; the model labels log lines with verbatim quotes; MTTR and missing fields are a script"
 }

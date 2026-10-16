@@ -25,6 +25,50 @@ export function extractClauses(text: string): { clauses: { id: string; heading: 
   return { clauses, gaps: REQUIRED.filter((heading) => !present.has(heading)) };
 }
 
+export interface ClauseScore {
+  id: string;
+  heading: string;
+  effect: 'permit' | 'forbid';
+  value: string;
+  risk: string;
+  ruleId: string | null;
+  origin: 'script';
+}
+
+export function scoreClauses(
+  text: string,
+  clauses: { id: string; heading: string; effect: string; value: string; quote: string }[],
+  policy: { required: string[]; defaultRisk: string; rules: { id: string; heading: string; effect: string; valuePattern?: string; risk: string }[] },
+): { scored: ClauseScore[]; absent: string[]; unextracted: string[] } {
+  const headings = extractClauses(text).clauses;
+  const scored = clauses.map((clause) => {
+    const section = headings.find((item) => item.heading === clause.heading);
+    if (!section) invalid(`Heading ${clause.heading} is not in the source`);
+    const sectionText = `${clause.heading}\n${section.text}`;
+    if (!sectionText.includes(clause.quote) && !section.text.includes(clause.quote)) invalid(`Quote for ${clause.id} is not in the source`);
+    if (!clause.quote.includes(clause.value)) invalid(`Value for ${clause.id} is not inside the quote`);
+    const rules = policy.rules.filter((rule) => rule.heading === clause.heading && rule.effect === clause.effect);
+    let risk = policy.defaultRisk;
+    let ruleId: string | null = null;
+    for (const rule of rules) {
+      if (!rule.valuePattern || new RegExp(rule.valuePattern).test(clause.value)) {
+        risk = rule.risk;
+        ruleId = rule.id;
+        break;
+      }
+    }
+    if (clause.effect !== 'permit' && clause.effect !== 'forbid') invalid(`Effect for ${clause.id} is malformed`);
+    return { id: clause.id, heading: clause.heading, effect: clause.effect, value: clause.value, risk, ruleId, origin: 'script' as const };
+  });
+  const present = new Set(headings.map((item) => item.heading));
+  const extracted = new Set(scored.map((clause) => clause.heading));
+  return {
+    scored,
+    absent: policy.required.filter((heading) => !present.has(heading)),
+    unextracted: policy.required.filter((heading) => present.has(heading) && !extracted.has(heading)),
+  };
+}
+
 export function extractClausesFromBytes(bytes: Uint8Array): ReturnType<typeof extractClauses> {
   const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
   return extractClauses(text);

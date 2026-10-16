@@ -1,6 +1,6 @@
 {
   "id": "contract-review",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "title": "Contract and supplier review",
   "owner": "enterprise",
   "tools": [
@@ -18,5 +18,5 @@
     "out/review_report.md",
     "out/review_claims.json"
   ],
-  "model": "any capable model; clause splits and missing headings are a script; risk notes are model judgement"
+  "model": "any capable model; the model extracts permit or forbid clauses with verbatim quotes; risk is a script over the policy table"
 }

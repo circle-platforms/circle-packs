@@ -169,8 +169,14 @@ export function buildReportWorkbook(bytes: Uint8Array): { summary: ReportSummary
     invalid('Report bytes are not UTF-8 JSON');
   }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) invalid('Report JSON must be an object');
-  const body = parsed as { period?: unknown; sources?: unknown };
+  const body = parsed as { period?: unknown; sources?: unknown; metrics?: { aggregate?: string; kind?: string }[] };
   if (typeof body.period !== 'string' || !Array.isArray(body.sources)) invalid('Report JSON needs period and sources');
+  if (Array.isArray(body.metrics)) {
+    const kinds = new Set(body.metrics.filter((metric) => metric.aggregate === 'sumif' && typeof metric.kind === 'string').map((metric) => metric.kind));
+    for (const source of body.sources as { rows?: { kind?: string }[] }[]) {
+      for (const row of source.rows ?? []) if (!kinds.has(row.kind)) invalid('Kind is not an approved metric');
+    }
+  }
   const summary = summariseReport(body.period, body.sources as ReportSource[]);
   return { summary, xlsx: workbookBytes(summary) };
 }

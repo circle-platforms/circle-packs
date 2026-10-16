@@ -1,12 +1,14 @@
 ---
 name: incident-postmortem
-description: Turn an incident log into a timeline and an MTTR figure, then attach a model narrative. Use when asked for a postmortem or a mean time to recover.
+description: Label an incident log and compute MTTR. The model labels each line. A script recomputes the events, names every missing field, and computes the mean. Use when asked for a postmortem or a mean time to recover.
 titleZh: 事故复盘
 ---
 
 # Incident postmortem
 
 Circle binding: Circle 1.7.0 or newer uses the `hub` extension, `/hub login` and `hub_tool_*`. Other harnesses expose the declared remote tools through their own adapters. Former Circle extension, command and tool names are not aliases.
+
+The model labels lines. The script parses them again and computes MTTR. This skill was built from `templates/judgement-gate`.
 
 ## Inputs
 
@@ -17,16 +19,26 @@ Circle binding: Circle 1.7.0 or newer uses the `hub` extension, `/hub login` and
 
 Call `hub_tool_docs_get`. Keep `savedAs`.
 
-## 2. Timeline (script) and narrative (judgement)
+## 2. Label the lines (judgement)
 
-Write `<folder>/narrative.json` as `{ "origin": "model", "text": "one paragraph" }`. Do not invent times. Then run:
+Write `<folder>/labels.json` as in `references/contract.md`. `quote` is one whole line. `event` and `incident` are your reading of that line. Do not invent a timestamp.
+
+## 3. Gate (script)
 
 ```
-node <skill>/scripts/timeline.mjs <folder> --get <hub-saved return> --narrative <folder>/narrative.json
+node <skill>/scripts/gate.mjs <folder> --labels <folder>/labels.json
 ```
 
-The script writes `out/timeline.json` and `out/postmortem.md`. MTTR is the mean of `resolved - opened` in minutes. An incident with either mark missing is listed as incomplete and is not included in the mean.
+The script loads the saved log, refuses a quote that is not a whole line, parses every non-empty line, and keeps the parse when it disagrees with a label. A line that does not match is listed with `missingFields` (`timestamp`, `incident`, `event`). An incident without `opened` or `resolved` is listed with those names. It is not included in the mean.
 
-## 3. Submit the MTTR (tool)
+## 4. Emit (script)
+
+```
+node <skill>/scripts/emit.mjs <folder> --labels <folder>/labels.json
+```
+
+The script writes `out/timeline.json` and `out/postmortem.md`. MTTR is the mean of `resolved - opened` in minutes over complete incidents.
+
+## 5. Submit the MTTR (tool)
 
 Submit one claim with `hub_tool_knowledge_claim_submit`: subject `incident-log:<path>`, predicate `mttr_minutes`, value the script's `mttrMinutes`, evidence the saved `docs.get` id. Skip it when `mttrMinutes` is null.

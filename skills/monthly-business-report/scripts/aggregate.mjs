@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-// Step 2 (script): merge docs.get extracts into report.json and report.xlsx.
-// Formulas on Summary are SUMIF and B1-B2. The zip is stored, method 0, timestamp fixed.
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+// Aggregate approved metrics from server-saved extracts. The zip is stored, method 0.
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { assertExactKeys, assertOriginModel, assertPointer, loadPointedReturn, readJson, sha256, utf8FromBase64 } from './pointers.mjs';
 
 export const FORMULAS = {
   revenue: 'SUMIF(Lines!C:C,"revenue",Lines!D:D)',
@@ -79,54 +79,100 @@ function sheetXml(rows) {
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>${lines.join('')}</sheetData></worksheet>`;
 }
 
-function readJson(path) {
-  try { return JSON.parse(readFileSync(path, 'utf8')); }
-  catch { throw new Error(`${path}: unreadable`); }
-}
-function loadSaved(folder, arg) {
-  let parsed = readJson(arg);
-  if (parsed && typeof parsed.savedAs === 'string' && parsed.savedAs.trim()) {
-    const path = [parsed.savedAs, resolve(dirname(arg), '..', '..', parsed.savedAs), resolve(folder, parsed.savedAs)].find((candidate) => existsSync(candidate));
-    if (!path) throw new Error(`${arg}: pointer target ${parsed.savedAs} not found`);
-    parsed = readJson(path);
-  }
-  const raw = parsed.response ?? parsed;
-  if (!raw?.result?.contentBase64) throw new Error(`${arg}: docs.get result has no contentBase64`);
-  const bytes = Buffer.from(raw.result.contentBase64, 'base64');
-  const text = bytes.toString('utf8');
-  if (!Buffer.from(text).equals(bytes)) throw new Error(`${arg}: document is not UTF-8`);
-  return JSON.parse(text);
-}
 const label = (value, field) => {
   if (typeof value !== 'string' || !/^[A-Za-z0-9 ._-]{1,80}$/.test(value)) throw new Error(`${field} is malformed`);
   return value;
 };
+const scalar = (raw) => {
+  const text = raw.trim();
+  if (text.startsWith('"') && text.endsWith('"')) return JSON.parse(text);
+  return text;
+};
 
-export function summarise(period, sources) {
-  if (!/^[A-Za-z0-9 ._-]{1,40}$/.test(period)) throw new Error('period is malformed');
+export function parseMetricsYaml(text) {
+  const root = { metrics: [] };
+  let current = null;
+  for (const line of text.split('\n')) {
+    if (!line.trim() || line.trim().startsWith('#')) continue;
+    const indent = line.match(/^ */)[0].length;
+    const body = line.trim();
+    if (indent === 0 && body === 'metrics:') continue;
+    if (indent === 0) {
+      const match = /^([A-Za-z]+): (.*)$/.exec(body);
+      if (!match) throw new Error('schema_invalid: metrics yaml');
+      root[match[1]] = scalar(match[2]);
+    } else if (indent === 2 && body.startsWith('- ')) {
+      current = {};
+      root.metrics.push(current);
+      const match = /^([A-Za-z]+): (.*)$/.exec(body.slice(2));
+      if (!match) throw new Error('schema_invalid: metric item');
+      current[match[1]] = scalar(match[2]);
+    } else if (indent === 4 && current) {
+      const match = /^([A-Za-z]+): (.*)$/.exec(body);
+      if (!match) throw new Error('schema_invalid: metric field');
+      current[match[1]] = scalar(match[2]);
+    } else throw new Error('schema_invalid: metrics yaml');
+  }
+  return root;
+}
+
+export function planMetrics(metrics) {
+  if (metrics.schema !== 'enterprise/metrics/1') throw new Error('schema_invalid: metrics schema');
+  if (typeof metrics.period !== 'string' || !/^[A-Za-z0-9 ._-]{1,40}$/.test(metrics.period)) throw new Error('schema_invalid: period');
+  const sumif = [];
+  let difference = null;
+  for (const item of metrics.metrics ?? []) {
+    if (item.aggregate === 'sumif') {
+      if (typeof item.id !== 'string' || typeof item.kind !== 'string') throw new Error('schema_invalid: sumif');
+      if (sumif.some((row) => row.id === item.id || row.kind === item.kind)) throw new Error('schema_invalid: duplicate metric');
+      sumif.push(item);
+    } else if (item.aggregate === 'difference') {
+      if (difference) throw new Error('schema_invalid: one difference');
+      difference = item;
+    } else throw new Error('schema_invalid: aggregate');
+  }
+  if (!sumif.length || !difference) throw new Error('schema_invalid: metrics need a sum and a difference');
+  if (!sumif.some((row) => row.id === difference.left) || !sumif.some((row) => row.id === difference.right)) throw new Error('schema_invalid: difference names');
+  return { period: metrics.period, sumif, difference };
+}
+
+export function summarise(plan, sources) {
+  const allowed = new Set(plan.sumif.map((metric) => metric.kind));
   const rows = [];
   for (const source of sources) {
     label(source.name, 'source name');
     for (const row of source.rows ?? []) {
       label(row.account, 'account');
-      if (row.kind !== 'revenue' && row.kind !== 'expense') throw new Error('kind must be revenue or expense');
+      if (!allowed.has(row.kind)) throw new Error('kind is not an approved metric');
       if (typeof row.amount !== 'number' || !Number.isFinite(row.amount)) throw new Error('amount must be a finite number');
       rows.push({ source: source.name, account: row.account, kind: row.kind, amount: row.amount });
     }
   }
   rows.sort((a, b) => (a.source < b.source ? -1 : a.source > b.source ? 1 : a.account < b.account ? -1 : a.account > b.account ? 1 : a.kind < b.kind ? -1 : 1));
-  const revenue = rows.filter((row) => row.kind === 'revenue').reduce((sum, row) => sum + row.amount, 0);
-  const expense = rows.filter((row) => row.kind === 'expense').reduce((sum, row) => sum + row.amount, 0);
-  return { period, rows, revenue, expense, margin: revenue - expense, formulas: { ...FORMULAS }, origin: 'script' };
+  const sums = plan.sumif.map((metric) => ({
+    id: metric.id,
+    formula: `SUMIF(Lines!C:C,"${metric.kind}",Lines!D:D)`,
+    result: rows.filter((row) => row.kind === metric.kind).reduce((sum, row) => sum + row.amount, 0),
+  }));
+  const left = sums.findIndex((row) => row.id === plan.difference.left) + 1;
+  const right = sums.findIndex((row) => row.id === plan.difference.right) + 1;
+  const margin = sums.find((row) => row.id === plan.difference.left).result - sums.find((row) => row.id === plan.difference.right).result;
+  const totals = [...sums, { id: plan.difference.id, formula: `B${left}-B${right}`, result: margin }];
+  return {
+    period: plan.period,
+    rows,
+    totals,
+    revenue: sums.find((row) => row.id === 'revenue')?.result ?? null,
+    expense: sums.find((row) => row.id === 'expense')?.result ?? null,
+    margin,
+    formulas: { revenue: FORMULAS.revenue, expense: FORMULAS.expense, margin: FORMULAS.margin },
+    origin: 'script',
+  };
 }
 
 export function workbook(summary) {
   const lines = [['Source', 'Account', 'Kind', 'Amount'], ...summary.rows.map((row) => [row.source, row.account, row.kind, row.amount])];
-  const totals = [
-    ['Revenue', { formula: FORMULAS.revenue, result: summary.revenue }],
-    ['Expense', { formula: FORMULAS.expense, result: summary.expense }],
-    ['Margin', { formula: FORMULAS.margin, result: summary.margin }],
-  ];
+  const totals = summary.totals.map((total) => [total.id, { formula: total.formula, result: total.result }]);
   const encode = (text) => Buffer.from(text);
   const styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/></cellXfs></styleSheet>';
   return zipStored([
@@ -140,25 +186,32 @@ export function workbook(summary) {
   ]);
 }
 
-export function aggregate(folder, period, sources) {
-  const summary = summarise(period, sources);
-  mkdirSync(join(folder, 'out'), { recursive: true });
-  writeFileSync(join(folder, 'out', 'report.json'), `${JSON.stringify(summary, null, 2)}\n`);
-  writeFileSync(join(folder, 'out', 'report.xlsx'), workbook(summary));
-  return summary;
+export function gateReport(folder, contractPath, metricsPath) {
+  const contractBytes = readFileSync(contractPath);
+  const metricsBytes = readFileSync(metricsPath);
+  const contract = readJson(contractPath);
+  assertExactKeys(contract, ['origin', 'schema', 'sources'], 'sources contract');
+  assertOriginModel(contract, 'sources contract');
+  if (contract.schema !== 'enterprise/sources/1' || !Array.isArray(contract.sources) || !contract.sources.length) throw new Error('schema_invalid: sources');
+  const plan = planMetrics(parseMetricsYaml(metricsBytes.toString('utf8')));
+  const sources = contract.sources.map((source, index) => {
+    assertPointer(source, `source ${index}`);
+    const saved = loadPointedReturn(folder, source, `source ${index}`);
+    const parsed = JSON.parse(utf8FromBase64(saved.result));
+    return { name: parsed.name, rows: parsed.rows, evidenceId: saved.evidenceId };
+  });
+  const summary = summarise(plan, sources);
+  const gate = { ok: true, origin: 'script', contractSha256: sha256(contractBytes), metricsSha256: sha256(metricsBytes), summary };
+  writeFileSync(join(folder, 'gate.json'), `${JSON.stringify(gate, null, 2)}\n`);
+  return gate;
 }
 
-if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
-  const [folder, ...rest] = process.argv.slice(2);
-  let period;
-  const gets = [];
-  for (let i = 0; i < rest.length; i++) {
-    if (rest[i] === '--period') period = rest[++i];
-    else if (rest[i] === '--get') gets.push(rest[++i]);
-  }
-  if (!folder || !period || !gets.length) {
-    console.error('usage: node aggregate.mjs <folder> --period <period> --get <file> [--get <file> ...]');
-    process.exit(2);
-  }
-  aggregate(folder, period, gets.map((path) => loadSaved(folder, path)));
+export function emitReport(folder, contractPath, metricsPath) {
+  const gate = readJson(join(folder, 'gate.json'));
+  if (gate?.ok !== true) throw new Error('gate_not_passed');
+  if (sha256(readFileSync(contractPath)) !== gate.contractSha256 || sha256(readFileSync(metricsPath)) !== gate.metricsSha256) throw new Error('contract_changed_after_gate');
+  mkdirSync(join(folder, 'out'), { recursive: true });
+  writeFileSync(join(folder, 'out', 'report.json'), `${JSON.stringify(gate.summary, null, 2)}\n`);
+  writeFileSync(join(folder, 'out', 'report.xlsx'), workbook(gate.summary));
+  return gate.summary;
 }

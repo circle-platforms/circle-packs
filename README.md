@@ -28,12 +28,12 @@ Skill manifests are English. A Chinese title is the `titleZh` field in `SKILL.md
 | [skills/apv-defect-claims](skills/apv-defect-claims/SKILL.md) | Turns ZenTao defect records into candidate knowledge claims with script origin: product resolution and bug picks are model judgement, the field-to-predicate extraction is a script with no inference, evidence ids pass through. Version 0.2.1 | on main |
 | [skills/apv-product-qa](skills/apv-product-qa/SKILL.md) | Answers APV product questions from the manuals only: the manual version is pinned with docs.list, sections are read directly by anchor, the answer is model judgement with an evidence tag on every paragraph, quotes are checked verbatim against hub-saved sections by a script, and a no-evidence answer requires a real section miss. Version 0.2.1 | on main |
 | [skills/apv-case-review](skills/apv-case-review/SKILL.md) | Reviews a compiled APV batch against its bound build: structure, command-tree and function-contract checks are scripts, coverage and risk are model judgement; the report carries evidence ids and findings are submitted as candidate claims. Version 0.2.1 | on main |
-| [products/enterprise](products/enterprise/README.md) | General-purpose product line: contract clauses, a monthly workbook with formulas, ticket priority, an onboarding checklist and access-approval hook, and an incident timeline with MTTR. Version 1.0.0 | draft |
-| [skills/contract-review](skills/contract-review/SKILL.md) | Splits a contract into headings and lists missing required clauses. Version 1.0.0 | draft |
-| [skills/monthly-business-report](skills/monthly-business-report/SKILL.md) | Aggregates multi-source rows into `report.xlsx` with `SUMIF` and a margin formula. Version 1.0.0 | draft |
-| [skills/support-triage](skills/support-triage/SKILL.md) | Assigns ticket priority, drafts a reply from a saved section, and records a knowledge-base gap when the quote is absent. Version 1.0.0 | draft |
-| [skills/employee-onboarding](skills/employee-onboarding/SKILL.md) | Checklist, access requests that need approval, and a policy answer quoted from a saved section. Version 1.0.0 | draft |
-| [skills/incident-postmortem](skills/incident-postmortem/SKILL.md) | Orders an incident log and computes mean time to recover. Version 1.0.0 | draft |
+| [products/enterprise](products/enterprise/README.md) | General-purpose product line: policy-table risk, an approved-metrics workbook, ticket routing, access evaluation, and an incident timeline with explicit missing fields. Version 1.1.0 | draft |
+| [skills/contract-review](skills/contract-review/SKILL.md) | Model extracts permit/forbid clauses with verbatim quotes. A script scores risk from a policy table. Version 1.1.0 | draft |
+| [skills/monthly-business-report](skills/monthly-business-report/SKILL.md) | Aggregates extracts named by pointers into `report.xlsx`. The metric list is a human-approved `metrics.yaml`. Version 1.1.0 | draft |
+| [skills/support-triage](skills/support-triage/SKILL.md) | Model names an intent and quotes the ticket. A script assigns SLA, queue and filters credentials. Version 1.1.0 | draft |
+| [skills/employee-onboarding](skills/employee-onboarding/SKILL.md) | Model extracts permit/forbid policy rules. A script evaluates the checklist and the access requests. Version 1.1.0 | draft |
+| [skills/incident-postmortem](skills/incident-postmortem/SKILL.md) | Model labels log lines. A script recomputes MTTR and names missing fields. Version 1.1.0 | draft |
 | [skills/local-script](skills/local-script/SKILL.md) | Counts lines and words with a local script. Documents the manifest, declared tool, output path and a sample trial record. Version 1.0.0 | draft |
 
 ## What stays out
@@ -61,7 +61,7 @@ Node.js 24. The first two commands need nothing installed:
 
 ```sh
 node tools/modules.ts check
-node --test tools/*.test.ts skills/*/tests/*.test.mjs
+node --test tools/*.test.ts skills/*/tests/*.test.mjs templates/judgement-gate/scaffold/tests/*.test.mjs
 ```
 
 Product-line pack tests use the dependency set from circle-hub commit `dc93c69826f73f16d2f20f7520ba4c6663d014ac`, the same commit pinned by `.github/workflows/checks.yml`. Check out that commit and run `npm ci --ignore-scripts` there before linking its `node_modules` into this repository. This pins the test environment, not a supported production hub version. Then:

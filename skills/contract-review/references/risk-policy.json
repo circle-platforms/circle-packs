@@ -1,0 +1,18 @@
+{
+  "schema": "enterprise/risk-policy/1",
+  "required": ["Payment terms", "Termination", "Liability", "Data protection"],
+  "defaultRisk": "review",
+  "rules": [
+    { "id": "payment-forbid", "heading": "Payment terms", "effect": "forbid", "risk": "high" },
+    { "id": "payment-days", "heading": "Payment terms", "effect": "permit", "valuePattern": "^[0-9]{1,3} days$", "risk": "low" },
+    { "id": "payment-other", "heading": "Payment terms", "effect": "permit", "risk": "medium" },
+    { "id": "termination-forbid", "heading": "Termination", "effect": "forbid", "risk": "high" },
+    { "id": "termination-permit", "heading": "Termination", "effect": "permit", "risk": "low" },
+    { "id": "liability-forbid", "heading": "Liability", "effect": "forbid", "risk": "high" },
+    { "id": "liability-capped", "heading": "Liability", "effect": "permit", "valuePattern": "capped", "risk": "low" },
+    { "id": "liability-other", "heading": "Liability", "effect": "permit", "risk": "high" },
+    { "id": "data-forbid", "heading": "Data protection", "effect": "forbid", "risk": "high" },
+    { "id": "data-permit", "heading": "Data protection", "effect": "permit", "risk": "low" },
+    { "id": "required-missing", "heading": "*", "effect": "missing", "risk": "high" }
+  ]
+}

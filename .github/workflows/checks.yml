@@ -22,7 +22,7 @@ jobs:
       - name: Manifest matches the files
         run: node tools/modules.ts check
       - name: Manifest and skill tests
-        run: node --test tools/*.test.ts skills/*/tests/*.test.mjs
+        run: node --test tools/*.test.ts skills/*/tests/*.test.mjs templates/judgement-gate/scaffold/tests/*.test.mjs
       - name: Fetch the hub dependency set
         run: |
           git init ../circle-hub

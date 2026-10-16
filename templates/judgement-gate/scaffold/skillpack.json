@@ -1,0 +1,19 @@
+{
+  "id": "__ID__",
+  "version": "1.0.0",
+  "title": "__TITLE__",
+  "owner": "__OWNER__",
+  "tools": [
+    "__TOOL__"
+  ],
+  "triggers": [
+    "manual"
+  ],
+  "inputs": {
+    "file": "document path on the documents connector"
+  },
+  "outputs": [
+    "out/summary.json"
+  ],
+  "model": "any capable model; the judgement file quotes the source, and the gate and emit steps are scripts"
+}

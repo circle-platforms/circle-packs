@@ -1,0 +1,10 @@
+{
+  "schema": "enterprise/sla-policy/1",
+  "intents": {
+    "outage": { "queue": "contract-desk", "responseMinutes": 15 },
+    "howto": { "queue": "knowledge", "responseMinutes": 480 },
+    "access": { "queue": "access-desk", "responseMinutes": 240 }
+  },
+  "default": { "queue": "general", "responseMinutes": 1440 },
+  "credential": { "queue": "credential-hold", "responseMinutes": 60 }
+}

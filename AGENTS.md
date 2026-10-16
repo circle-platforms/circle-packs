@@ -27,7 +27,7 @@ Inspect status and diffs and preserve other people's work; use isolated worktree
 
 ```sh
 node tools/modules.ts check
-node --test tools/*.test.ts skills/*/tests/*.test.mjs
+node --test tools/*.test.ts skills/*/tests/*.test.mjs templates/judgement-gate/scaffold/tests/*.test.mjs
 node --experimental-strip-types --test 'products/apv/tests/*.test.mjs'   # needs circle-hub's node_modules symlinked
 ```
 

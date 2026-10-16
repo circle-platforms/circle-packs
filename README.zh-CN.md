@@ -28,12 +28,12 @@
 | [skills/apv-defect-claims](skills/apv-defect-claims/SKILL.md) | 把禅道缺陷记录抽成候选知识声明（origin script）：定位产品、挑缺陷是模型判断，字段到谓词的抽取是脚本、零推断，evidenceId 透传。版本 0.2.1 | 已在 main |
 | [skills/apv-product-qa](skills/apv-product-qa/SKILL.md) | 只凭手册回答 APV 产品问题：先用 docs.list 钉住手册版本、按 anchor 直取小节，作答是模型判断、每段带证据标记，引文由脚本对 hub 落盘的章节逐字校验，no_evidence 必须有一次真实的小节未命中。版本 0.2.1 | 已在 main |
 | [skills/apv-case-review](skills/apv-case-review/SKILL.md) | 对编译批次按绑定构建做评审：结构、命令树、函数契约核对是脚本，覆盖与风险是模型判断；报告带 evidenceId，发现以候选声明提交。版本 0.2.1 | 已在 main |
-| [products/enterprise](products/enterprise/README.md) | 通用产品线：合同条款、带公式的月度工作簿、工单优先级、入职清单和访问批准 hook、事故时间线与 MTTR。版本 1.0.0 | 草案 |
-| [skills/contract-review](skills/contract-review/SKILL.md) | 按标题拆合同，列出缺少的必要条款。版本 1.0.0 | 草案 |
-| [skills/monthly-business-report](skills/monthly-business-report/SKILL.md) | 把多来源行汇总成带 `SUMIF` 和差额公式的 `report.xlsx`。版本 1.0.0 | 草案 |
-| [skills/support-triage](skills/support-triage/SKILL.md) | 定工单优先级，按已保存章节起草回复；引文不在章节里就记成知识库缺口。版本 1.0.0 | 草案 |
-| [skills/employee-onboarding](skills/employee-onboarding/SKILL.md) | 入职清单、需要批准的访问申请，以及从已保存章节引用的制度答复。版本 1.0.0 | 草案 |
-| [skills/incident-postmortem](skills/incident-postmortem/SKILL.md) | 整理事故日志并计算平均恢复时间。版本 1.0.0 | 草案 |
+| [products/enterprise](products/enterprise/README.md) | 通用产品线：策略表风险分、已批准指标的工作簿、工单路由、访问判定、以及写明缺失字段的事故时间线。版本 1.1.0 | 草案 |
+| [skills/contract-review](skills/contract-review/SKILL.md) | 模型抽取允许或禁止条款并附逐字引文。脚本按策略表给风险分。版本 1.1.0 | 草案 |
+| [skills/monthly-business-report](skills/monthly-business-report/SKILL.md) | 按指针汇总摘录，生成带公式的 `report.xlsx`。指标清单是人工批准的 `metrics.yaml`。版本 1.1.0 | 草案 |
+| [skills/support-triage](skills/support-triage/SKILL.md) | 模型给出意图并引用工单。脚本确定 SLA、队列并过滤凭据。版本 1.1.0 | 草案 |
+| [skills/employee-onboarding](skills/employee-onboarding/SKILL.md) | 模型抽取允许或禁止的制度规则。脚本评估清单和访问申请。版本 1.1.0 | 草案 |
+| [skills/incident-postmortem](skills/incident-postmortem/SKILL.md) | 模型给日志行打标签。脚本重算 MTTR 并点名缺失字段。版本 1.1.0 | 草案 |
 | [skills/local-script](skills/local-script/SKILL.md) | 用本地脚本统计行数和词数。说明清单、声明的工具、输出路径和一份试跑记录样本。版本 1.0.0 | 草案 |
 
 ## 不放什么
@@ -61,7 +61,7 @@
 
 ```sh
 node tools/modules.ts check
-node --test tools/*.test.ts skills/*/tests/*.test.mjs
+node --test tools/*.test.ts skills/*/tests/*.test.mjs templates/judgement-gate/scaffold/tests/*.test.mjs
 ```
 
 产品线包测试使用 circle-hub 提交 `dc93c69826f73f16d2f20f7520ba4c6663d014ac` 的依赖集，与 `.github/workflows/checks.yml` 固定的提交一致。先检出该提交并在其中运行 `npm ci --ignore-scripts`，再把它的 `node_modules` 软链到本仓库后运行。这只固定测试环境，不代表已支持该 hub 的生产版本：

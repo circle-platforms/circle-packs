@@ -41,6 +41,25 @@ export function triageTickets(tickets: unknown): { id: string; subject: string; 
   });
 }
 
+const CREDENTIAL = /(?:password|api[_-]?key|secret|token)\s*[:=]\s*\S+|Bearer\s+\S+|\bsk-[A-Za-z0-9]{8,}/i;
+
+export function routeTickets(
+  tickets: { id: string; subject: string; severity: number; tier: string; body?: string }[],
+  intents: { id: string; intent: string; quote: string }[],
+  policy: { intents: Record<string, { queue: string; responseMinutes: number }>; default: { queue: string; responseMinutes: number }; credential: { queue: string; responseMinutes: number } },
+): { id: string; intent: string; queue: string; responseMinutes: number; priority: string; credential: boolean; origin: 'script' }[] {
+  return intents.map((item) => {
+    const ticket = tickets.find((row) => row.id === item.id);
+    if (!ticket) invalid(`Ticket ${item.id} is not in the source`);
+    const blob = `${ticket.subject}\n${ticket.body ?? ''}`;
+    if (!blob.includes(item.quote)) invalid(`Quote for ${item.id} is not in the source`);
+    const credential = CREDENTIAL.test(blob);
+    const listed = policy.intents[item.intent];
+    const route = credential ? policy.credential : listed ?? policy.default;
+    return { id: item.id, intent: item.intent, queue: route.queue, responseMinutes: route.responseMinutes, priority: priorityOf(ticket), credential, origin: 'script' as const };
+  });
+}
+
 export function triageTicketBytes(bytes: Uint8Array): ReturnType<typeof triageTickets> {
   let parsed: unknown;
   try {

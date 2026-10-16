@@ -8,17 +8,19 @@ These modules are general-purpose and synthetic. They do not describe a real sup
 
 | Module | Kind | Version | What it does |
 |---|---|---|---|
-| [products/enterprise](../products/enterprise/README.md) | product-line | 1.0.0 | Documents connector, five flows, five pure tools, one access-approval hook |
-| [skills/contract-review](../skills/contract-review/SKILL.md) | skill-pack | 1.0.0 | Clause split and missing required headings; model writes the risk note |
-| [skills/monthly-business-report](../skills/monthly-business-report/SKILL.md) | skill-pack | 1.0.0 | Merges source rows into `report.xlsx` with `SUMIF` and a margin formula |
-| [skills/support-triage](../skills/support-triage/SKILL.md) | skill-pack | 1.0.0 | Priority, reply drafts, and a knowledge-base gap when a quote is not in the section |
-| [skills/employee-onboarding](../skills/employee-onboarding/SKILL.md) | skill-pack | 1.0.0 | Checklist, access requests that need approval, policy answer from a saved section |
-| [skills/incident-postmortem](../skills/incident-postmortem/SKILL.md) | skill-pack | 1.0.0 | Log timeline and mean time to recover, in minutes |
+| [products/enterprise](../products/enterprise/README.md) | product-line | 1.1.0 | Documents connector, five flows, five pure tools, one access-approval hook |
+| [skills/contract-review](../skills/contract-review/SKILL.md) | skill-pack | 1.1.0 | Model extracts permit/forbid clauses; a policy table scores risk |
+| [skills/monthly-business-report](../skills/monthly-business-report/SKILL.md) | skill-pack | 1.1.0 | Human-approved metrics.yaml; the script aggregates into `report.xlsx` |
+| [skills/support-triage](../skills/support-triage/SKILL.md) | skill-pack | 1.1.0 | Model names intent; the script assigns SLA, queue and the credential filter |
+| [skills/employee-onboarding](../skills/employee-onboarding/SKILL.md) | skill-pack | 1.1.0 | Model extracts policy rules; the script evaluates requests |
+| [skills/incident-postmortem](../skills/incident-postmortem/SKILL.md) | skill-pack | 1.1.0 | Model labels log lines; the script computes MTTR and names missing fields |
 | [skills/local-script](../skills/local-script/SKILL.md) | skill-pack | 1.0.0 | Worked example of a local script, its manifest and a sample trial record |
 
 `skillpack.json` titles are English. Chinese titles are the `titleZh` field in each `SKILL.md` frontmatter, and `title` plus `titleZh` on each enterprise flow file. See [Local script example](local-script.md) for why the manifest itself cannot carry `titleZh`.
 
-The monthly workbook is a stored zip (compression method 0) so the product tool imports nothing. Summary cell `B1` is `SUMIF(Lines!C:C,"revenue",Lines!D:D)`, `B2` is the same for `expense`, and `B3` is `B1-B2`. The incident tool's MTTR is the mean of `(resolved - opened) / 60000` over complete incidents. The access hook on `beforeDispatch` blocks an `access-grant` whose role is missing or not on `approvedRoles`, and passes every other dispatch.
+Each of those five skills follows the [judgement-gate template](judgement-gate.md): the model writes a schema'd file of verbatim quotes and source pointers, then a script checks the quotes against the server-saved original, recomputes the decision, and emits. Scaffold another skill with `node templates/judgement-gate/generate.mjs`.
+
+The monthly workbook is a stored zip (compression method 0) so the product tool imports nothing. For the sample metrics, summary cell `B1` is `SUMIF(Lines!C:C,"revenue",Lines!D:D)`, `B2` is the same for `expense`, and `B3` is `B1-B2`. The incident tool's MTTR is the mean of `(resolved - opened) / 60000` over complete incidents, and a line or incident that cannot be used is reported with `missingFields`. The access hook on `beforeDispatch` blocks an `access-grant` whose role is missing or not on `approvedRoles`, and passes every other dispatch.
 
 ## Install on a dev:stack hub
 
