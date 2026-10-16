@@ -14,7 +14,7 @@ General-purpose packs for a circle-hub that already has the documents connector 
 | C which identities | Roles in the scope policy. The access desk does not use a machine credential. |
 | D which resources | `resources/access-desk.json`. It is a declaration, not a remote connector. `approvedRoles` is filled at registration and is not in Git. |
 | D how credentials are supplied | The documents connector uses whatever credential mode the administrator registers. This pack stores none. |
-| D what counts as unknown | A CSV cell whose kind is not in the approved metrics, an incident missing the pinned start or end event (the gate fails), or an access role no gated rule covers. The script names it and does not invent a value. |
+| D what counts as unknown | A CSV row the period filter rejects, an incident metric the agreed labels cannot fill, a ticket intent the policy does not name, or an access role no pinned rule covers. The script names it and does not invent a value. |
 | E which skill steps are scripts | See each `skills/<id>/SKILL.md`. Scripts live in that skill's `scripts/` and do not import this product line. |
 | E what the manifest declares | This file's sibling `product-line.json`: connector package, aliases, knowledge mappings, tools, the access hook, flows, the access-desk resource. |
 | E which hooks | `hooks/access-approval.ts` on `beforeDispatch`, order 10. Codes: `ACCESS_ROLES_UNDECLARED`, `ACCESS_ROLE_MISSING`, `ACCESS_ROLE_UNAPPROVED`. Any other dispatch passes. |
@@ -24,11 +24,11 @@ General-purpose packs for a circle-hub that already has the documents connector 
 
 | Skill | What the script does | What the model does |
 |---|---|---|
-| [contract-review](../../skills/contract-review/SKILL.md) | Scores risk from the pinned policy table, checks the polarity cue, and names missing topics | Extracts every heading, including `第N条`, as permit or forbid |
-| [monthly-business-report](../../skills/monthly-business-report/SKILL.md) | Parses raw CSV into `report.xlsx` with `SUMIF` and a difference formula | Maps header cells only. The metric list is a human-approved `metrics.yaml` |
-| [support-triage](../../skills/support-triage/SKILL.md) | Maps judged severity to SLA and priority, assigns the queue, and filters credentials | Names intent and severity and quotes every ticket |
-| [employee-onboarding](../../skills/employee-onboarding/SKILL.md) | Applies tenure floors and admin downgrades and lists checklist gaps | Extracts permit, forbid, tenure and downgrade rules with verbatim quotes |
-| [incident-postmortem](../../skills/incident-postmortem/SKILL.md) | Converts labeled timestamps, including JST, and computes MTTR | Labels each log line. The start event is the pinned policy, not a fresh extract |
+| [contract-review](../../skills/contract-review/SKILL.md) | Scores an agreed term from the pinned day floor, and reports an unmatched heading with no default risk | Extracts every heading twice, including a one-line `第N条`, with a kind and an offset |
+| [monthly-business-report](../../skills/monthly-business-report/SKILL.md) | Parses raw CSV into `report.xlsx`, rejects rows outside the period, and reconciles the total | Maps header cells only, twice. The metric list is a human-approved `metrics.yaml` |
+| [support-triage](../../skills/support-triage/SKILL.md) | Applies the pinned severity floor, assigns the queue, and filters credentials | Names intent and severity twice and quotes every ticket, including a raw `{text}` ticket |
+| [employee-onboarding](../../skills/employee-onboarding/SKILL.md) | Applies the pinned tenure and downgrade rules and writes the approver and grant date | The first run extracts rules twice. Later runs do not extract them again |
+| [incident-postmortem](../../skills/incident-postmortem/SKILL.md) | Converts zoned timestamps and reports alert duration and customer impact separately | Labels each log line twice. A line need not carry an incident id |
 | [local-script](../../skills/local-script/SKILL.md) | Counts lines and words in one document | Nothing. This is the manifest example |
 
 ## Acceptance notes

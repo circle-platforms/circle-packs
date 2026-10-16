@@ -28,12 +28,12 @@
 | [skills/apv-defect-claims](skills/apv-defect-claims/SKILL.md) | 把禅道缺陷记录抽成候选知识声明（origin script）：定位产品、挑缺陷是模型判断，字段到谓词的抽取是脚本、零推断，evidenceId 透传。版本 0.2.1 | 已在 main |
 | [skills/apv-product-qa](skills/apv-product-qa/SKILL.md) | 只凭手册回答 APV 产品问题：先用 docs.list 钉住手册版本、按 anchor 直取小节，作答是模型判断、每段带证据标记，引文由脚本对 hub 落盘的章节逐字校验，no_evidence 必须有一次真实的小节未命中。版本 0.2.1 | 已在 main |
 | [skills/apv-case-review](skills/apv-case-review/SKILL.md) | 对编译批次按绑定构建做评审：结构、命令树、函数契约核对是脚本，覆盖与风险是模型判断；报告带 evidenceId，发现以候选声明提交。版本 0.2.1 | 已在 main |
-| [products/enterprise](products/enterprise/README.md) | 通用产品线：钉死的策略表、原始 CSV 汇总、模型判定的工单严重度、司龄与降权规则、以及按标签计算的 MTTR。版本 1.2.0 | 草案 |
-| [skills/contract-review](skills/contract-review/SKILL.md) | 模型抽取允许或禁止条款（含「第N条」）并给出极性片段。脚本按钉死的策略表给风险分。版本 1.2.0 | 草案 |
-| [skills/monthly-business-report](skills/monthly-business-report/SKILL.md) | 读取原始 CSV。模型只映射表头。合计来自人工批准的 `metrics.yaml`。版本 1.2.0 | 草案 |
-| [skills/support-triage](skills/support-triage/SKILL.md) | 模型给出意图、严重度并覆盖每一张工单。脚本按钉死的策略表映射 SLA 和队列。版本 1.2.0 | 草案 |
-| [skills/employee-onboarding](skills/employee-onboarding/SKILL.md) | 模型抽取允许、禁止、司龄和降权规则。脚本评估申请。版本 1.2.0 | 草案 |
-| [skills/incident-postmortem](skills/incident-postmortem/SKILL.md) | 模型给日志行打标签，含混合时区。脚本按标签计算 MTTR，缺了均值则门禁失败。版本 1.2.0 | 草案 |
+| [products/enterprise](products/enterprise/README.md) | 通用产品线：钉死的策略表、可对账的 CSV 合计、严重度下限、按天或按月的司龄，以及分开的告警时长和客户影响时长。版本 1.3.0 | 草案 |
+| [skills/contract-review](skills/contract-review/SKILL.md) | 两次抽取各自给条款种类，并在偏移处引用原文。脚本只在两次一致时按钉死的天数下限给风险分。版本 1.3.0 | 草案 |
+| [skills/monthly-business-report](skills/monthly-business-report/SKILL.md) | 两次抽取映射任意 CSV 表头。脚本按期间过滤，并把合计与剔除行对账。版本 1.3.0 | 草案 |
+| [skills/support-triage](skills/support-triage/SKILL.md) | 两次抽取给出意图和严重度。未知意图交给人。安全类意图的下限来自钉死的策略。版本 1.3.0 | 草案 |
+| [skills/employee-onboarding](skills/employee-onboarding/SKILL.md) | 后续运行使用钉死的规则。天和月不混用，授权写明批准人和日期。版本 1.3.0 | 草案 |
+| [skills/incident-postmortem](skills/incident-postmortem/SKILL.md) | 两次抽取给日志行打标签。脚本分别给出告警时长和客户影响，没有时区的时间戳会被拒绝。版本 1.3.0 | 草案 |
 | [skills/local-script](skills/local-script/SKILL.md) | 用本地脚本统计行数和词数。说明清单、声明的工具、输出路径和一份试跑记录样本。版本 1.0.0 | 草案 |
 
 ## 不放什么

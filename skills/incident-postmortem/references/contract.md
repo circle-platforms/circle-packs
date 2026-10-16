@@ -1,23 +1,29 @@
 # Event labels
 
-The model labels every non-empty line. It does not compute MTTR. The start and end events are the SHA-pinned `references/incident-policy.json` (`opened` and `resolved`). Do not re-extract that definition.
+The model labels every non-empty line, twice, into two files. It does not compute a duration.
 
 ```json
 {
-  "schema": "enterprise/event-labels/1",
+  "schema": "enterprise/event-labels/2",
   "origin": "model",
-  "source": { "savedAs": ".circle/hub-returns/log.json" },
+  "source": { "savedAs": "log.zh.txt" },
   "labels": [
     {
-      "quote": "[2026-09-02 19:00 JST] inc-1 客服：用户无法登录",
-      "incident": "inc-1",
+      "quote": "[19:00 JST] 客服：用户无法登录",
+      "offset": 11,
       "event": "opened",
-      "at": "2026-09-02 19:00 JST"
+      "incident": "inc-1",
+      "at": "19:00 JST",
+      "dateFrom": { "quote": "2026-09-02", "offset": 0 }
     }
   ]
 }
 ```
 
-`quote` is one whole line of the original. `incident` and `at` are spans of that line. `at` may be UTC (`Z`), a numeric offset (`+08:00`), or a named zone in the pinned policy (`JST`, `CST`). `event` is the model's label and is one of the policy's events. The script does not replace that label with a line grammar. It converts `at` to UTC and computes minutes from the pinned start event to the pinned end event.
+`incident` is optional. It is not required to be a span of `quote`. `event` includes `other`, which needs no clock and no incident id. `at` must include a zone (`Z`, `+08:00`, `JST`, `CST`, `UTC`, `GMT`). A timestamp with no zone fails `zone_missing` and is not read as UTC. A clock with no date fails `date_missing` unless `dateFrom` quotes an earlier `YYYY-MM-DD` in the same file. The script records that assumed date on the event.
 
-Every non-empty line must have a label (`input_not_covered`). An incident missing the start or end event fails the gate with `metrics_missing` and the field names. The gate does not pass with MTTR `none`.
+The same incident and event twice, or the same offset twice, fails `duplicate_label`.
+
+`references/incident-policy.json` pins two metrics: `alert` is opened to resolved, and `customerImpact` is impact-start to impact-end. The sample log is 40 minutes of alert and 45 minutes of customer impact. Do not report the alert duration as the only figure.
+
+A different `event`, incident id, or `at` between the two files is `needs_human`. The script does not pick one.

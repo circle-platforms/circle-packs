@@ -27,14 +27,22 @@ Then replace the generic contract and the two scripts with the domain rules. Lea
 
 | Skill | Judgement file | What the code decides |
 |---|---|---|
-| contract-review | every `第N条` or Markdown heading, with permit/forbid, a polarity cue, and a value copied from the quote | risk, from the pinned `references/risk-policy.json`; a heading the contract skips fails the gate |
-| monthly-business-report | a header map for each raw CSV | totals from the human-approved `metrics.yaml`; cell values are not copied from the model |
-| support-triage | intent, severity, and a verbatim quote for every ticket | SLA, queue, and the credential filter, from the pinned policy |
-| employee-onboarding | `policy_rules.json`: permit, forbid, a tenure floor, or an admin downgrade, each quoted | whether a requested role is permitted, short of tenure, or downgraded |
-| incident-postmortem | a label per log line, with the timestamp span | MTTR from those labels; the gate fails when the pinned start or end event is missing |
+| contract-review | two extracts of every heading, with a kind, a quote and an offset | risk from the pinned policy where the extracts agree; a disagreement is `needs_human` |
+| monthly-business-report | two header maps for each raw CSV | the period total from the pinned `metrics.yaml`; a header disagreement writes no total |
+| support-triage | two extracts of intent, severity, and a quote at an offset for every ticket | SLA and queue where the extracts agree; an unknown intent is `needs_human` |
+| employee-onboarding | one approved rule file, pinned after two extracts were compared | whether a requested role is permitted, not yet due, or downgraded |
+| incident-postmortem | two label files, one event per line | alert duration and customer-impact duration from the pinned definitions |
 
 The sample trial shape for a skill that only runs a script is still [docs/local-script.md](../../docs/local-script.md). This template adds the judgement file in front of that script.
 
 ## Pin a policy, do not re-extract it
 
-A judgement that defines policy is extracted once, approved by a person, and pinned by SHA. Later runs point at that file. They do not ask the model to write it again. That includes a risk table, an SLA table, a metric list, an access-rule table, and the definition of which event starts an incident. The gate records the file's SHA. Emit refuses the run when those bytes differ. A per-run contract (quotes, labels, a header map) is not that file.
+A judgement that defines policy is extracted once, approved by a person, and pinned by SHA. Later runs point at that file. They do not ask the model to write it again. That includes a risk table, an SLA table, a metric list, an access-rule table, and which events define alert duration and customer impact.
+
+```sh
+node templates/judgement-gate/pin.mjs path/to/policy.json --out path/to/policy.pin.json --approve
+```
+
+The pin is `{schema: "circle-packs/policy-pin/1", sha256, approved}`. The gate compares the policy bytes to `sha256` and refuses a mismatch with `policy_pin_mismatch`. `approved` must be true. Emit refuses a policy that changed after the gate with `policy_changed_after_gate`. A per-run contract that changed uses `contract_changed_after_gate`.
+
+Where a label is still a judgement (kind, severity, event, header role), run that judgement twice into two files. The script compares them. A disagreement is `needs_human`. It is not auto-resolved, and a third model pass is not a review of the first two. The script only checks facts with one answer: the quote is at that offset, a cited cue is inside the quote and adjacent to the cited predicate, a number parses, and `天` / `日` are not `月`. The scaffold's own gate still takes one contract. A skill adds the second file when its domain needs it.

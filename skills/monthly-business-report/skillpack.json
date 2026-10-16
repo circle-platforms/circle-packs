@@ -1,6 +1,6 @@
 {
   "id": "monthly-business-report",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "title": "Monthly business report",
   "owner": "enterprise",
   "tools": [
@@ -19,5 +19,5 @@
     "out/report.json",
     "out/report.xlsx"
   ],
-  "model": "any capable model; the model maps CSV headers only; the approved metrics.yaml and the totals are not model judgement"
+  "model": "any capable model; two independent extracts map CSV headers only; totals are a script over the pinned metrics and rows the period accepts"
 }

@@ -1,7 +1,7 @@
 {
   "schemaVersion": "product-line/1",
   "id": "enterprise",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "connectorPackages": [
     "documents"
   ],
@@ -56,6 +56,6 @@
     "reportPeriod": "The period named on the aggregated workbook",
     "ticketPriority": "The script priority of one synthetic ticket",
     "onboardingItem": "A required checklist item and whether it was marked done",
-    "incidentMttr": "Mean minutes from the pinned start event to the pinned end event, after label quotes are checked"
+    "incidentMttr": "Alert duration and customer-impact duration from the pinned metric definitions, after label quotes are checked"
   }
 }

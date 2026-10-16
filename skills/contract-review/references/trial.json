@@ -2,27 +2,27 @@
   "toolCalls": [
     {
       "name": "docs.get",
-      "argsSha256": "87c4881eee62010da6a263fac6fbc5cf9508d43d4569611af362021f59a68180",
+      "argsSha256": "b619bdbfcfc8534626a0788023aca9c5c259946d906ac26126f89d0f223876fd",
       "ok": true
     },
     {
       "name": "knowledge.claim_submit",
-      "argsSha256": "9ae25522c69fe3f1cffba04cfc39f5a835f98a89132cd2f17a40d412fabf4b78",
+      "argsSha256": "07f3a539cb647c48433d10809389ea7fa3ab24858d252ca23d15aa36a7df83cc",
       "ok": true
     }
   ],
   "outputs": [
     {
       "path": "out/clauses.json",
-      "sha256": "6d40c7d97e786aed7533f6116597b45b812a2bc00532d2aa5437a2891bd001e1"
+      "sha256": "7bf6306533947b7942545aa9ca4219479f9335bac42895e199d01eee1fba6e95"
     },
     {
       "path": "out/review_report.md",
-      "sha256": "464615372876b6cfa57ab23061f0fe308ff12688e2b7bb1f421fde1f2f91e8c1"
+      "sha256": "a9c553ff93c8fa07f0826dfde32f3976edd1c6d7cf4198eb12edfa5f52d02e44"
     },
     {
       "path": "out/review_claims.json",
-      "sha256": "afa5a84882b84aa04db640c74c4fcd6ccb38b519dd9281aa9d777e5354d01ff8"
+      "sha256": "ced4999e255f7910963075062ddb94eb9c4e4ef2379e8514e6bbaebe3670bf36"
     }
   ]
 }

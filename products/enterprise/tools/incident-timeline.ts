@@ -89,12 +89,15 @@ export function buildTimeline(text: string): {
 const ZONES: Record<string, number> = { UTC: 0, GMT: 0, JST: 540, CST: 480 };
 
 export function parseClock(text: string, zones: Record<string, number> = ZONES): number {
-  const match = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:\s*(Z|UTC|GMT|JST|CST|[+-]\d{2}:\d{2}))?$/.exec(text.trim());
-  if (!match) invalid(`Bad timestamp ${text}`);
+  const match = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?\s*(Z|UTC|GMT|JST|CST|[+-]\d{2}:\d{2})$/.exec(text.trim());
+  if (!match) {
+    if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(text.trim())) invalid(`zone_missing: ${text}`);
+    invalid(`Bad timestamp ${text}`);
+  }
   const local = unixMs(`${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6] ?? '00'}Z`);
   const zone = match[7];
   let offset = 0;
-  if (zone && zone !== 'Z') {
+  if (zone !== 'Z') {
     if (Object.prototype.hasOwnProperty.call(zones, zone)) offset = zones[zone];
     else if (/^[+-]\d{2}:\d{2}$/.test(zone)) offset = (zone[0] === '-' ? -1 : 1) * (Number(zone.slice(1, 3)) * 60 + Number(zone.slice(4, 6)));
     else invalid(`Bad timestamp ${text}`);
@@ -104,48 +107,49 @@ export function parseClock(text: string, zones: Record<string, number> = ZONES):
 
 export function timelineFromLabels(
   text: string,
-  labels: { quote: string; incident: string; event: string; at: string }[],
-  policy: { startEvent: string; endEvent: string; events?: string[]; timezones?: Record<string, number> },
-): { events: { at: string; incident: string; event: string }[]; durations: { incident: string; minutes: number }[]; mttrMinutes: number; origin: 'script' } {
+  labels: { quote: string; incident?: string; event: string; at?: string }[],
+  policy: { events?: string[]; timezones?: Record<string, number>; metrics: { id: string; start: string; end: string }[] },
+): { events: { at: string | null; incident: string | null; event: string }[]; metrics: { id: string; minutes: number }[]; origin: 'script' } {
   if (typeof text !== 'string') invalid('Incident log must be a string');
   const lines = text.split(/\r?\n/).filter((line) => line.trim());
-  const allowed = new Set(policy.events ?? [policy.startEvent, policy.endEvent]);
+  const allowed = new Set(policy.events ?? policy.metrics.flatMap((metric) => [metric.start, metric.end]));
+  const seen = new Set<string>();
   const labeled = labels.map((label) => {
     if (!lines.includes(label.quote)) invalid('Label quote is not a whole log line');
-    if (!label.quote.includes(label.incident) || !label.quote.includes(label.at)) invalid('Label incident or timestamp is not in the quote');
+    if (label.at != null && !label.quote.includes(label.at)) invalid('Label timestamp is not in the quote');
     if (!allowed.has(label.event)) invalid(`Event ${label.event} is not in the policy`);
-    return { ...label, atMs: parseClock(label.at, policy.timezones ?? ZONES) };
+    const incident = label.incident ?? '';
+    const key = `${incident}\0${label.event}`;
+    if (label.event !== 'other' && seen.has(key)) invalid(`duplicate_label: ${label.event}`);
+    if (label.event !== 'other') seen.add(key);
+    const atMs = label.at == null ? null : parseClock(label.at, policy.timezones ?? ZONES);
+    return { ...label, incident: label.incident ?? null, at: label.at ?? null, atMs };
   });
   const covered = new Set(labeled.map((label) => label.quote));
   const missingLines = lines.filter((line) => !covered.has(line));
   if (missingLines.length) invalid(`Line is not covered: ${missingLines[0]}`);
   const marks = new Map<string, Record<string, { atMs: number }>>();
   for (const label of labeled) {
-    const row = marks.get(label.incident) ?? {};
-    row[label.event] = label;
-    marks.set(label.incident, row);
+    if (label.event === 'other' || label.atMs == null) continue;
+    const key = label.incident ?? '';
+    const row = marks.get(key) ?? {};
+    row[label.event] = { atMs: label.atMs };
+    marks.set(key, row);
   }
-  const missing: string[] = [];
-  const durations: { incident: string; minutes: number }[] = [];
-  for (const incident of [...marks.keys()].sort()) {
-    const row = marks.get(incident)!;
-    const missingFields: string[] = [];
-    if (!row[policy.startEvent]) missingFields.push(policy.startEvent);
-    if (!row[policy.endEvent]) missingFields.push(policy.endEvent);
-    if (missingFields.length) {
-      missing.push(`${incident} missing ${missingFields.join(', ')}`);
-      continue;
+  const metrics = policy.metrics.map((metric) => {
+    const missing: string[] = [];
+    const minutes: number[] = [];
+    for (const [incident, row] of marks) {
+      const absent = [metric.start, metric.end].filter((event) => !row[event]);
+      if (absent.length) missing.push(`${incident || '(none)'} missing ${absent.join(', ')}`);
+      else minutes.push((row[metric.end].atMs - row[metric.start].atMs) / 60000);
     }
-    const minutes = (row[policy.endEvent].atMs - row[policy.startEvent].atMs) / 60000;
-    if (!Number.isFinite(minutes) || minutes < 0) invalid(`Incident ${incident} resolved before it opened`);
-    durations.push({ incident, minutes });
-  }
-  if (missing.length) invalid(`Required metrics are missing: ${missing.join('; ')}`);
-  const mttrMinutes = durations.reduce((sum, row) => sum + row.minutes, 0) / durations.length;
+    if (missing.length || !minutes.length) invalid(`metrics_missing: ${missing.join('; ') || metric.id}`);
+    return { id: metric.id, minutes: minutes.reduce((sum, value) => sum + value, 0) / minutes.length };
+  });
   return {
-    events: [...labeled].sort((a, b) => a.atMs - b.atMs).map((label) => ({ at: label.at, incident: label.incident, event: label.event })),
-    durations,
-    mttrMinutes,
+    events: labeled.map((label) => ({ at: label.at, incident: label.incident, event: label.event })),
+    metrics,
     origin: 'script',
   };
 }

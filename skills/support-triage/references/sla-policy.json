@@ -1,5 +1,5 @@
 {
-  "schema": "enterprise/sla-policy/1",
+  "schema": "enterprise/sla-policy/2",
   "severities": {
     "critical": { "priority": "P1", "responseMinutes": 15 },
     "high": { "priority": "P2", "responseMinutes": 60 },
@@ -12,6 +12,8 @@
     "howto": { "queue": "knowledge" },
     "access": { "queue": "access-desk" }
   },
-  "default": { "queue": "general", "severity": "low" },
+  "floors": {
+    "account-takeover": "critical"
+  },
   "credential": { "queue": "credential-hold", "responseMinutes": 60 }
 }

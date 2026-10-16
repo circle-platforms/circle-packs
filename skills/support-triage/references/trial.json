@@ -2,27 +2,27 @@
   "toolCalls": [
     {
       "name": "docs.get",
-      "argsSha256": "0d5fe23235285254f05f79cabe12ec7ddce6145210d73a8c0e5196fddc420431",
+      "argsSha256": "6a2a65f4a745caae52c4660f8f05d5cbc56162ce7e5a0dfe1ce13851275350ff",
       "ok": true
     },
     {
       "name": "knowledge.claim_submit",
-      "argsSha256": "d535fd2b39d2667a1fdb65f6c574417e151d50f530f0afb4df80e8b8697ab296",
+      "argsSha256": "01e375586f083adab5c18888ee2f2900b7818c076100e42091c4c8bfa43fef97",
       "ok": true
     }
   ],
   "outputs": [
     {
       "path": "out/triage.json",
-      "sha256": "5afee6fa82185704c97b55d11399327db04743be31f173a2bb2cddc9114b6f80"
+      "sha256": "64cd3135ece7e0bd2b0a1565e5a2ef3424485d69089d176d9c2920622ad94d81"
     },
     {
       "path": "out/replies.md",
-      "sha256": "c70e918ef756967dc8552e89255c26b759730e2aef879c0b7003c87f1f20c172"
+      "sha256": "91c091c69293ab8a13d47278231712fd5392186179ea71c540803b11c40579c2"
     },
     {
       "path": "out/kb_gaps.json",
-      "sha256": "b42bf94dc8df31252f0a491ca9fecd6ea44ff343ebcf5aaaca01335e81ce7650"
+      "sha256": "56c8399ea2da302b546b099724bbea03cba61c02d0be14c05e7b99596785def2"
     }
   ]
 }

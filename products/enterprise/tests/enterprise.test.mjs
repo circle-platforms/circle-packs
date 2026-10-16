@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { extractClauses, scoreClauses } from '../tools/contract-clauses.ts';
-import { buildReportWorkbook, REPORT_FORMULAS, rowsFromCsv } from '../tools/report-workbook.ts';
+import { agreeKind, extractClauses, parseQuantity, scoreTerm } from '../tools/contract-clauses.ts';
+import { buildReportWorkbook, reconcileCsv, REPORT_FORMULAS, rowsFromCsv } from '../tools/report-workbook.ts';
 import { routeTickets, triageTickets } from '../tools/ticket-triage.ts';
 import { checklistStatus, accessRequests, evaluateAccess } from '../tools/onboarding.ts';
 import { buildTimeline, timelineFromLabels, unixMs } from '../tools/incident-timeline.ts';
@@ -27,38 +27,22 @@ function unzipStored(bytes) {
   return files;
 }
 
-test('contract clauses keep heading text and name the missing required headings', () => {
+test('contract headings stay short and a payment term uses the pinned day floor', () => {
   const text = '# Parties\nExample Supplier.\n# Payment terms\nNet 30.\n# Termination\n30 days notice.\n';
   const found = extractClauses(text);
   assert.deepEqual(found.clauses.map((clause) => clause.heading), ['Parties', 'Payment terms', 'Termination']);
   assert.equal(found.clauses[1].text, 'Net 30.');
-  assert.deepEqual(found.gaps, ['Liability', 'Data protection']);
-  const scored = scoreClauses(text, [{ id: 'c1', heading: 'Payment terms', effect: 'permit', value: 'Net 30', quote: 'Net 30.' }], {
-    required: ['Payment terms', 'Termination', 'Liability', 'Data protection'],
-    defaultRisk: 'review',
-    rules: [{ id: 'payment-permit', heading: 'Payment terms', effect: 'permit', risk: 'low' }, { id: 'missing', heading: '*', effect: 'missing', risk: 'high' }],
-  });
-  assert.equal(scored.scored[0].risk, 'low');
-  assert.equal(scored.scored[0].origin, 'script');
-  const zh = '第1条 付款期限\n甲方应于收到发票后10日内付款。\n第4条 数据保护\n乙方不向关联方共享甲方数据。\n';
-  assert.deepEqual(extractClauses(zh).clauses.map((clause) => clause.heading), ['付款期限', '数据保护']);
-  const zhPolicy = {
-    required: [{ id: 'payment', headings: ['付款期限'] }, { id: 'data', headings: ['数据保护'] }],
-    defaultRisk: 'review',
-    rules: [
-      { id: 'payment-short', topic: 'payment', effect: 'permit', maxDays: 14, risk: 'high' },
-      { id: 'data-forbid-share', topic: 'data', effect: 'forbid', valuePattern: '共享', risk: 'low' },
-    ],
-  };
-  const zhScored = scoreClauses(zh, [
-    { id: 'c1', heading: '付款期限', effect: 'permit', cue: '应', value: '10日', quote: '甲方应于收到发票后10日内付款。' },
-    { id: 'c4', heading: '数据保护', effect: 'forbid', cue: '不', value: '不向关联方共享', quote: '乙方不向关联方共享甲方数据。' },
-  ], zhPolicy);
-  assert.equal(zhScored.scored[0].risk, 'high');
-  assert.equal(zhScored.scored[1].risk, 'low');
-  assert.throws(() => scoreClauses(zh, [
-    { id: 'c4', heading: '数据保护', effect: 'permit', cue: '不', value: '不向关联方共享', quote: '乙方不向关联方共享甲方数据。' },
-  ], zhPolicy), /polarity cue/);
+  const zh = '第1条 甲方应于收到发票后三十日内付款。\n第2条 数据\n乙方不向关联方共享甲方数据。\n第8条 不可抗力\n因不可抗力免责。\n';
+  assert.deepEqual(extractClauses(zh).clauses.map((clause) => clause.heading), ['第1条', '数据', '不可抗力']);
+  const rule = { id: 'payment-days', topic: 'payment', kind: 'term', unit: 'day', minDays: 30, belowRisk: 'high', metRisk: 'low' };
+  assert.equal(scoreTerm(parseQuantity('三十日'), rule).risk, 'low');
+  assert.equal(scoreTerm(parseQuantity('十日'), rule).risk, 'high');
+  assert.equal(scoreTerm(parseQuantity('四十五日'), rule).risk, 'low');
+  assert.equal(scoreTerm(parseQuantity('十二个月'), rule).risk, null);
+  assert.equal(scoreTerm(parseQuantity('三十日'), { ...rule, minDays: 45 }).risk, 'high');
+  assert.deepEqual(agreeKind('term', 'forbid'), { decision: 'needs_human', kind: null });
+  assert.equal(parseQuantity('90天').unit, 'day');
+  assert.equal(parseQuantity('90天').value, 90);
 });
 
 test('the monthly workbook stores SUMIF formulas and the margin difference', () => {
@@ -82,6 +66,16 @@ test('the monthly workbook stores SUMIF formulas and the margin difference', () 
   assert.equal(csvRows[0].account, '华北');
   assert.equal(csvRows[0].kind, 'revenue');
   assert.throws(() => rowsFromCsv('sales', '账户,类型,金额\n华北,收入,120\n', { account: '账户', kind: '类型', amount: '120' }, [{ kind: 'revenue', match: '收入' }]), /Header 120/);
+  assert.throws(() => rowsFromCsv('sales', '账户,类型,金额\n华北,收入,\n', { account: '账户', kind: '类型', amount: '金额' }, [{ kind: 'revenue', match: '收入' }]), /empty_amount/);
+  const ledger = reconcileCsv(
+    '记账日期,部门,发生额,摘要\n2026-09-01,华北,16426400,收入\n2026-08-15,华南,98000,收入\n,合计,399,收入\n2026-09-02,华北,,收入\n2026-09-03,华北,-100,收入\n',
+    { date: '记账日期', account: '部门', kind: '摘要', amount: '发生额' },
+    [{ kind: 'revenue', match: '收入' }],
+    '2026-09',
+  );
+  assert.equal(ledger.acceptedTotal, 16426400);
+  assert.equal(ledger.reconcile.naivePositive, 16524799);
+  assert.deepEqual(ledger.rejected.map((row) => row.reason), ['outside_period', 'bad_date', 'empty_amount', 'negative_amount']);
 });
 
 test('ticket priority is a script of severity and tier', () => {
@@ -94,9 +88,9 @@ test('ticket priority is a script of severity and tier', () => {
   assert.deepEqual(rows.map((row) => row.priority), ['P1', 'P1', 'P2', 'P4']);
   assert.equal(rows[0].origin, 'script');
   const sla = {
-    severities: { critical: { priority: 'P1', responseMinutes: 15 }, low: { priority: 'P4', responseMinutes: 1440 } },
+    severities: { critical: { priority: 'P1', responseMinutes: 15 }, high: { priority: 'P2', responseMinutes: 60 }, medium: { priority: 'P3', responseMinutes: 240 }, low: { priority: 'P4', responseMinutes: 1440 } },
     intents: { outage: { queue: 'contract-desk' }, 'account-takeover': { queue: 'security-desk' } },
-    default: { queue: 'general', severity: 'low' },
+    floors: { 'account-takeover': 'critical' },
     credential: { queue: 'credential-hold', responseMinutes: 60 },
   };
   const routed = routeTickets(
@@ -108,12 +102,21 @@ test('ticket priority is a script of severity and tier', () => {
   assert.equal(routed[0].priority, 'P1');
   const takeover = routeTickets(
     [{ id: 't-2', subject: '账号被盗', severity: 4, body: '有人在东京登录了我的账号' }],
-    [{ id: 't-2', intent: 'account-takeover', severity: 'critical', quote: '有人在东京登录了我的账号' }],
+    [{ id: 't-2', intent: 'account-takeover', severity: 'medium', quote: '有人在东京登录了我的账号' }],
     sla,
   );
   assert.equal(takeover[0].queue, 'security-desk');
   assert.equal(takeover[0].priority, 'P1');
   assert.equal(takeover[0].responseMinutes, 15);
+  assert.equal(takeover[0].severityRaised, true);
+  const unknown = routeTickets(
+    [{ id: 't-9', subject: '天气', body: '明天会下雨吗' }],
+    [{ id: 't-9', intent: 'weather', severity: 'low', quote: '明天会下雨吗' }],
+    sla,
+  );
+  assert.equal(unknown[0].decision, 'needs_human');
+  assert.equal(unknown[0].priority, null);
+  assert.equal(unknown[0].responseMinutes, null);
   assert.throws(() => routeTickets(
     [{ id: 't-2', subject: '账号被盗', body: '有人在东京登录了我的账号' }, { id: 't-9', subject: '其他', body: '还有一张' }],
     [{ id: 't-2', intent: 'account-takeover', severity: 'critical', quote: '有人在东京登录了我的账号' }],
@@ -137,17 +140,25 @@ test('onboarding marks missing checklist items and starter roles', () => {
   assert.equal(requests[1].needsApproval, true);
   const graded = evaluateAccess(
     [
-      { person: 'ada', role: '账本只读', system: 'ledger', tenureMonths: 3 },
-      { person: 'ada', role: '账本管理员', system: 'ledger', tenureMonths: 24 },
+      { person: 'ada', role: '账本:只读', system: 'ledger', tenure: { value: 40, unit: 'day' }, startDate: '2026-09-01' },
+      { person: 'ada', role: '账本:管理员', system: 'ledger', tenure: { value: 90, unit: 'day' }, startDate: '2026-09-01' },
+      { person: 'ada', role: '账本:管理员', system: 'ledger', tenure: { value: 89, unit: 'day' }, startDate: '2026-09-01' },
     ],
     [
-      { role: '账本只读', effect: 'permit', minTenureMonths: 6 },
-      { role: '账本管理员', effect: 'downgrade', grant: '账本只读' },
+      { role: '账本:只读', effect: 'permit', minTenure: { value: 30, unit: 'day' }, approver: '直属经理' },
+      { role: '账本:管理员', effect: 'downgrade', grant: '账本:只读', after: { value: 90, unit: 'day' }, approver: '安全官' },
     ],
   );
-  assert.equal(graded[0].decision, 'tenure_short');
+  assert.equal(graded[0].decision, 'permit');
+  assert.equal(graded[0].grantDate, '2026-10-01');
+  assert.equal(graded[0].approver, '直属经理');
   assert.equal(graded[1].decision, 'downgrade');
-  assert.equal(graded[1].grant, '账本只读');
+  assert.equal(graded[1].grant, '账本:只读');
+  assert.equal(graded[2].decision, 'not_yet');
+  assert.throws(() => evaluateAccess(
+    [{ person: 'ada', role: '账本:只读', system: 'ledger', tenure: { value: 3, unit: 'month' }, startDate: '2026-09-01' }],
+    [{ role: '账本:只读', effect: 'permit', minTenure: { value: 90, unit: 'day' } }],
+  ), /unit_mismatch/);
 });
 
 test('incident MTTR uses opened and resolved marks and skips an incomplete incident', () => {
@@ -168,17 +179,27 @@ test('incident MTTR uses opened and resolved marks and skips an incomplete incid
   const withGap = buildTimeline(`${log}\ninc-4 resolved without a clock`);
   assert.deepEqual(withGap.unparsed[0].missingFields, ['timestamp']);
   assert.equal(withGap.mttrMinutes, 30);
-  const chat = '[2026-09-02 19:00 JST] inc-1 客服：用户无法登录\n2026-09-02T10:40:00Z inc-1 resolved 已恢复\n';
+  const chat = '[2026-09-02 19:00 JST] 客服：用户无法登录\n2026-09-02T10:05:00Z 结算不可用\n2026-09-02T10:40:00Z 告警恢复\n2026-09-02T10:50:00Z 客户恢复\n群里有人问了一句进度\n';
+  const policy = {
+    events: ['opened', 'resolved', 'impact-start', 'impact-end', 'other'],
+    metrics: [{ id: 'alert', start: 'opened', end: 'resolved' }, { id: 'customerImpact', start: 'impact-start', end: 'impact-end' }],
+  };
   const labeled = timelineFromLabels(chat, [
-    { quote: '[2026-09-02 19:00 JST] inc-1 客服：用户无法登录', incident: 'inc-1', event: 'opened', at: '2026-09-02 19:00 JST' },
-    { quote: '2026-09-02T10:40:00Z inc-1 resolved 已恢复', incident: 'inc-1', event: 'resolved', at: '2026-09-02T10:40:00Z' },
-  ], { startEvent: 'opened', endEvent: 'resolved', events: ['opened', 'acknowledged', 'mitigated', 'resolved'] });
-  assert.equal(labeled.mttrMinutes, 40);
-  assert.throws(() => timelineFromLabels(`${chat}2026-09-02T12:00:00+08:00 inc-2 acknowledged 处理中\n`, [
-    { quote: '[2026-09-02 19:00 JST] inc-1 客服：用户无法登录', incident: 'inc-1', event: 'opened', at: '2026-09-02 19:00 JST' },
-    { quote: '2026-09-02T10:40:00Z inc-1 resolved 已恢复', incident: 'inc-1', event: 'resolved', at: '2026-09-02T10:40:00Z' },
-    { quote: '2026-09-02T12:00:00+08:00 inc-2 acknowledged 处理中', incident: 'inc-2', event: 'acknowledged', at: '2026-09-02T12:00:00+08:00' },
-  ], { startEvent: 'opened', endEvent: 'resolved', events: ['opened', 'acknowledged', 'mitigated', 'resolved'] }), /missing opened, resolved/);
+    { quote: '[2026-09-02 19:00 JST] 客服：用户无法登录', incident: 'inc-1', event: 'opened', at: '2026-09-02 19:00 JST' },
+    { quote: '2026-09-02T10:05:00Z 结算不可用', incident: 'inc-1', event: 'impact-start', at: '2026-09-02T10:05:00Z' },
+    { quote: '2026-09-02T10:40:00Z 告警恢复', incident: 'inc-1', event: 'resolved', at: '2026-09-02T10:40:00Z' },
+    { quote: '2026-09-02T10:50:00Z 客户恢复', incident: 'inc-1', event: 'impact-end', at: '2026-09-02T10:50:00Z' },
+    { quote: '群里有人问了一句进度', event: 'other' },
+  ], policy);
+  assert.equal(labeled.metrics.find((metric) => metric.id === 'alert').minutes, 40);
+  assert.equal(labeled.metrics.find((metric) => metric.id === 'customerImpact').minutes, 45);
+  assert.throws(() => timelineFromLabels('2026-09-02T10:00:00 无时区\n', [
+    { quote: '2026-09-02T10:00:00 无时区', incident: 'inc-1', event: 'opened', at: '2026-09-02T10:00:00' },
+  ], policy), /zone_missing/);
+  assert.throws(() => timelineFromLabels('2026-09-02T10:00:00Z 开了两次\n', [
+    { quote: '2026-09-02T10:00:00Z 开了两次', incident: 'inc-1', event: 'opened', at: '2026-09-02T10:00:00Z' },
+    { quote: '2026-09-02T10:00:00Z 开了两次', incident: 'inc-1', event: 'opened', at: '2026-09-02T10:00:00Z' },
+  ], policy), /duplicate_label/);
 });
 
 test('access approval blocks only an undeclared or unlisted grant', () => {

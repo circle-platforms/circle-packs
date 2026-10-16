@@ -167,59 +167,98 @@ export function assertTextCovered(text, quotes, label) {
   if (missing.length) throw new GateError('input_not_covered', `${label}: ${missing.join(' | ')}`);
 }
 
-const POLARITY = [
-  ['shall not', 'forbid'],
-  ['must not', 'forbid'],
-  ['may not', 'forbid'],
-  ['不得', 'forbid'],
-  ['禁止', 'forbid'],
-  ['不可', 'forbid'],
-  ['不应', 'forbid'],
-  ['不准', 'forbid'],
-  ['不允许', 'forbid'],
-  ['严禁', 'forbid'],
-  ['可以', 'permit'],
-  ['应当', 'permit'],
-  ['允许', 'permit'],
-  ['shall', 'permit'],
-  ['must', 'permit'],
-  ['may', 'permit'],
-  ['降为', 'downgrade'],
-  ['改为', 'downgrade'],
-  ['downgrade', 'downgrade'],
-  ['不', 'forbid'],
-  ['可', 'permit'],
-  ['应', 'permit'],
-  ['not', 'forbid'],
-];
-
-export function polaritySpans(quote) {
-  const used = [];
-  const found = [];
-  for (const [phrase, effect] of POLARITY) {
-    let from = 0;
-    while (from < quote.length) {
-      const at = quote.indexOf(phrase, from);
-      if (at < 0) break;
-      const end = at + phrase.length;
-      const ascii = /^[A-Za-z ]+$/.test(phrase);
-      const boundary = !ascii || ((at === 0 || !/[A-Za-z]/.test(quote[at - 1])) && (end === quote.length || !/[A-Za-z]/.test(quote[end])));
-      const overlaps = used.some(([start, stop]) => at < stop && end > start);
-      if (boundary && !overlaps) {
-        found.push({ cue: phrase, effect });
-        used.push([at, end]);
-        from = end;
-      } else from = at + 1;
-    }
-  }
-  return found;
+export function assertKeys(value, required, optional, label) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new GateError('schema_invalid', `${label} is not an object`);
+  const keys = Object.keys(value);
+  for (const key of required) if (!keys.includes(key)) throw new GateError('schema_invalid', `${label} missing ${key}`);
+  const allowed = new Set([...required, ...optional]);
+  const extra = keys.filter((key) => !allowed.has(key));
+  if (extra.length) throw new GateError('schema_invalid', `${label} unexpected ${extra.join(', ')}`);
 }
 
-export function assertPolarity(quote, cue, effect, label) {
-  if (typeof cue !== 'string' || cue.trim() !== cue || !cue) throw new GateError('polarity_cue_missing', `${label}: cue is empty or padded`);
-  if (!quote.includes(cue)) throw new GateError('polarity_cue_missing', `${label}: cue is not a span of the quote`);
-  const spans = polaritySpans(quote).filter((span) => span.cue === cue);
-  if (!spans.length) throw new GateError('polarity_cue_missing', `${label}: ${cue} is not a polarity cue`);
-  if (!spans.some((span) => span.effect === effect)) throw new GateError('polarity_mismatch', `${label}: ${cue} is ${spans[0].effect}, not ${effect}`);
-  return cue;
+export function assertQuoteAt(text, quote, offset, label) {
+  if (typeof quote !== 'string' || quote.trim() !== quote || !quote.trim()) throw new GateError('quote_not_verbatim', `${label}: quote is empty or padded`);
+  if (!Number.isInteger(offset) || offset < 0) throw new GateError('quote_not_verbatim', `${label}: offset`);
+  if (text.slice(offset, offset + quote.length) !== quote) throw new GateError('quote_not_verbatim', `${label}: quote is not at offset ${offset}`);
+  return quote;
+}
+
+// The cue and the cited predicate are adjacent when only space or a short mark sits between them.
+// This does not decide what the cue means.
+export function assertAdjacent(quote, cue, predicate, label) {
+  if (typeof cue !== 'string' || !cue || !quote.includes(cue)) throw new GateError('cue_not_in_quote', `${label}: cue`);
+  if (typeof predicate !== 'string' || !predicate || !quote.includes(predicate)) throw new GateError('predicate_not_in_quote', `${label}: predicate`);
+  const findAll = (needle) => {
+    const at = [];
+    let from = 0;
+    while (from < quote.length) {
+      const index = quote.indexOf(needle, from);
+      if (index < 0) break;
+      at.push(index);
+      from = index + 1;
+    }
+    return at;
+  };
+  for (const cueAt of findAll(cue)) {
+    for (const predicateAt of findAll(predicate)) {
+      const [start, end] = cueAt <= predicateAt ? [cueAt + cue.length, predicateAt] : [predicateAt + predicate.length, cueAt];
+      if (start <= end && /^[\s　,，、：:]{0,4}$/.test(quote.slice(start, end))) return true;
+    }
+  }
+  throw new GateError('cue_not_adjacent', `${label}: cue is not adjacent to the predicate`);
+}
+
+const CN_DIGIT = { 零: 0, 〇: 0, 一: 1, 二: 2, 两: 2, 三: 3, 四: 4, 五: 5, 六: 6, 七: 7, 八: 8, 九: 9 };
+
+export function parseChineseInteger(text) {
+  if (/^\d+$/.test(text)) return Number(text);
+  let total = 0;
+  let current = 0;
+  for (const ch of text) {
+    if (Object.prototype.hasOwnProperty.call(CN_DIGIT, ch)) current = CN_DIGIT[ch];
+    else if (ch === '十' || ch === '百' || ch === '千') {
+      const scale = ch === '十' ? 10 : ch === '百' ? 100 : 1000;
+      total += (current || 1) * scale;
+      current = 0;
+    } else return null;
+  }
+  return total + current;
+}
+
+// 天 and 日 are days. 月 is a month. 90天 is 90 days, not 90 months and not 3 months.
+// English day/month words are the same split. The two units are never converted.
+export function parseQuantity(text) {
+  if (typeof text !== 'string') return null;
+  const match = /([0-9]+|[零〇一两二三四五六七八九十百千]+)\s*个?\s*(天|日|月|days?|months?)/i.exec(text);
+  if (!match) return null;
+  const value = parseChineseInteger(match[1]);
+  if (value == null) return null;
+  const unit = match[2] === '月' || /^months?$/i.test(match[2]) ? 'month' : 'day';
+  return { value, unit, span: match[0] };
+}
+
+export function assertPolicyPin(policyBytes, pin) {
+  if (!pin || pin.schema !== 'circle-packs/policy-pin/1' || typeof pin.sha256 !== 'string') throw new GateError('policy_pin_mismatch', 'pin schema');
+  if (pin.approved !== true) throw new GateError('policy_not_approved', 'pin is not approved');
+  if (pin.sha256 !== sha256(policyBytes)) throw new GateError('policy_pin_mismatch', 'policy bytes do not match the approved pin');
+}
+
+export function addCalendarDays(iso, days) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  if (!match || !Number.isInteger(days)) throw new GateError('schema_invalid', `bad date ${iso}`);
+  let year = Number(match[1]);
+  let month = Number(match[2]);
+  let day = Number(match[3]) + days;
+  const dim = (y, m) => (m === 2 ? ((y % 4 === 0 && y % 100 !== 0) || y % 400 === 0 ? 29 : 28) : [0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m]);
+  while (day > dim(year, month)) {
+    day -= dim(year, month);
+    month += 1;
+    if (month > 12) { month = 1; year += 1; }
+  }
+  while (day < 1) {
+    month -= 1;
+    if (month < 1) { month = 12; year -= 1; }
+    day += dim(year, month);
+  }
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 }

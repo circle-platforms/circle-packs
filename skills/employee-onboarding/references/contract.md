@@ -1,33 +1,37 @@
-# Policy rules
+# Access rules
 
-The model extracts rules from the saved manual. It does not decide an access request. Approve the file once and pin its SHA for later runs; do not re-extract the table every time.
+The first run extracts every rule twice. A person approves one file. Later runs load that file and do not extract again.
 
 ```json
 {
-  "schema": "enterprise/policy-rules/1",
-  "origin": "model",
+  "schema": "enterprise/policy-rules/2",
+  "origin": "approved",
   "source": { "savedAs": "policy.zh.txt" },
   "rules": [
     {
       "id": "r1",
       "effect": "permit",
-      "role": "账本只读",
-      "cue": "可以",
-      "minTenureMonths": 6,
-      "quote": "入职满6个月的员工可以申请账本只读。"
-    },
-    {
-      "id": "r2",
-      "effect": "downgrade",
-      "role": "账本管理员",
-      "grant": "账本只读",
-      "cue": "降为",
-      "quote": "账本管理员应降为账本只读，不得直接开通管理员。"
+      "kind": "obligation",
+      "role": "账本:只读",
+      "quote": "需入职满30天可以申请账本:只读，由直属经理批准。",
+      "offset": 0,
+      "minTenure": { "value": 30, "unit": "day" },
+      "approver": "直属经理"
     }
   ]
 }
 ```
 
-`effect` is `permit`, `forbid`, or `downgrade`. `cue` is a polarity span of `quote` and must match the effect (`降为` is `downgrade`). `minTenureMonths` is optional on a permit and the digits must appear in the quote. `grant` is the role a downgrade actually gives, and it must appear in the quote. `role` is a span of `quote`.
+`effect` is `permit`, `forbid`, or `downgrade`. `kind` may be `obligation` when the sentence is a requirement (`需入职满30天`) and there is no polarity word to cite. `minTenure` and `after` are `{value, unit}` with `unit` `day` or `month`. The quote must parse to that same value and unit. `天` and `日` are days. `月` is a month. `90天` does not satisfy a month rule.
 
-The script compares `request.tenureMonths` with `minTenureMonths`. A short tenure is `tenure_short`. A downgrade returns `grant` instead of the requested admin role.
+`role` and `grant` may contain colons. `approver` is a span of the quote. A downgrade sets `after` and `grant`. The same offset and quote cannot be both `permit` and `forbid`.
+
+A request carries `tenure` in the same shape and a `startDate` of `YYYY-MM-DD`. The grant date is that start plus the waiting days. `2026-09-01` plus 30 days is `2026-10-01`.
+
+Compare the two extracts before anyone approves them:
+
+```
+node scripts/gate.mjs <folder> --left rules.left.json --right rules.right.json
+```
+
+Pin the approved file with `node templates/judgement-gate/pin.mjs`. The gate compares `--pin` to the file and refuses a mismatch.

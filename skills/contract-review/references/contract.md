@@ -1,28 +1,29 @@
 # Clause contract
 
-The model extracts every heading. It does not score risk. Keys are exact.
+The model extracts every heading, twice, into two files. It does not score risk. Keys are exact.
 
 ```json
 {
-  "schema": "enterprise/clauses/1",
+  "schema": "enterprise/clauses/2",
   "origin": "model",
-  "source": { "savedAs": ".circle/hub-returns/contract.json" },
+  "source": { "savedAs": "contract.zh.txt" },
   "clauses": [
     {
       "id": "c1",
-      "heading": "付款期限",
-      "effect": "permit",
-      "cue": "应",
-      "value": "10日",
-      "quote": "甲方应于收到发票后10日内付款。",
-      "source": { "savedAs": ".circle/hub-returns/contract.json" }
+      "heading": "第1条",
+      "kind": "term",
+      "value": "三十日",
+      "quote": "甲方应于收到发票后三十日内付款。",
+      "offset": 4
     }
   ]
 }
 ```
 
-A heading is a Markdown heading, a `1.` / `1、` line, or `第N条` (digits or 一二三…). `heading` is the title after that marker, such as `付款期限` or `Payment terms`. `quote` is a span of that section. `value` is a span of `quote`. `cue` is a polarity span of `quote` (`不得` / `禁止` / `不` / `可` / `应`, or `shall not` / `may` / `shall`). The script checks that the cue's polarity is the `effect`. Flipping `permit` and `forbid` while leaving the quote and cue unchanged fails with `polarity_mismatch`.
+`kind` is `permit`, `forbid`, `obligation`, `term` or `definition`. A cue is optional. When `cue` is present, `predicate` is required, both are spans of `quote`, and only space or a short mark may sit between them. The script does not classify the cue. `value` is a span of `quote`. For a `term`, `value` must parse: digits or a Chinese numeral, then `天` / `日` / `月` (or English `day` / `month`). `天` and `日` are days. `月` is a month. They are not converted.
 
-`source` is only the pointer. It may name a hub return or a user-provided UTF-8 file. Every heading in the original must appear in `clauses` (`input_not_covered` otherwise).
+A one-line `第1条 甲方应于收到发票后三十日内付款。` has heading `第1条`. `第2条 数据` has heading `数据`. `第4条 保密：…` has heading `保密`. `offset` is where `quote` starts in the original. A topic the heading does not match is reported with no default risk. The payment day floor is `minDays` on the pinned policy, not a number in this script.
 
-Risk comes from the SHA-pinned `references/risk-policy.json`. Do not re-extract that table. A required topic the source does not contain is `missing`. Ten-day payment is high. Thirty-day payment is low. `不向关联方共享` with cue `不` is a forbid of sharing and scores low.
+The two files are independent. A different `kind`, or a different parsed term, is `needs_human`. The script does not pick one, and a third model pass is not a resolver.
+
+`references/risk-policy.json` is approved once. Pin it with `node templates/judgement-gate/pin.mjs <file> --out <pin.json> --approve` after a person has accepted the bytes. The sample floor is 30 days. A company that pins 45 days gets a different score without a code change.

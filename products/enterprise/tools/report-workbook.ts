@@ -166,13 +166,56 @@ export function rowsFromCsv(
   return table.slice(1).map((line) => {
     const account = line[accountAt] ?? '';
     const rawKind = (line[kindAt] ?? '').trim();
-    const amount = Number((line[amountAt] ?? '').trim());
+    const amountText = (line[amountAt] ?? '').trim();
+    if (amountText === '') invalid('empty_amount');
+    const amount = Number(amountText);
     label(account, 'Account');
     const metric = metrics.find((item) => (item.match ?? item.kind).split('|').includes(rawKind));
     if (!metric || (metric.kind !== 'revenue' && metric.kind !== 'expense')) invalid('Kind is not an approved metric');
     if (!Number.isFinite(amount)) invalid('Amount must be a finite number');
     return { account, kind: metric.kind, amount };
   });
+}
+
+export function reconcileCsv(
+  text: string,
+  columns: { date: string; account: string; kind: string; amount: string },
+  metrics: { kind: string; match?: string }[],
+  period: string,
+): { accepted: { account: string; kind: 'revenue' | 'expense'; amount: number }[]; rejected: { reason: string; amount: number | null }[]; acceptedTotal: number; reconcile: { accepted: number; rejectedNumeric: number; naivePositive: number } } {
+  const table = parseCsv(text);
+  if (table.length < 2) invalid('CSV has no data row');
+  const headers = table[0];
+  const at = (header: string) => {
+    const index = headers.indexOf(header);
+    if (index < 0) invalid(`Header ${header} is not in the source`);
+    return index;
+  };
+  const dateAt = at(columns.date);
+  const accountAt = at(columns.account);
+  const kindAt = at(columns.kind);
+  const amountAt = at(columns.amount);
+  const accepted: { account: string; kind: 'revenue' | 'expense'; amount: number }[] = [];
+  const rejected: { reason: string; amount: number | null }[] = [];
+  for (const line of table.slice(1)) {
+    const date = (line[dateAt] ?? '').trim();
+    const amountText = (line[amountAt] ?? '').trim();
+    const amount = /^-?\d+(\.\d+)?$/.test(amountText) ? Number(amountText) : null;
+    const reject = (reason: string) => rejected.push({ reason, amount });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { reject('bad_date'); continue; }
+    if (!date.startsWith(period)) { reject('outside_period'); continue; }
+    if (amountText === '') { reject('empty_amount'); continue; }
+    if (amount == null) { reject('bad_amount'); continue; }
+    if (amount < 0) { reject('negative_amount'); continue; }
+    const rawKind = (line[kindAt] ?? '').trim();
+    const metric = metrics.find((item) => (item.match ?? item.kind).split('|').includes(rawKind));
+    if (!metric || (metric.kind !== 'revenue' && metric.kind !== 'expense')) { reject('unapproved_kind'); continue; }
+    label(line[accountAt] ?? '', 'Account');
+    accepted.push({ account: line[accountAt] ?? '', kind: metric.kind, amount });
+  }
+  const acceptedTotal = accepted.reduce((sum, row) => sum + row.amount, 0);
+  const rejectedNumeric = rejected.reduce((sum, row) => sum + (typeof row.amount === 'number' && row.amount > 0 ? row.amount : 0), 0);
+  return { accepted, rejected, acceptedTotal, reconcile: { accepted: acceptedTotal, rejectedNumeric, naivePositive: acceptedTotal + rejectedNumeric } };
 }
 
 export function summariseReport(period: string, sources: ReportSource[]): ReportSummary {

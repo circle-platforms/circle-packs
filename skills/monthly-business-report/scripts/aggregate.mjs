@@ -2,7 +2,7 @@
 // Aggregate approved metrics from server-saved extracts. The zip is stored, method 0.
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { assertExactKeys, assertOriginModel, loadOriginal, readJson, sha256 } from './pointers.mjs';
+import { assertExactKeys, assertOriginModel, assertPolicyPin, loadOriginal, readJson, sha256 } from './pointers.mjs';
 
 export const FORMULAS = {
   revenue: 'SUMIF(Lines!C:C,"revenue",Lines!D:D)',
@@ -163,7 +163,12 @@ export function parseCsv(text) {
   return rows;
 }
 
-export function rowsFromCsv(name, text, columns, plan) {
+function numericAmount(text) {
+  if (!/^-?\d+(\.\d+)?$/.test(text)) return null;
+  return Number(text);
+}
+
+export function classifyCsv(name, text, columns, plan) {
   const table = parseCsv(text);
   if (table.length < 2) throw new Error('schema_invalid: csv has no data row');
   const headers = table[0];
@@ -172,20 +177,31 @@ export function rowsFromCsv(name, text, columns, plan) {
     if (at < 0) throw new Error(`header_not_in_source: ${header}`);
     return at;
   };
+  const dateAt = index(columns.date);
   const accountAt = index(columns.account);
   const kindAt = index(columns.kind);
   const amountAt = index(columns.amount);
-  return table.slice(1).map((line) => {
+  const accepted = [];
+  const rejected = [];
+  for (const line of table.slice(1)) {
+    const date = (line[dateAt] ?? '').trim();
     const account = line[accountAt] ?? '';
     const rawKind = (line[kindAt] ?? '').trim();
-    const amount = Number((line[amountAt] ?? '').trim());
+    const amountText = (line[amountAt] ?? '').trim();
+    const amount = numericAmount(amountText);
+    const reject = (reason) => rejected.push({ source: name, reason, amount, date, account });
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { reject('bad_date'); continue; }
+    if (!date.startsWith(plan.period)) { reject('outside_period'); continue; }
+    if (amountText === '') { reject('empty_amount'); continue; }
+    if (amount == null) { reject('bad_amount'); continue; }
+    if (amount < 0) { reject('negative_amount'); continue; }
+    const metric = plan.sumif.find((item) => item.accept.includes(rawKind));
+    if (!metric) { reject('unapproved_kind'); continue; }
     label(name, 'source name');
     label(account, 'account');
-    const metric = plan.sumif.find((item) => item.accept.includes(rawKind));
-    if (!metric) throw new Error('kind is not an approved metric');
-    if (!Number.isFinite(amount)) throw new Error('amount must be a finite number');
-    return { source: name, account, kind: metric.kind, amount };
-  });
+    accepted.push({ source: name, account, kind: metric.kind, amount });
+  }
+  return { accepted, rejected };
 }
 
 export function summarise(plan, sources) {
@@ -238,33 +254,86 @@ export function workbook(summary) {
   ]);
 }
 
-export function gateReport(folder, contractPath, metricsPath) {
-  const contractBytes = readFileSync(contractPath);
-  const metricsBytes = readFileSync(metricsPath);
-  const contract = readJson(contractPath);
-  assertExactKeys(contract, ['origin', 'schema', 'sources'], 'sources contract');
-  assertOriginModel(contract, 'sources contract');
-  if (contract.schema !== 'enterprise/sources/2' || !Array.isArray(contract.sources) || !contract.sources.length) throw new Error('schema_invalid: sources');
-  const plan = planMetrics(parseMetricsYaml(metricsBytes.toString('utf8')));
-  const sources = contract.sources.map((entry, index) => {
+function readMap(path) {
+  const bytes = readFileSync(path);
+  const contract = readJson(path);
+  assertExactKeys(contract, ['origin', 'schema', 'sources'], path);
+  assertOriginModel(contract, path);
+  if (contract.schema !== 'enterprise/header-map/1' || !Array.isArray(contract.sources) || !contract.sources.length) throw new Error('schema_invalid: sources');
+  contract.sources.forEach((entry, index) => {
     assertExactKeys(entry, ['columns', 'name', 'source'], `source ${index}`);
-    assertExactKeys(entry.columns, ['account', 'amount', 'kind'], `source ${index} columns`);
+    assertExactKeys(entry.columns, ['account', 'amount', 'date', 'kind'], `source ${index} columns`);
+  });
+  return { bytes, contract };
+}
+
+function mapsAgree(left, right) {
+  if (left.sources.length !== right.sources.length) return false;
+  const byName = new Map(right.sources.map((entry) => [entry.name, entry]));
+  return left.sources.every((entry) => {
+    const other = byName.get(entry.name);
+    return other && other.source.savedAs === entry.source.savedAs && JSON.stringify(entry.columns) === JSON.stringify(other.columns);
+  });
+}
+
+export function reconcile(accepted, rejected) {
+  const acceptedTotal = accepted.reduce((sum, row) => sum + row.amount, 0);
+  const rejectedNumeric = rejected.reduce((sum, row) => sum + (typeof row.amount === 'number' && row.amount > 0 ? row.amount : 0), 0);
+  return { accepted: acceptedTotal, rejectedNumeric, naivePositive: acceptedTotal + rejectedNumeric };
+}
+
+export function gateReport(folder, leftPath, rightPath, metricsPath, pinPath) {
+  const left = readMap(leftPath);
+  const right = readMap(rightPath);
+  const metricsBytes = readFileSync(metricsPath);
+  assertPolicyPin(metricsBytes, readJson(pinPath));
+  const plan = planMetrics(parseMetricsYaml(metricsBytes.toString('utf8')));
+  if (!mapsAgree(left.contract, right.contract)) {
+    const gate = { ok: true, needsHuman: true, origin: 'script', leftSha256: sha256(left.bytes), rightSha256: sha256(right.bytes), metricsSha256: sha256(metricsBytes), summary: null };
+    writeFileSync(join(folder, 'gate.json'), `${JSON.stringify(gate, null, 2)}\n`);
+    return gate;
+  }
+  const accepted = [];
+  const rejected = [];
+  for (const [index, entry] of left.contract.sources.entries()) {
     label(entry.name, 'source name');
     const saved = loadOriginal(folder, entry.source, `source ${index}`);
-    const parsed = rowsFromCsv(entry.name, saved.text, entry.columns, plan);
-    return { name: entry.name, rows: parsed.map(({ account, kind, amount }) => ({ account, kind, amount })), evidenceId: saved.evidenceId };
-  });
+    const parsed = classifyCsv(entry.name, saved.text, entry.columns, plan);
+    accepted.push(...parsed.accepted);
+    rejected.push(...parsed.rejected);
+  }
+  const sources = [];
+  for (const row of accepted) {
+    let source = sources.find((item) => item.name === row.source);
+    if (!source) {
+      source = { name: row.source, rows: [] };
+      sources.push(source);
+    }
+    source.rows.push({ account: row.account, kind: row.kind, amount: row.amount });
+  }
+  if (!sources.length) sources.push({ name: left.contract.sources[0].name, rows: [] });
   const summary = summarise(plan, sources);
-  const gate = { ok: true, origin: 'script', contractSha256: sha256(contractBytes), metricsSha256: sha256(metricsBytes), summary };
+  const books = reconcile(accepted, rejected);
+  summary.acceptedTotal = books.accepted;
+  summary.rejected = rejected;
+  summary.reconcile = books;
+  const gate = { ok: true, needsHuman: false, origin: 'script', leftSha256: sha256(left.bytes), rightSha256: sha256(right.bytes), metricsSha256: sha256(metricsBytes), summary };
   writeFileSync(join(folder, 'gate.json'), `${JSON.stringify(gate, null, 2)}\n`);
   return gate;
 }
 
-export function emitReport(folder, contractPath, metricsPath) {
+export function emitReport(folder, leftPath, rightPath, metricsPath) {
   const gate = readJson(join(folder, 'gate.json'));
   if (gate?.ok !== true) throw new Error('gate_not_passed');
-  if (sha256(readFileSync(contractPath)) !== gate.contractSha256 || sha256(readFileSync(metricsPath)) !== gate.metricsSha256) throw new Error('contract_changed_after_gate');
+  if (sha256(readFileSync(leftPath)) !== gate.leftSha256 || sha256(readFileSync(rightPath)) !== gate.rightSha256) throw new Error('contract_changed_after_gate');
+  if (sha256(readFileSync(metricsPath)) !== gate.metricsSha256) throw new Error('policy_changed_after_gate');
   mkdirSync(join(folder, 'out'), { recursive: true });
+  if (gate.needsHuman) {
+    const summary = { needsHuman: true, origin: 'script', acceptedTotal: null, reconcile: null };
+    writeFileSync(join(folder, 'out', 'report.json'), `${JSON.stringify(summary, null, 2)}\n`);
+    writeFileSync(join(folder, 'out', 'report.xlsx'), workbook({ ...summary, period: '', rows: [], totals: [], margin: 0, revenue: 0, expense: 0 }));
+    return summary;
+  }
   writeFileSync(join(folder, 'out', 'report.json'), `${JSON.stringify(gate.summary, null, 2)}\n`);
   writeFileSync(join(folder, 'out', 'report.xlsx'), workbook(gate.summary));
   return gate.summary;

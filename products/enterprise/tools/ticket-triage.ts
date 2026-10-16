@@ -49,10 +49,10 @@ export function routeTickets(
   policy: {
     severities: Record<string, { priority: string; responseMinutes: number }>;
     intents: Record<string, { queue: string }>;
-    default: { queue: string; severity: 'critical' | 'high' | 'medium' | 'low' };
     credential: { queue: string; responseMinutes: number };
+    floors?: Record<string, 'critical' | 'high' | 'medium' | 'low'>;
   },
-): { id: string; intent: string; severity: string; queue: string; responseMinutes: number; priority: string; credential: boolean; origin: 'script' }[] {
+): { id: string; intent: string | null; severity: string | null; decision: 'routed' | 'needs_human'; queue: string | null; responseMinutes: number | null; priority: string | null; credential: boolean; severityRaised?: boolean; origin: 'script' }[] {
   const wanted = tickets.map((ticket) => ticket.id);
   const covered = new Set(intents.map((item) => item.id));
   const missing = wanted.filter((id) => !covered.has(id));
@@ -62,14 +62,27 @@ export function routeTickets(
     if (!ticket) invalid(`Ticket ${item.id} is not in the source`);
     const blob = `${ticket.subject}\n${ticket.body ?? ''}`;
     if (!blob.includes(item.quote)) invalid(`Quote for ${item.id} is not in the source`);
-    const judged = policy.severities[item.severity];
-    if (!judged) invalid(`Severity ${item.severity} is not in the policy`);
     const credential = CREDENTIAL.test(blob);
-    const listed = policy.intents[item.intent];
-    const queue = credential ? policy.credential.queue : listed?.queue ?? policy.default.queue;
-    const responseMinutes = credential ? policy.credential.responseMinutes : listed ? judged.responseMinutes : policy.severities[policy.default.severity].responseMinutes;
-    const priority = listed || credential ? judged.priority : policy.severities[policy.default.severity].priority;
-    return { id: item.id, intent: item.intent, severity: item.severity, queue, responseMinutes, priority, credential, origin: 'script' as const };
+    if (!policy.intents[item.intent]) {
+      return { id: item.id, intent: item.intent, severity: null, decision: 'needs_human' as const, queue: credential ? policy.credential.queue : null, responseMinutes: null, priority: null, credential, origin: 'script' as const };
+    }
+    const rank = ['low', 'medium', 'high', 'critical'];
+    const floor = policy.floors?.[item.intent] ?? null;
+    const severity = floor && rank.indexOf(item.severity) < rank.indexOf(floor) ? floor : item.severity;
+    const judged = policy.severities[severity];
+    if (!judged) invalid(`Severity ${item.severity} is not in the policy`);
+    return {
+      id: item.id,
+      intent: item.intent,
+      severity,
+      decision: 'routed' as const,
+      queue: credential ? policy.credential.queue : policy.intents[item.intent].queue,
+      responseMinutes: credential ? policy.credential.responseMinutes : judged.responseMinutes,
+      priority: judged.priority,
+      credential,
+      severityRaised: severity !== item.severity,
+      origin: 'script' as const,
+    };
   });
 }
 

@@ -8,21 +8,21 @@ These modules are general-purpose and synthetic. They do not describe a real sup
 
 | Module | Kind | Version | What it does |
 |---|---|---|---|
-| [products/enterprise](../products/enterprise/README.md) | product-line | 1.2.0 | Documents connector, five flows, five pure tools, one access-approval hook |
-| [skills/contract-review](../skills/contract-review/SKILL.md) | skill-pack | 1.2.0 | Model extracts permit/forbid clauses, including `第N条`; a pinned policy table scores risk |
-| [skills/monthly-business-report](../skills/monthly-business-report/SKILL.md) | skill-pack | 1.2.0 | Human-approved metrics.yaml; the script reads raw CSV from a header map |
-| [skills/support-triage](../skills/support-triage/SKILL.md) | skill-pack | 1.2.0 | Model names intent and severity; the script maps SLA and covers every ticket |
-| [skills/employee-onboarding](../skills/employee-onboarding/SKILL.md) | skill-pack | 1.2.0 | Model extracts rules, including tenure and downgrade; the script evaluates requests |
-| [skills/incident-postmortem](../skills/incident-postmortem/SKILL.md) | skill-pack | 1.2.0 | Model labels lines; the script computes MTTR from those labels and fails when the mean is missing |
+| [products/enterprise](../products/enterprise/README.md) | product-line | 1.3.0 | Documents connector, five flows, five pure tools, one access-approval hook |
+| [skills/contract-review](../skills/contract-review/SKILL.md) | skill-pack | 1.3.0 | Two extracts name a kind; the pinned policy scores a term only where they agree |
+| [skills/monthly-business-report](../skills/monthly-business-report/SKILL.md) | skill-pack | 1.3.0 | Two header maps; the script filters the period and reconciles the total |
+| [skills/support-triage](../skills/support-triage/SKILL.md) | skill-pack | 1.3.0 | Two extracts name intent and severity; an unknown intent is left for a person |
+| [skills/employee-onboarding](../skills/employee-onboarding/SKILL.md) | skill-pack | 1.3.0 | Later runs use the pinned rules; days and months stay distinct |
+| [skills/incident-postmortem](../skills/incident-postmortem/SKILL.md) | skill-pack | 1.3.0 | Two label files; alert duration and customer impact are separate |
 | [skills/local-script](../skills/local-script/SKILL.md) | skill-pack | 1.0.0 | Worked example of a local script, its manifest and a sample trial record |
 
 `skillpack.json` titles are English. Chinese titles are the `titleZh` field in each `SKILL.md` frontmatter, and `title` plus `titleZh` on each enterprise flow file. See [Local script example](local-script.md) for why the manifest itself cannot carry `titleZh`.
 
 Each of those five skills follows the [judgement-gate template](judgement-gate.md): the model writes a schema'd file of verbatim quotes and source pointers, then a script checks the quotes against the original, refuses a run that skips an input item, recomputes the decision, and emits. A pointer may name a hub return or a user-provided UTF-8 file. Scaffold another skill with `node templates/judgement-gate/generate.mjs`.
 
-A risk table, an SLA table, `metrics.yaml`, an access-rule table, and the incident-start definition are extracted once, approved by a person, and SHA-pinned. A later run points at that file. It does not ask the model to write the table again.
+A risk table, an SLA table, `metrics.yaml`, an access-rule table, and the incident metric definitions are extracted once, approved by a person, and SHA-pinned with `node templates/judgement-gate/pin.mjs`. A later run points at that file. It does not ask the model to write the table again. The gate refuses a file whose SHA is not the approved pin. A per-run judgement is written twice. A disagreement is `needs_human`.
 
-The monthly workbook is a stored zip (compression method 0) so the product tool imports nothing. For the sample metrics, summary cell `B1` is `SUMIF(Lines!C:C,"revenue",Lines!D:D)`, `B2` is the same for `expense`, and `B3` is `B1-B2`. The incident tool's MTTR is the mean of `(resolved - opened) / 60000` over complete incidents, and a line or incident that cannot be used is reported with `missingFields`. The access hook on `beforeDispatch` blocks an `access-grant` whose role is missing or not on `approvedRoles`, and passes every other dispatch.
+The monthly workbook is a stored zip (compression method 0) so the product tool imports nothing. For the sample metrics, summary cell `B1` is `SUMIF(Lines!C:C,"revenue",Lines!D:D)`, `B2` is the same for `expense`, and `B3` is `B1-B2`. Rows outside the pinned period, rows with a bad date, and empty amounts are listed and are not added as zero. The incident tool reports alert duration and customer-impact duration from the pinned definitions. A timestamp with no zone fails. The access hook on `beforeDispatch` blocks an `access-grant` whose role is missing or not on `approvedRoles`, and passes every other dispatch.
 
 ## Install on a dev:stack hub
 
