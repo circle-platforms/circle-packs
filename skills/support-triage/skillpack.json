@@ -1,0 +1,25 @@
+{
+  "id": "support-triage",
+  "version": "1.0.0",
+  "title": "Support ticket triage",
+  "owner": "enterprise",
+  "tools": [
+    "docs.get",
+    "docs.search",
+    "docs.section",
+    "knowledge.claim_submit"
+  ],
+  "triggers": [
+    "manual"
+  ],
+  "inputs": {
+    "file": "path of the ticket JSON on the documents connector",
+    "question": "what the reply must answer, in the customer's words"
+  },
+  "outputs": [
+    "out/triage.json",
+    "out/replies.md",
+    "out/kb_gaps.json"
+  ],
+  "model": "any capable model; priority is a script; the reply draft is model judgement and must quote a saved section or be recorded as a gap"
+}

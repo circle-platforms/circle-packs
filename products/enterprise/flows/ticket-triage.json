@@ -1,0 +1,11 @@
+{
+  "schema": "circle-packs/flow/1",
+  "id": "ticket-triage",
+  "version": "ticket-triage/1",
+  "title": "Support ticket triage",
+  "titleZh": "客户支持工单分拣",
+  "stages": ["received", "running", "delivered", "failed", "cancelled"],
+  "waitingReasons": [],
+  "deliverables": ["out/triage.json", "out/replies.md", "out/kb_gaps.json"],
+  "unknown": "A reply with no knowledge-base evidence is a gap, not an answer from memory."
+}

@@ -1,0 +1,22 @@
+{
+  "id": "contract-review",
+  "version": "1.0.0",
+  "title": "Contract and supplier review",
+  "owner": "enterprise",
+  "tools": [
+    "docs.get",
+    "knowledge.claim_submit"
+  ],
+  "triggers": [
+    "manual"
+  ],
+  "inputs": {
+    "file": "path of the contract text on the documents connector"
+  },
+  "outputs": [
+    "out/clauses.json",
+    "out/review_report.md",
+    "out/review_claims.json"
+  ],
+  "model": "any capable model; clause splits and missing headings are a script; risk notes are model judgement"
+}

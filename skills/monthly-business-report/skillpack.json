@@ -1,0 +1,23 @@
+{
+  "id": "monthly-business-report",
+  "version": "1.0.0",
+  "title": "Monthly business report",
+  "owner": "enterprise",
+  "tools": [
+    "docs.list",
+    "docs.get"
+  ],
+  "triggers": [
+    "manual",
+    "schedule"
+  ],
+  "inputs": {
+    "period": "report period, such as 2026-09",
+    "directory": "documents directory that holds the source extracts"
+  },
+  "outputs": [
+    "out/report.json",
+    "out/report.xlsx"
+  ],
+  "model": "any capable model; choosing the period and the source files is judgement; the totals and the workbook formulas are a script"
+}

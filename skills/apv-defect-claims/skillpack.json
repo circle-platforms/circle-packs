@@ -1,7 +1,7 @@
 {
   "id": "apv-defect-claims",
-  "version": "0.2.0",
-  "title": "APV 缺陷声明抽取",
+  "version": "0.2.1",
+  "title": "APV defect claim extraction",
   "owner": "apv-product-line",
   "tools": [
     "zentao.products",

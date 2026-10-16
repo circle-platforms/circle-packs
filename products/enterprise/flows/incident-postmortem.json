@@ -1,0 +1,11 @@
+{
+  "schema": "circle-packs/flow/1",
+  "id": "incident-postmortem",
+  "version": "incident-postmortem/1",
+  "title": "Incident postmortem",
+  "titleZh": "事故复盘",
+  "stages": ["received", "running", "delivered", "failed", "cancelled"],
+  "waitingReasons": [],
+  "deliverables": ["out/timeline.json", "out/postmortem.md"],
+  "unknown": "An incident with no opened or resolved mark is incomplete and is left out of MTTR."
+}

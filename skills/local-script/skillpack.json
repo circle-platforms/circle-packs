@@ -1,0 +1,19 @@
+{
+  "id": "local-script",
+  "version": "1.0.0",
+  "title": "Local script example",
+  "owner": "enterprise",
+  "tools": [
+    "docs.get"
+  ],
+  "triggers": [
+    "manual"
+  ],
+  "inputs": {
+    "file": "document path on the documents connector, such as sources/synthetic-note.txt"
+  },
+  "outputs": [
+    "out/summary.json"
+  ],
+  "model": "any capable model; the line and word counts are a script and there is no judgement step"
+}

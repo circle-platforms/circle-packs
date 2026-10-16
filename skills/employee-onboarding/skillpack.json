@@ -1,0 +1,26 @@
+{
+  "id": "employee-onboarding",
+  "version": "1.0.0",
+  "title": "Employee onboarding",
+  "owner": "enterprise",
+  "tools": [
+    "docs.get",
+    "docs.section"
+  ],
+  "triggers": [
+    "manual"
+  ],
+  "inputs": {
+    "checklist": "completed item ids: identity, equipment, accounts, policies, manager",
+    "requests": "access requests {person, role, system}",
+    "question": "the policy question",
+    "file": "policy manual path",
+    "anchor": "section anchor, the text inside **anchor**"
+  },
+  "outputs": [
+    "out/checklist.json",
+    "out/access_requests.json",
+    "out/policy_answer.md"
+  ],
+  "model": "any capable model; the checklist and the approval flag are scripts; the policy answer is model judgement checked against a saved section"
+}

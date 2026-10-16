@@ -6,11 +6,11 @@
       "kind": "skill-pack",
       "root": "skills/apv-case-review",
       "manifestPath": "skills/apv-case-review/skillpack.json",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "85cd2a50d0665bdbc28f1b27c9d115292a978a3e1c9df8cce0dde3486b7ab9c7"
+          "sha256": "017ea11633206699881c107fb357a6659b7aef5097818c06e75d9dba6245d14f"
         },
         {
           "path": "scripts/check.mjs",
@@ -26,25 +26,25 @@
         },
         {
           "path": "skillpack.json",
-          "sha256": "47667a324180b34955c62fc58a87e993442c5e46f61b1e1c94ef4697e2fc3275"
+          "sha256": "816acdd636b32663dcab11e2f3c6083eff8056b7c12d364b1e07d033faa55ff0"
         },
         {
           "path": "tests/review.test.mjs",
           "sha256": "9eb80246caea94cf9451cad2aa86fa73a7d2157e9a5482aa1ad1986550813587"
         }
       ],
-      "digest": "de43fd4dd8cdd9994338f8cb031d268a9dd8f072449d3c7fa4910b77e7e39ef0"
+      "digest": "90c84a7748ad42052aea04385a94200d91f9bab66e9f6841edc5338e297afeaa"
     },
     {
       "id": "apv-defect-claims",
       "kind": "skill-pack",
       "root": "skills/apv-defect-claims",
       "manifestPath": "skills/apv-defect-claims/skillpack.json",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "4ac9f436ba0e4b36b295d6a2ac04dfd9cd3729b9ffd73a6a2b8f118b86472b43"
+          "sha256": "97190e84cd7bb656f127e669ead435f143b7d67a0c7c51a6cf2bfcc29af4fa07"
         },
         {
           "path": "scripts/extract.mjs",
@@ -52,25 +52,25 @@
         },
         {
           "path": "skillpack.json",
-          "sha256": "82daae92a70309e3fd71682614a6e5557bb4492c696ac6a1213dd67796ad8e6c"
+          "sha256": "e08133b9327146711fd82a0b93b492fdc5a9299309f33767941624d21e73b4af"
         },
         {
           "path": "tests/extract.test.mjs",
           "sha256": "aec537c4209b09471dee25c589a01743b5d581bf8e2b11bfe17828d3ed0c68b9"
         }
       ],
-      "digest": "f4704fb6654d3964d99cd5dc9bb9f3b2942d35fadcbe33f4635fae2d103fed5a"
+      "digest": "9c2faf19dd50fc057c897f655876f2c52a4e61870f64d31aa05e48154841870e"
     },
     {
       "id": "apv-mindmap-compile",
       "kind": "skill-pack",
       "root": "skills/apv-mindmap-compile",
       "manifestPath": "skills/apv-mindmap-compile/skillpack.json",
-      "version": "0.4.0",
+      "version": "0.4.1",
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "b7ac4e0469ebcbaf7263ab33534a59a3358967d24d94c3a85f568cc2b7e4ffc6"
+          "sha256": "f626b6fafced62a1e0804a6fd95ae0d748d0140b419ea57420adc300288eafb5"
         },
         {
           "path": "references/contract.md",
@@ -110,7 +110,7 @@
         },
         {
           "path": "skillpack.json",
-          "sha256": "a7b0525828b43f42558137005264141b37cae79880c4cff12257ed1e1445294c"
+          "sha256": "17a0abeb7a2887ccd140093139c02885db4a83715820a2bc7e4f325aafbc1398"
         },
         {
           "path": "tests/bed-facts.test.mjs",
@@ -133,18 +133,18 @@
           "sha256": "6c1d0a530e901ff9686594b37b947cae760f53223711efe7f8d1868e0f1521d7"
         }
       ],
-      "digest": "7c4639528cec7995410ae41d9ae71a96683ccb516d7c19a287e2d0f4d4b8b9d7"
+      "digest": "6585aa62255a7d2f12cbed3e7386f86480318024a5931c6ba44130a2ab583bda"
     },
     {
       "id": "apv-product-qa",
       "kind": "skill-pack",
       "root": "skills/apv-product-qa",
       "manifestPath": "skills/apv-product-qa/skillpack.json",
-      "version": "0.2.0",
+      "version": "0.2.1",
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "d4a4b043197c9eb1fd8e1f56eb0bb51781ef93a390545976e81f4ba7008dc624"
+          "sha256": "88090935544f4b1160c58382ea8ed50fbe739f9c7aab5cb439c25dbedb5253be"
         },
         {
           "path": "scripts/cite.mjs",
@@ -152,21 +152,181 @@
         },
         {
           "path": "skillpack.json",
-          "sha256": "28520c096405d524a2c123f87434832fd4a9deec99c753a5e83f3a21287e41b8"
+          "sha256": "28ca0c4f54d8f6990432403f92dd235fafd6fda824fb787a04fa2e686726fa17"
         },
         {
           "path": "tests/cite.test.mjs",
           "sha256": "bb458c84d500b136c66f9d199e5208919f7f1b3ab81ed8442c2444c5d770f36f"
         }
       ],
-      "digest": "181c974ab6ecddd569d8922d154d9400283b942d181c134fa834b61455c763b1"
+      "digest": "22bf2ece43d3e49a61963d731e26b95cfa79608673224912238161129887d601"
+    },
+    {
+      "id": "contract-review",
+      "kind": "skill-pack",
+      "root": "skills/contract-review",
+      "manifestPath": "skills/contract-review/skillpack.json",
+      "version": "1.0.0",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "58d5202bbfcf41868b4a2100468079254e8c601aea818c0c5eb69d661b1f4d28"
+        },
+        {
+          "path": "scripts/clauses.mjs",
+          "sha256": "9a217a9f2c34e4c07935fc0736f47963924db8f60dd2b0b5052608a00046bd52"
+        },
+        {
+          "path": "skillpack.json",
+          "sha256": "a37e315d553ec9a0a09ff4f57f75f3a037ff773b4292d746eb9d6bef9541d779"
+        },
+        {
+          "path": "tests/clauses.test.mjs",
+          "sha256": "c88816416c2aeeadb37d77c01e4c226fc297d6fb70cd1cbf09441f61aa30fc15"
+        }
+      ],
+      "digest": "39b90ba602d42be3732ab69a0c9f3f2a808dccf069ef3aa68271d95e8ce96017"
+    },
+    {
+      "id": "employee-onboarding",
+      "kind": "skill-pack",
+      "root": "skills/employee-onboarding",
+      "manifestPath": "skills/employee-onboarding/skillpack.json",
+      "version": "1.0.0",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "3477540305f61012c3719a55de7e803b7be47425940602473256fdd42204fbf4"
+        },
+        {
+          "path": "scripts/onboard.mjs",
+          "sha256": "df68caf21c0259c2a72b1fc9596550b5a6faa73acd16c2eabdeb45f5697f8562"
+        },
+        {
+          "path": "skillpack.json",
+          "sha256": "26f31697c8fd73f89363442e93b2e9115cd75cc6906ed996647689048ad4c57a"
+        },
+        {
+          "path": "tests/onboard.test.mjs",
+          "sha256": "0534716120b347a52e69197557810e450346a9c036e106d30fc22387f91c4d9d"
+        }
+      ],
+      "digest": "0aa41f8a85b629266c249f70860477409b20a44a1b2b91106571301dfef2cf2c"
+    },
+    {
+      "id": "incident-postmortem",
+      "kind": "skill-pack",
+      "root": "skills/incident-postmortem",
+      "manifestPath": "skills/incident-postmortem/skillpack.json",
+      "version": "1.0.0",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "5c0e79e6e2bca005c5c3057a84ed752fdcd0e3b73aa1a19beeea1abdd10753c4"
+        },
+        {
+          "path": "scripts/timeline.mjs",
+          "sha256": "27cb36200b5f145ea984c67c5fd417232479efddee9ae948909cebf0fe2fb7c4"
+        },
+        {
+          "path": "skillpack.json",
+          "sha256": "510b63db43cdb93e1fed56ac19ea21d93ca6c93781ea95c95e9237d2143e9e17"
+        },
+        {
+          "path": "tests/timeline.test.mjs",
+          "sha256": "600b62cfe63cb9d6e036df8af288b5ea46a828d6a6c2b2a4d2ac8bb572d795be"
+        }
+      ],
+      "digest": "9f6cb740c87ee3c4fc37b5c3040781acb982239fb850a75651d932c9d2eaed71"
+    },
+    {
+      "id": "local-script",
+      "kind": "skill-pack",
+      "root": "skills/local-script",
+      "manifestPath": "skills/local-script/skillpack.json",
+      "version": "1.0.0",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "c96f04db7b117a61263647eec1bac42f5379a8f05d34fc796a6ffa590b3bde80"
+        },
+        {
+          "path": "references/trial.json",
+          "sha256": "0b37eb90dfdc789f54abb4aa5872191be4911139c48f6d4d2e94efc138a72cd3"
+        },
+        {
+          "path": "scripts/summarise.mjs",
+          "sha256": "845309ffebc3ad8982a06816dec825ccaf0e967248b561ca27059e6a33034363"
+        },
+        {
+          "path": "skillpack.json",
+          "sha256": "38262ad7aee99866846952c13c0adcc73bd252756c74890be9ea8d34b098c59c"
+        },
+        {
+          "path": "tests/summarise.test.mjs",
+          "sha256": "a5a15e1e0d0780e374e6c7810be0495c658797b91ac9f8b5d41a19af72fe95a8"
+        }
+      ],
+      "digest": "4d5af64c346bb06152df573edff8ac5479178024da3f84528132603f27c55642"
+    },
+    {
+      "id": "monthly-business-report",
+      "kind": "skill-pack",
+      "root": "skills/monthly-business-report",
+      "manifestPath": "skills/monthly-business-report/skillpack.json",
+      "version": "1.0.0",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "918e7b725e4fe215ad3c64dc09ecae78bc4c9e75bf6b57a0e905c2cd1ace21cf"
+        },
+        {
+          "path": "scripts/aggregate.mjs",
+          "sha256": "675be069fcdb3f7501ec81ef31c4a66cfa4cd5229d4a59b9565681489a69bb9c"
+        },
+        {
+          "path": "skillpack.json",
+          "sha256": "3ffbcd55e6c369e027f9118e810e0f0ca23c153180ada6bd7350f35db7b018e4"
+        },
+        {
+          "path": "tests/aggregate.test.mjs",
+          "sha256": "464d73b780d0fc8022f9b70f6f412dd3c36a6df45b1be426a3aec2b270b0c276"
+        }
+      ],
+      "digest": "e957f357e5b5d76654e04df62b44bcb250d2d34755a70c2eb1a3f67c522b238c"
+    },
+    {
+      "id": "support-triage",
+      "kind": "skill-pack",
+      "root": "skills/support-triage",
+      "manifestPath": "skills/support-triage/skillpack.json",
+      "version": "1.0.0",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "442b8c3d5e2caa4aacae0ab12e0ca19f793468b4f9545553676636288912ad0f"
+        },
+        {
+          "path": "scripts/triage.mjs",
+          "sha256": "4726ea0affa05a31fb4946a89a5f80bd847ef17f1f922589f26633e757c8e748"
+        },
+        {
+          "path": "skillpack.json",
+          "sha256": "f652ebb3c4972d4ecef6754da4c970b42be9962dfec07e42f618a32eb6c71aa3"
+        },
+        {
+          "path": "tests/triage.test.mjs",
+          "sha256": "8ce1199df2a6f136da546cc56b7ff998b4c5801dd2315453f6781ee52ce974fb"
+        }
+      ],
+      "digest": "d01d31cb1a182f958fd13a1b72953b289e16c2b31fed85be0b27ad71984820ad"
     },
     {
       "id": "apv",
       "kind": "product-line",
       "root": "products/apv",
       "manifestPath": "products/apv/product-line.json",
-      "version": "1.4.1",
+      "version": "1.4.2",
       "files": [
         {
           "path": "README.md",
@@ -178,7 +338,7 @@
         },
         {
           "path": "flows/apv-case-execute.json",
-          "sha256": "97098bb9b045c560baf1c93c71cca0444eaf2aad172deda1a575cef2ba75817e"
+          "sha256": "f04bd4474f58f27cac27a1a34557de9119259095b73aaea4f3bbf4ec4adb14f5"
         },
         {
           "path": "hooks/device-command-tree.ts",
@@ -198,7 +358,7 @@
         },
         {
           "path": "product-line.json",
-          "sha256": "e03965f8bb8520fc8c7405ef4f19b5bdcd657d3343af5b364b5acb62aa0219d8"
+          "sha256": "89cc2a9e16d347d97d3ab4bd5506b8c8c5d938c714b6351066fbb71ed769e584"
         },
         {
           "path": "resources/case-gateway.json",
@@ -262,7 +422,7 @@
         },
         {
           "path": "tools/contracts.ts",
-          "sha256": "a0596c871915098b9f21bad1d7ec6e0a2c628394ed27b499ce8d9835d548a491"
+          "sha256": "aeb4e6c6527aced977c0780ee49578ce6db4ee9a72d9ea92c991835b547e0a0c"
         },
         {
           "path": "tools/defect-claims.ts",
@@ -313,7 +473,101 @@
           "sha256": "1c1372e36f85700388b7950162062570387da6faf8a3d14b754917d007fcf2b4"
         }
       ],
-      "digest": "a954baaa3fd530c790368ff547f74bc2b478fcc8f5f9987ff309699f33185589"
+      "digest": "43ce8700002e53d78ef23cdb68163da02c120f876c70bde69b6cd6df15e37f6c"
+    },
+    {
+      "id": "enterprise",
+      "kind": "product-line",
+      "root": "products/enterprise",
+      "manifestPath": "products/enterprise/product-line.json",
+      "version": "1.0.0",
+      "files": [
+        {
+          "path": "README.md",
+          "sha256": "41350ec5711a0937f00b2a17fd4084c67381ef09164ccd265312aa74f5e9168d"
+        },
+        {
+          "path": "connectors/documents.json",
+          "sha256": "6d99c941eb073b34b35fec5fc5421075f02e16d06225e90742d197c5f98d6c57"
+        },
+        {
+          "path": "flows/employee-onboarding.json",
+          "sha256": "163e6cace1bb3e929b0421d7e00e519fb385f68bc77f680018aa8986323a696b"
+        },
+        {
+          "path": "flows/incident-postmortem.json",
+          "sha256": "d614d7fa95ba07dd4c865832dcd2417e456e9ca907ceeba1242860dc80b46546"
+        },
+        {
+          "path": "flows/monthly-report.json",
+          "sha256": "6473b27b8d5d14b67465c226580ae24826de746960a22ddef574778ef43e7635"
+        },
+        {
+          "path": "flows/supplier-review.json",
+          "sha256": "4f963c077d3eedc37ca997cbd71dfb9cfb1627a78b8ace299dc68cf64102518b"
+        },
+        {
+          "path": "flows/ticket-triage.json",
+          "sha256": "712b7e417528dcf0775941bebde11e4bdaf53fa26570e4c275d6daacd5da0c0b"
+        },
+        {
+          "path": "hooks/access-approval.ts",
+          "sha256": "18837e949071d2fe3cdc4cd0cb6da8082c5972f88307c76c6dd80e8a7544efd9"
+        },
+        {
+          "path": "product-line.json",
+          "sha256": "d84a711ee3cc99624c2a8d0a69792df713d042bf91d0c4a8f521230d19e83eb0"
+        },
+        {
+          "path": "resources/access-desk.json",
+          "sha256": "ae92f8dad973c911fd566f33435223f308540ebe1974ab7e7dea4d0786ed4abd"
+        },
+        {
+          "path": "sources/business-extract.md",
+          "sha256": "a8587bd8c7123e5008cc75bfe6325ae403ac3c504e5d3ef49db571ea7ae76a8a"
+        },
+        {
+          "path": "sources/contract.md",
+          "sha256": "80a7188596802f8e5a0bd2e56c8c1f75c8e46af8646477fb7e1300ebba7df89b"
+        },
+        {
+          "path": "sources/incident-log.md",
+          "sha256": "fdca6cc63da872ae8d4b4b917c261aa39614f698ad02855f08ff38363b865b10"
+        },
+        {
+          "path": "sources/policy.md",
+          "sha256": "b6336fea5f60350c77b75a2e38492424574a5709a06ebd257ac57174922dd07f"
+        },
+        {
+          "path": "sources/ticket.md",
+          "sha256": "9ac7f938f391c32ec217171889273b5e401cf4b6c3531099af1b6ec7326c122d"
+        },
+        {
+          "path": "tests/enterprise.test.mjs",
+          "sha256": "6f9751e4f577b08deff485db431d6ee59d565a66338ac656e075b7288f28c962"
+        },
+        {
+          "path": "tools/contract-clauses.ts",
+          "sha256": "49e36406745c733fe530ab74a897084c6b358fc2bdedc1c48691288293ef4675"
+        },
+        {
+          "path": "tools/incident-timeline.ts",
+          "sha256": "beda44f2982e2be4204788051f7edd8a39a9371bcfe193c806d065f08dde5855"
+        },
+        {
+          "path": "tools/onboarding.ts",
+          "sha256": "0aaf27404a82ff846fe350aef3982b69936b39453f69520e8c41b241b3064404"
+        },
+        {
+          "path": "tools/report-workbook.ts",
+          "sha256": "bd6597e18bac9b7da60cf52106a4100bcd90d29f9759fc3520e0decbe1042394"
+        },
+        {
+          "path": "tools/ticket-triage.ts",
+          "sha256": "5edce4e1d161796bcbaf77be8bcaebab09ec4c60e7e2040da519308219028c34"
+        }
+      ],
+      "digest": "1b88fc7450b38a07a05b338570f7cef292c7613ca6666292b7d5969ec3c51536"
     }
   ]
 }

@@ -1,0 +1,11 @@
+{
+  "schema": "circle-packs/flow/1",
+  "id": "supplier-review",
+  "version": "supplier-review/1",
+  "title": "Contract and supplier review",
+  "titleZh": "合同与供应商评审",
+  "stages": ["received", "running", "delivered", "failed", "cancelled"],
+  "waitingReasons": [],
+  "deliverables": ["out/clauses.json", "out/review_report.md", "out/review_claims.json"],
+  "unknown": "When the uploaded text has no clause headings, stop and say so. Do not invent clauses."
+}

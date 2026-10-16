@@ -1,0 +1,21 @@
+{
+  "id": "incident-postmortem",
+  "version": "1.0.0",
+  "title": "Incident postmortem",
+  "owner": "enterprise",
+  "tools": [
+    "docs.get",
+    "knowledge.claim_submit"
+  ],
+  "triggers": [
+    "manual"
+  ],
+  "inputs": {
+    "file": "path of the incident log on the documents connector"
+  },
+  "outputs": [
+    "out/timeline.json",
+    "out/postmortem.md"
+  ],
+  "model": "any capable model; the timeline and MTTR are a script; the narrative paragraph is model judgement"
+}

@@ -34,4 +34,12 @@ jobs:
       - name: Product-line pack tests
         run: |
           ln -s ../circle-hub/node_modules node_modules
-          node --experimental-strip-types --test 'products/apv/tests/*.test.mjs'
+          node --experimental-strip-types --test 'products/*/tests/*.test.mjs'
+      - name: Validate manifests with the hub schemas
+        run: |
+          git init ../circle-hub-schema
+          git -C ../circle-hub-schema remote add origin https://github.com/circle-platforms/circle-hub
+          git -C ../circle-hub-schema fetch --depth 1 origin main
+          git -C ../circle-hub-schema checkout --detach FETCH_HEAD
+          ln -s ../circle-hub/node_modules ../circle-hub-schema/node_modules
+          HUB_ROOT=../circle-hub-schema node --experimental-strip-types tools/validate-with-hub.mjs

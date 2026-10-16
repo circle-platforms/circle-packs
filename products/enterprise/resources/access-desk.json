@@ -1,0 +1,13 @@
+{
+  "schema": "circle-packs/resource/1",
+  "id": "access-desk",
+  "kind": "declaration",
+  "role": "approval-boundary",
+  "writes": ["access-grant"],
+  "credentialMode": "none",
+  "executionIsChange": true,
+  "notes": "This is not a remote connector. approvedRoles is filled when the resource is registered and is the closed set of roles an access grant may name. The list does not belong in Git. There is no address and no credential in this file.",
+  "declaration": {
+    "approvedRoles": "string[]: roles this desk may grant. Empty or missing means undeclared, and the access-approval hook blocks every access grant."
+  }
+}

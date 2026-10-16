@@ -1,7 +1,7 @@
 {
   "id": "apv-case-review",
-  "version": "0.2.0",
-  "title": "APV 用例评审",
+  "version": "0.2.1",
+  "title": "APV case review",
   "owner": "apv-product-line",
   "tools": [
     "buildsite.command_check",
